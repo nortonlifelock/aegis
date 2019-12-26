@@ -2,7 +2,7 @@ package domain
 
 // DeviceInfo defines the interface
 type DeviceInfo interface {
-	// ID is the ID of the device as reported by the backend database of PDE
+	// ID is the ID of the device as reported by the backend database of Aegis
 	ID() string
 
 	// SourceID is the ID of the device as reported by the scanner

@@ -41,5 +41,5 @@ type WebAppConfig interface {
 	WebSocketProtocol() string
 	TransportProtocol() string
 	UILocation() string
-	PDEPath() string
+	AegisPath() string
 }
