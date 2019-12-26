@@ -64,7 +64,7 @@ func (session *Session) makeRequest(request *http.Request, action func(response 
 			if err = json.Unmarshal([]byte(session.Config.AuthInfo()), &authInfo); err == nil {
 				// Set the basic auth information and required Qualys Headers
 				request.SetBasicAuth(authInfo.Username, authInfo.Password)
-				request.Header.Add("X-Requested-With", "PDE-VRR")
+				request.Header.Add("X-Requested-With", "Aegis")
 				request.Header.Add("Content-Type", "application/xml")
 
 				// Execute the HTTP request against the Qualys API

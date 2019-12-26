@@ -12,7 +12,7 @@ type hostDetectionCombo struct {
 	detection *detection
 }
 
-// ID returns the PDE database ID, which is not present in the Qualys object
+// ID returns the Aegis database ID, which is not present in the Qualys object
 func (combo *hostDetectionCombo) ID() string {
 	return ""
 }
