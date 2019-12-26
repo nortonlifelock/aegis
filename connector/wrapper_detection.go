@@ -1,0 +1,135 @@
+package connector
+
+import (
+	"context"
+	"github.com/nortonlifelock/domain"
+	"github.com/nortonlifelock/qualys"
+	"github.com/nortonlifelock/log"
+	"strconv"
+	"sync"
+	"time"
+)
+
+type detection struct {
+	d                 qualys.QDetection
+	vulnerabilityInfo *vulnerabilityInfo
+
+	session *QsSession
+	lock    sync.Mutex
+}
+
+func (detection *detection) lazyLoadVulnerabilityInfo() {
+	detection.lock.Lock()
+	defer detection.lock.Unlock()
+
+	needToLoad := false
+	if detection.vulnerabilityInfo == nil {
+		needToLoad = true
+	} else if detection.vulnerabilityInfo.v == nil {
+		needToLoad = true
+	}
+
+	if needToLoad {
+
+		detection.session.vulnerabilityLock.Lock()
+		if detection.session.vulnerabilities[detection.d.QualysID] == nil {
+			detection.session.vulnerabilityLock.Unlock()
+
+			var err error
+			vulnInfo := &vulnerabilityInfo{}
+			vulnInfo.v, err = detection.session.apiSession.LoadVulnerability(detection.SourceID())
+
+			detection.session.vulnerabilityLock.Lock()
+			detection.session.vulnerabilities[detection.d.QualysID] = vulnInfo.v
+			detection.session.vulnerabilityLock.Unlock()
+
+			if err == nil {
+				detection.vulnerabilityInfo = vulnInfo
+			} else {
+				detection.session.lstream.Send(log.Errorf(err, "error while loading vulnerability information for detection [%v]", detection.SourceID()))
+			}
+		} else {
+			detection.vulnerabilityInfo = &vulnerabilityInfo{
+				v: detection.session.vulnerabilities[detection.d.QualysID],
+			}
+			detection.session.vulnerabilityLock.Unlock()
+		}
+	}
+}
+
+// TODO what to do if the vulnInfo is nil when we try and access it? should we continually attempt to load the vulnerability info?
+
+func (detection *detection) ID() string {
+	return ""
+}
+
+// SourceID returns the vulnerability ID of the detection
+func (detection *detection) SourceID() string {
+	return strconv.Itoa(detection.d.QualysID)
+}
+
+// Updated must return the time on the detection, not the time that the vulnerability was updated
+// it is helpful to know the date of the detection in the context of the history of a device (e.g. a decommission date)
+func (detection *detection) Updated() time.Time {
+	return detection.d.LastFound
+}
+
+// Name returns the title of the vulnerability
+func (detection *detection) Name() string {
+	detection.lazyLoadVulnerabilityInfo()
+	return detection.vulnerabilityInfo.Name()
+}
+
+// Description returns the consequence of the vulnerability
+func (detection *detection) Description() string {
+	detection.lazyLoadVulnerabilityInfo()
+	return detection.vulnerabilityInfo.Description()
+}
+
+// CVSS2 returns the Common Vulnerability Scoring System version 2 score for the detection
+func (detection *detection) CVSS2() float32 {
+	detection.lazyLoadVulnerabilityInfo()
+	return detection.vulnerabilityInfo.CVSS2()
+}
+
+// CVSS3 returns the Common Vulnerability Scoring System version 3 score for the detection
+func (detection *detection) CVSS3() *float32 {
+	detection.lazyLoadVulnerabilityInfo()
+	return detection.vulnerabilityInfo.CVSS3()
+}
+
+// Solutions returns a channel containing
+func (detection *detection) Solutions(ctx context.Context) (<-chan domain.Solution, error) {
+	detection.lazyLoadVulnerabilityInfo()
+	return detection.vulnerabilityInfo.Solutions(ctx)
+}
+
+func (detection *detection) References(ctx context.Context) (<-chan domain.VulnerabilityReference, error) {
+	detection.lazyLoadVulnerabilityInfo()
+	return detection.vulnerabilityInfo.References(ctx)
+}
+
+func (detection *detection) Severity() int {
+	detection.lazyLoadVulnerabilityInfo()
+	return detection.vulnerabilityInfo.Severity()
+}
+
+func (detection *detection) CVSS2Vector() string {
+	detection.lazyLoadVulnerabilityInfo()
+	return detection.vulnerabilityInfo.CVSS2Vector()
+}
+
+func (detection *detection) CVSS3Vector() string {
+	detection.lazyLoadVulnerabilityInfo()
+	return detection.vulnerabilityInfo.CVSS3Vector()
+}
+
+func (detection *detection) Software() string {
+	detection.lazyLoadVulnerabilityInfo()
+	return detection.vulnerabilityInfo.Software()
+}
+
+func (detection *detection) DetectionInformation() string {
+	detection.lazyLoadVulnerabilityInfo()
+	return detection.vulnerabilityInfo.DetectionInformation()
+}
