@@ -1,6 +1,6 @@
 package jira
 
-// MappableFields contains a list of all custom fields used by PDE that may need to be mapped to a different name for a field that
+// MappableFields contains a list of all custom fields used by Aegis that may need to be mapped to a different name for a field that
 // uses custom fields with different names
 var MappableFields = []string{
 	backendMOD,
@@ -103,7 +103,7 @@ const (
 	jeditableprojectfields = "/rest/api/2/issue/createmeta?projectKeys={project}&expand=projects.issuetypes.fields"
 )
 
-// The following consts correspond to ticket values that PDE tracks. Because any given project can have varying fields, these
+// The following consts correspond to ticket values that Aegis tracks. Because any given project can have varying fields, these
 // consts are used in collaboration with the field map to find th equivalent custom field in any given JIRA project
 const (
 	backendKey              = "Key"

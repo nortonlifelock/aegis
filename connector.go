@@ -52,10 +52,10 @@ type PayloadJira struct {
 	// Mappable fields is used by the UI to discern which JIRA fields can be mapped to a field supplied by a cloud provider
 	MappableFields []string `json:"mappable_fields,omitempty"`
 
-	// Maps the PDE name for a status to the JIRA-specific name for a status
+	// Maps the Aegis name for a status to the JIRA-specific name for a status
 	StatusMap map[string]string `json:"status_map"`
 
-	// Maps the PDE name for a field to the JIRA-specific name for a field
+	// Maps the Aegis name for a field to the JIRA-specific name for a field
 	FieldMap map[string]string `json:"field_map"`
 }
 
