@@ -38,7 +38,7 @@ func (finding *Finding) ScanID() (param int) {
 
 // Summary returns the Summary parameter of the ticket
 func (finding *Finding) Summary() (param string) {
-	return fmt.Sprintf("VRR (%s) - %s", finding.EntityName, finding.VulnerabilityTitle())
+	return fmt.Sprintf("Aegis (%s) - %s", finding.EntityName, finding.VulnerabilityTitle())
 }
 
 // BundleID returns the bundle id of the finding
