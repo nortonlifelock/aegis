@@ -7,6 +7,8 @@
 
 aegis
 
+**NOTE: We're still building the Readme files for Aegis.**
+
 Installing Aegis:
 
 - Step 0: Create a JIRA project for vulnerability management by Aegis
