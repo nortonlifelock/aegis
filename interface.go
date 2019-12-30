@@ -12,9 +12,9 @@ import (
 	"time"
 
 	"github.com/andygrunwald/go-jira"
-	"github.com/pkg/errors"
 	"github.com/nortonlifelock/domain"
 	"github.com/nortonlifelock/log"
+	"github.com/pkg/errors"
 )
 
 // ***********************************************************
@@ -87,7 +87,7 @@ func (connector *ConnectorJira) CreateTicket(ticket domain.Ticket) (sourceID int
 				ji.Issue.Fields.Project.Key = connector.project
 
 				// Clear out these fields as they can't be sent
-				// during create for vrr because they don't exist
+				// during create for Aegis because they don't exist
 				// in the create screen
 				ji.Issue.Fields.Reporter = nil
 				ji.Issue.Fields.Updated = jira.Time(time.Time{})

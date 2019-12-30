@@ -277,7 +277,7 @@ func (connector *ConnectorJira) getTicketsForPassiveRescan(methodOfDiscovery str
 	if statuses != nil {
 		if len(statuses) > 0 {
 
-			// JQL -> project = vrr and "Method of Discovery" = Nexpose and (status IN (Open, "In Progress", Reopened, Resolved-Exception) AND (due <= 15d or created <= -20d))
+			// JQL -> project = Aegis and "Method of Discovery" = Nexpose and (status IN (Open, "In Progress", Reopened, Resolved-Exception) AND (due <= 15d or created <= -20d))
 			q := connector.queryStart().
 				and().
 				equals(connector.GetFieldMap(backendMOD), methodOfDiscovery). // Must filter on MOD in order to ensure no overlap
