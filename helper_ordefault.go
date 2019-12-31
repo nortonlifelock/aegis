@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/pkg/errors"
 	"github.com/nortonlifelock/domain"
+	"github.com/pkg/errors"
 )
 
 func sord(in *string) (out string) {
