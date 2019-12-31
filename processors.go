@@ -2,12 +2,12 @@ package scaffold
 
 import (
 	"fmt"
+	"github.com/nortonlifelock/files"
 	"go/format"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"sort"
-	"github.com/nortonlifelock/files"
 	"strings"
 )
 

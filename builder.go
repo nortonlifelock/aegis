@@ -7,8 +7,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/pkg/errors"
 	"github.com/nortonlifelock/files"
+	"github.com/pkg/errors"
 )
 
 // builder holds a list of all the procedures, classes, and methods and is used to hold the information required to generate code
