@@ -9,10 +9,10 @@ import (
 	network2 "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2019-07-01/network"
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure/auth"
-	"os"
-	"github.com/nortonlifelock/domain"
 	"github.com/nortonlifelock/aws"
+	"github.com/nortonlifelock/domain"
 	"github.com/nortonlifelock/log"
+	"os"
 	"strings"
 	"sync"
 )
