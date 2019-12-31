@@ -5,10 +5,10 @@ import (
 	"flag"
 	"fmt"
 
-	"github.com/pkg/errors"
 	"github.com/nortonlifelock/config"
 	"github.com/nortonlifelock/database"
 	"github.com/nortonlifelock/domain"
+	"github.com/pkg/errors"
 
 	// Shadowed import for registering the jobs into the job runner. There is no need for a direct import here
 	// as the jobs are used from a registry for the dispatcher.
