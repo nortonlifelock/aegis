@@ -1,10 +1,10 @@
 package connector
 
 import (
-	"github.com/pkg/errors"
 	"github.com/nortonlifelock/domain"
-	"github.com/nortonlifelock/nexpose"
 	"github.com/nortonlifelock/log"
+	"github.com/nortonlifelock/nexpose"
+	"github.com/pkg/errors"
 	"strconv"
 )
 

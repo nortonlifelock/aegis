@@ -2,8 +2,8 @@ package connector
 
 import (
 	"fmt"
-	"github.com/pkg/errors"
 	"github.com/nortonlifelock/log"
+	"github.com/pkg/errors"
 )
 
 type stackTracer interface {

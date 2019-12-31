@@ -10,8 +10,8 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/pkg/errors"
 	"github.com/nortonlifelock/log"
+	"github.com/pkg/errors"
 )
 
 // GetScans loads scans from the nexpose based on the active flag that is passed in.

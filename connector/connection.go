@@ -12,12 +12,12 @@ import (
 	"time"
 
 	"github.com/benjivesterby/validator"
-	"github.com/pkg/errors"
 	"github.com/nortonlifelock/domain"
-	"github.com/nortonlifelock/nexpose"
 	"github.com/nortonlifelock/funnel"
 	"github.com/nortonlifelock/log"
+	"github.com/nortonlifelock/nexpose"
 	"github.com/nortonlifelock/ttl"
+	"github.com/pkg/errors"
 )
 
 // TODO: Setup default sorting for the api so that it correctly returns the data

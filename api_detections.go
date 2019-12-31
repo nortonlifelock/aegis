@@ -3,8 +3,8 @@ package nexpose
 import (
 	"context"
 	"fmt"
-	"net/http"
 	"github.com/nortonlifelock/log"
+	"net/http"
 )
 
 // GetAssetDetections loads all vulnerability detections for the asset ID that is passed.

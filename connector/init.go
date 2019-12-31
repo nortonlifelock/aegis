@@ -3,11 +3,11 @@ package connector
 import (
 	"context"
 
-	"github.com/pkg/errors"
 	"github.com/nortonlifelock/domain"
-	"github.com/nortonlifelock/nexpose"
 	"github.com/nortonlifelock/log"
+	"github.com/nortonlifelock/nexpose"
 	"github.com/nortonlifelock/ttl"
+	"github.com/pkg/errors"
 )
 
 // Connect creates a Nexpose session that implements the connector interface and is used to interact with the Nexpose API

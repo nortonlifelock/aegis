@@ -3,9 +3,9 @@ package connector
 import (
 	"fmt"
 	"github.com/benjivesterby/validator"
-	"github.com/pkg/errors"
 	"github.com/nortonlifelock/domain"
 	"github.com/nortonlifelock/nexpose"
+	"github.com/pkg/errors"
 	"time"
 )
 
