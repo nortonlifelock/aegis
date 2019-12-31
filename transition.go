@@ -2,8 +2,8 @@ package jira
 
 import (
 	"fmt"
-	"github.com/trivago/tgo/tcontainer"
 	"github.com/nortonlifelock/domain"
+	"github.com/trivago/tgo/tcontainer"
 	"strings"
 	"time"
 )

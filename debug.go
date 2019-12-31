@@ -2,10 +2,10 @@ package jira
 
 import (
 	"fmt"
+	"github.com/nortonlifelock/domain"
 	"html"
 	"io/ioutil"
 	"net/http"
-	"github.com/nortonlifelock/domain"
 	"strings"
 )
 

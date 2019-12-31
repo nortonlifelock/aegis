@@ -10,9 +10,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/pkg/errors"
 	"github.com/nortonlifelock/domain"
 	"github.com/nortonlifelock/log"
+	"github.com/pkg/errors"
 )
 
 func (connector *ConnectorJira) createStatusSlice(statuses map[string]bool) (statusStrings []string) {

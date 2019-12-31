@@ -3,9 +3,9 @@ package jira
 import (
 	"fmt"
 	"github.com/andygrunwald/go-jira"
+	"github.com/nortonlifelock/domain"
 	"github.com/pkg/errors"
 	"github.com/trivago/tgo/tcontainer"
-	"github.com/nortonlifelock/domain"
 	"strconv"
 	"strings"
 )
