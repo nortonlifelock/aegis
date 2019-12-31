@@ -2,9 +2,9 @@ package funnel
 
 import (
 	"fmt"
+	"github.com/nortonlifelock/log"
 	"github.com/pkg/errors"
 	"net/http"
-	"github.com/nortonlifelock/log"
 	"strings"
 	"time"
 )

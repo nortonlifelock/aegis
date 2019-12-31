@@ -3,9 +3,9 @@ package funnel
 import (
 	"context"
 	"github.com/benjivesterby/validator"
+	"github.com/nortonlifelock/log"
 	"github.com/pkg/errors"
 	"net/http"
-	"github.com/nortonlifelock/log"
 	"time"
 )
 
