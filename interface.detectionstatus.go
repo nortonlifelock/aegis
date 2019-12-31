@@ -1,7 +1,5 @@
 package domain
 
-import ()
-
 // DetectionStatus defines the interface
 type DetectionStatus interface {
 	ID() (param int)

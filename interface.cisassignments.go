@@ -1,7 +1,5 @@
 package domain
 
-import ()
-
 // CISAssignments defines the interface
 type CISAssignments interface {
 	AssignmentGroup() (param string)
