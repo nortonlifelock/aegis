@@ -3,11 +3,12 @@ package funnel
 import (
 	"context"
 	"fmt"
-	"github.com/pkg/errors"
 	"io/ioutil"
 	"net/http"
-	"github.com/nortonlifelock/log"
 	"time"
+
+	"github.com/nortonlifelock/log"
+	"github.com/pkg/errors"
 )
 
 type funnel struct {
@@ -192,9 +193,11 @@ func (f *funnel) handleFailedRequest(resp *http.Response) (err error) {
 	if resp != nil && resp.StatusCode >= 300 {
 		err = errors.Errorf("retries exceeded for request | code: %v", resp.StatusCode)
 
-		defer resp.Body.Close()
-		if body, readErr := ioutil.ReadAll(resp.Body); readErr == nil {
-			err = fmt.Errorf("%v - %v", err.Error(), string(body))
+		if resp.Body != nil {
+			defer resp.Body.Close()
+			if body, readErr := ioutil.ReadAll(resp.Body); readErr == nil {
+				err = fmt.Errorf("%v - %v", err.Error(), string(body))
+			}
 		}
 	}
 	return err

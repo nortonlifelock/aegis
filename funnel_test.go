@@ -2,12 +2,13 @@ package funnel
 
 import (
 	"context"
-	"github.com/benjivesterby/validator"
-	"github.com/pkg/errors"
 	"net/http"
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/benjivesterby/validator"
+	"github.com/pkg/errors"
 )
 
 func TestFunnel_Do(t *testing.T) {
@@ -31,7 +32,7 @@ func TestFunnel_Do(t *testing.T) {
 				&testlogger{},
 				false,
 			},
-			newReq(http.MethodGet, "fakeurl"),
+			newReq(http.MethodGet, "ValidWValidClient"),
 			tstruct{false},
 		},
 		{
@@ -47,7 +48,7 @@ func TestFunnel_Do(t *testing.T) {
 				&testlogger{},
 				false,
 			},
-			newReq(http.MethodGet, "fakeurl"),
+			newReq(http.MethodGet, "ValidWValidClientConcurrency"),
 			tstruct{false},
 		},
 		{
@@ -63,7 +64,7 @@ func TestFunnel_Do(t *testing.T) {
 				&testlogger{},
 				false,
 			},
-			newReq(http.MethodGet, "fakeurl"),
+			newReq(http.MethodGet, "ValidWValidClientDelay"),
 			tstruct{false},
 		},
 		{
@@ -79,7 +80,7 @@ func TestFunnel_Do(t *testing.T) {
 				&testlogger{},
 				false,
 			},
-			newReq(http.MethodGet, "fakeurl"),
+			newReq(http.MethodGet, "ValidWValidClientDelayAndConcurrency"),
 			tstruct{false},
 		},
 		{
@@ -95,7 +96,7 @@ func TestFunnel_Do(t *testing.T) {
 				&testlogger{},
 				false,
 			},
-			newReq(http.MethodGet, "fakeurl"),
+			newReq(http.MethodGet, "ValidWValidClientW5Retries"),
 			tstruct{false},
 		},
 		{
@@ -111,7 +112,7 @@ func TestFunnel_Do(t *testing.T) {
 				&testlogger{},
 				false,
 			},
-			newReq(http.MethodGet, "fakeurl"),
+			newReq(http.MethodGet, "FailWValidClientW5Retries4Attempts"),
 			tstruct{true},
 		},
 		{
@@ -127,7 +128,7 @@ func TestFunnel_Do(t *testing.T) {
 				&testlogger{},
 				false,
 			},
-			newReq(http.MethodGet, "fakeurl"),
+			newReq(http.MethodGet, "FailWBadStatus"),
 			tstruct{true},
 		},
 		{
@@ -143,7 +144,7 @@ func TestFunnel_Do(t *testing.T) {
 				&testlogger{},
 				false,
 			},
-			newReq(http.MethodGet, "fakeurl"),
+			newReq(http.MethodGet, "FailWBadConcurrency"),
 			tstruct{true},
 		},
 		{
@@ -159,7 +160,7 @@ func TestFunnel_Do(t *testing.T) {
 				&testlogger{},
 				false,
 			},
-			newReq(http.MethodGet, "fakeurl"),
+			newReq(http.MethodGet, "FailWBadRetries"),
 			tstruct{true},
 		},
 		{
@@ -175,7 +176,7 @@ func TestFunnel_Do(t *testing.T) {
 				nil,
 				false,
 			},
-			newReq(http.MethodGet, "fakeurl"),
+			newReq(http.MethodGet, "FailWBadLogger"),
 			tstruct{true},
 		},
 		{
@@ -191,7 +192,7 @@ func TestFunnel_Do(t *testing.T) {
 				&testlogger{},
 				false,
 			},
-			newReq(http.MethodGet, "fakeurl"),
+			newReq(http.MethodGet, "FailWBadDelay"),
 			tstruct{true},
 		},
 		{
@@ -207,7 +208,7 @@ func TestFunnel_Do(t *testing.T) {
 				&testlogger{},
 				true,
 			},
-			newReq(http.MethodGet, "fakeurl"),
+			newReq(http.MethodGet, "FailByCancellation"),
 			tstruct{true},
 		},
 		{
@@ -223,7 +224,7 @@ func TestFunnel_Do(t *testing.T) {
 				&testlogger{},
 				true,
 			},
-			newReq(http.MethodGet, "fakeurl"),
+			newReq(http.MethodGet, "FailByCancellation"),
 			tstruct{true},
 		},
 		{
