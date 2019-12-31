@@ -2,8 +2,8 @@ package job
 
 import (
 	"context"
-	"github.com/pkg/errors"
 	"github.com/nortonlifelock/log"
+	"github.com/pkg/errors"
 	"sync"
 )
 

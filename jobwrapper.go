@@ -7,9 +7,9 @@ import (
 	"time"
 
 	"github.com/benjivesterby/validator"
-	"github.com/pkg/errors"
 	"github.com/nortonlifelock/domain"
 	"github.com/nortonlifelock/log"
+	"github.com/pkg/errors"
 )
 
 type jobWrapper struct {

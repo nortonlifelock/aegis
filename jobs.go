@@ -9,9 +9,9 @@ import (
 	"time"
 
 	"github.com/benjivesterby/validator"
-	"github.com/pkg/errors"
 	"github.com/nortonlifelock/domain"
 	"github.com/nortonlifelock/log"
+	"github.com/pkg/errors"
 )
 
 // GetDBJobs pulls pending jobs from the job queue, as kicks of the threads for running scheduled jobs and processing running jobs
