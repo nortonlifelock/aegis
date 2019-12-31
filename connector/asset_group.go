@@ -3,10 +3,10 @@ package connector
 import (
 	"bytes"
 	"fmt"
+	"github.com/nortonlifelock/log"
+	"github.com/nortonlifelock/qualys"
 	"net"
 	"sort"
-	"github.com/nortonlifelock/qualys"
-	"github.com/nortonlifelock/log"
 	"strconv"
 	"strings"
 )

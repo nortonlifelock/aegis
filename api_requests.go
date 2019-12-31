@@ -10,9 +10,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/pkg/errors"
 	"github.com/nortonlifelock/domain"
 	"github.com/nortonlifelock/log"
+	"github.com/pkg/errors"
 )
 
 //----------------------------------------------------------------

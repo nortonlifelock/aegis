@@ -1,8 +1,8 @@
 package connector
 
 import (
-	"github.com/nortonlifelock/qualys"
 	"github.com/nortonlifelock/log"
+	"github.com/nortonlifelock/qualys"
 	"time"
 )
 

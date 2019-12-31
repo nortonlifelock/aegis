@@ -3,10 +3,10 @@ package qualys
 import (
 	"context"
 	"fmt"
-	"net/http"
 	"github.com/nortonlifelock/domain"
 	"github.com/nortonlifelock/funnel"
 	"github.com/nortonlifelock/log"
+	"net/http"
 	"sync"
 	"time"
 )
