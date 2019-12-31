@@ -3,12 +3,12 @@ package log
 import (
 	"context"
 	"fmt"
+	"github.com/nortonlifelock/connection"
+	"github.com/nortonlifelock/files"
 	"github.com/pkg/errors"
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"github.com/nortonlifelock/connection"
-	"github.com/nortonlifelock/files"
 	"strings"
 	"time"
 )
