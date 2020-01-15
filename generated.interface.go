@@ -170,6 +170,7 @@ type GeneratedDatabaseConnection interface {
 	UpdateOrganization(_ID string, _Description string, _TimezoneOffset float32, _UpdatedBy string) (id int, affectedRows int, err error)
 	UpdatePermissionsByUserOrgID(_UserID string, _OrgID string, _Admin bool, _Manager bool, _Reader bool, _Reporter bool) (id int, affectedRows int, err error)
 	UpdateSourceConfig(_ID string, _OrgID string, _Address string, _Username string, _Password string, _PrivateKey string, _ConsumerKey string, _Token string, _Port string, _Payload string, _UpdatedBy string) (id int, affectedRows int, err error)
+	UpdateSourceConfigConcurrencyByID(_ID string, _Delay int, _Retries int, _Concurrency int) (id int, affectedRows int, err error)
 	UpdateSourceConfigToken(_ID string, _Token string) (id int, affectedRows int, err error)
 	UpdateStateOfDevice(_ID string, _State string, _OrgID string) (id int, affectedRows int, err error)
 	UpdateTag(_DeviceID string, _TagKeyID string, _Value string) (id int, affectedRows int, err error)
