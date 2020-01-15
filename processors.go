@@ -13,7 +13,7 @@ import (
 
 // ProcessSprocs generates classes for every stored procedure that reads information back from the database, as well as generates the go code
 // required to execute the sproc against the database and parse the response
-func ProcessSprocs(dbConn idb, sprocPath string, domainEngPath, sprocGenPath, templatePath string) (err error) {
+func ProcessSprocs(dbConn idb, sprocPath string, domainEngPath, sprocGenPath, templatePath string, generateFiles bool) (err error) {
 
 	var methodMap = make(map[string]string)
 	var includesMap = make(map[string]bool)
@@ -52,25 +52,28 @@ func ProcessSprocs(dbConn idb, sprocPath string, domainEngPath, sprocGenPath, te
 			}
 
 			if err == nil {
-				path = path + "generated.%s.go"
 
-				// For each class build the file for that class
-				for _, class := range builder.classes {
+				if generateFiles {
+					path = path + "generated.%s.go"
 
-					var genClass string
-					if genClass, err = builder.generateClass(class); err == nil {
+					// For each class build the file for that class
+					for _, class := range builder.classes {
 
-						filePath := fmt.Sprintf(path, strings.ToLower(class.Name))
+						var genClass string
+						if genClass, err = builder.generateClass(class); err == nil {
 
-						// Overwrite the file in the folder structure
-						var formattedTemplate []byte
-						formattedTemplate, err = format.Source([]byte(genClass))
-						if err == nil {
-							err = ioutil.WriteFile(filePath, formattedTemplate, 0644)
-						}
+							filePath := fmt.Sprintf(path, strings.ToLower(class.Name))
 
-						if err != nil {
-							fmt.Println(err)
+							// Overwrite the file in the folder structure
+							var formattedTemplate []byte
+							formattedTemplate, err = format.Source([]byte(genClass))
+							if err == nil {
+								err = ioutil.WriteFile(filePath, formattedTemplate, 0644)
+							}
+
+							if err != nil {
+								fmt.Println(err)
+							}
 						}
 					}
 				}
@@ -79,14 +82,16 @@ func ProcessSprocs(dbConn idb, sprocPath string, domainEngPath, sprocGenPath, te
 				var interfaceImports map[string]bool
 				signatures, interfaceImports, err = createsProceduresInDBAndGenerateSignatures(builder, methodMap, includesMap, dbConn)
 
-				path = domainEngPath + "/generated.interface.go"
-				err = generateDatabaseInterface(signatures, templatePath, interfaceImports, path)
-				if err != nil {
-					fmt.Println(err.Error())
+				if generateFiles {
+					path = domainEngPath + "/generated.interface.go"
+					err = generateDatabaseInterface(signatures, templatePath, interfaceImports, path)
+					if err != nil {
+						fmt.Println(err.Error())
+					}
 				}
 
 				// Build the methods files for each database
-				if err == nil {
+				if err == nil && generateFiles {
 					path = sprocGenPath + "/generated.procedures.go"
 					err = generateGoCodeThatExecutesSprocs(includesMap, methodMap, templatePath, path)
 				}
