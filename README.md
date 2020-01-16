@@ -41,7 +41,7 @@ Base Json Configuration File:
     "path_to_aegis": "",
     "ad_servers": ["", ""],
     "ad_ldap_tls_port": 636,
-    "ad_base_dn": "OU=Corporate,OU=Standard,OU=People,DC=corp,DC=ad",
+    "ad_base_dn": "DC=exampledomain,DC=ad",
     "ad_skip_verify": true,
     "ad_member_of_attribute": "memberOf",
     "ad_search_string": "(sAMAccountName=%s)"
