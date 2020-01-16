@@ -21,6 +21,7 @@ type dbconn struct {
 	db      *sql.DB
 	execute chan *Procedure
 	read    chan *Procedure
+	schema  string
 }
 
 // Procedure holds the information required for call a stored procedure
@@ -49,10 +50,10 @@ func NewConnection(config dbConfig) (DatabaseConnection, error) {
 		config.DBPassword(),
 		proto,
 		true,
-	), true)
+	), config.DBSchema())
 }
 
-func connectionBuilder(connectionString string, createDriver bool) (DatabaseConnection, error) {
+func connectionBuilder(connectionString string, schema string) (DatabaseConnection, error) {
 	var db *dbconn
 	var err error
 
@@ -63,6 +64,7 @@ func connectionBuilder(connectionString string, createDriver bool) (DatabaseConn
 			db:      dbInstance,
 			execute: make(chan *Procedure),
 			read:    make(chan *Procedure),
+			schema:  schema,
 		}
 
 		go db.listenForDatabaseRequests(context.Background())
@@ -155,11 +157,12 @@ func (conn *dbconn) tableExists(table string) (exists bool, err error) {
 	if len(table) > 0 {
 
 		// TODO: Validate table name to ensure that there is not sql injection here
-
-		command := "select EXISTS(select * from information_schema.tables where table_name = '%s' limit 1) as result;"
-
-		// Update the check with the correct table name
-		command = fmt.Sprintf(command, table)
+		var command string
+		if len(conn.schema) > 0 {
+			command = fmt.Sprintf("select EXISTS(select * from information_schema.tables where table_name = '%s'  and table_schema = '%s' limit 1) as result;", table, conn.schema)
+		} else {
+			command = fmt.Sprintf("select EXISTS(select * from information_schema.tables where table_name = '%s' limit 1) as result;", table)
+		}
 
 		// Run exists check
 		exists, err = conn.existsCheck(command)
