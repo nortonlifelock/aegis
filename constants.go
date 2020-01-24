@@ -95,3 +95,8 @@ const (
 	// Vendor is the ID that corresponds to a generic entry in the VulnerabilityReference table
 	Vendor = 2
 )
+
+const (
+	// VulnPathConcatenator is used for when the same vulnerability is present on multiple paths. The concatenator joins the vulnerability ID and the path to ensure no instance of the vulnerability is skipped
+	VulnPathConcatenator = ";"
+)

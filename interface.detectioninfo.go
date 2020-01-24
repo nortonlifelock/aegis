@@ -14,6 +14,8 @@ type DetectionInfo interface {
 	DetectionStatusID() int
 	TimesSeen() int
 	Port() int
+	IgnoreID() *string
+	Updated() time.Time
 	Protocol() string
 	ActiveKernel() *int
 }
