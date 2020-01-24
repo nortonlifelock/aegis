@@ -22,6 +22,11 @@ github.com/google/go-querystring v0.0.0-20170111101155-53e6ce116135 h1:zLTLjkaOF
 github.com/google/go-querystring v0.0.0-20170111101155-53e6ce116135/go.mod h1:odCYkC5MyYFN7vkCjXpyrEuKhc/BUO6wN/zVPAxq5ck=
 github.com/jmespath/go-jmespath v0.0.0-20180206201540-c2b33e8439af h1:pmfjZENx5imkbgOkpRUYLnmbU7UEFbjtDA2hxJ1ichM=
 github.com/jmespath/go-jmespath v0.0.0-20180206201540-c2b33e8439af/go.mod h1:Nht3zPeWKUH0NzdCt2Blrr5ys8VGpn0CEB0cQHVjt7k=
+github.com/nortonlifelock/connection v1.0.0/go.mod h1:D3AcK+pIIFPt/hKhjuEkhkCRaSYelwSYmw8cKqmba/0=
+github.com/nortonlifelock/domain v1.0.0/go.mod h1:K3X+mz2P0Cx9bOob3jzqDCXM8UmAv4HKqrMUqFCOuh4=
+github.com/nortonlifelock/files v1.0.0/go.mod h1:ysI+Id+8FykfZXLfd2dflw17naIW8ePei/rgLmTBIfM=
+github.com/nortonlifelock/funnel v1.0.0/go.mod h1:TuMsXaIdv7u3n3j00+3cjLD9M7CLR9xTeFm4yNJfzyw=
+github.com/nortonlifelock/log v1.0.0/go.mod h1:wL9ECRgtkte486J5tqQV7/7PUcmzQivBtSPTry/8sUc=
 github.com/pkg/errors v0.8.0/go.mod h1:bwawxfHBFNV+L2hUp1rHADufV3IMtnDRdf1r5NINEl0=
 github.com/pkg/errors v0.8.1 h1:iURUrRGxPUNPdy5/HRSm+Yj6okJ6UtLINN0Q9M4+h3I=
 github.com/pkg/errors v0.8.1/go.mod h1:bwawxfHBFNV+L2hUp1rHADufV3IMtnDRdf1r5NINEl0=

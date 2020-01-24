@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"encoding/pem"
 	"fmt"
+	"github.com/nortonlifelock/funnel"
 	"net/http"
 	"net/url"
 	"strings"
@@ -19,7 +20,7 @@ import (
 
 // Create a jira client instance
 // Pulled from https://gist.github.com/Lupus/edafe9a7c5c6b13407293d795442fe67
-func (connector *ConnectorJira) getOauthClient(JiraURL, JiraPk, JiraCk, JiraToken string) (client *http.Client, token string, err error) {
+func (connector *ConnectorJira) getOauthClient(JiraURL, JiraPk, JiraCk, JiraToken string) (client funnel.Client, token string, err error) {
 	if len(JiraURL) > 0 {
 		if len(JiraPk) > 0 {
 			if len(JiraCk) > 0 {
@@ -117,7 +118,7 @@ func (connector *ConnectorJira) updateToken(token string) (err error) {
 	return err
 }
 
-func (connector *ConnectorJira) initClient(httpClient *http.Client, baseURL string) (err error) {
+func (connector *ConnectorJira) initJIRALayerClient(httpClient funnel.Client, baseURL string) (err error) {
 	connector.client, err = jira.NewClient(httpClient, baseURL)
 	return err
 }
@@ -158,12 +159,11 @@ func (connector *ConnectorJira) getTokenFromJIRA(config *oauth1.Config) (token *
 	return token, err
 }
 
-func (connector *ConnectorJira) initBasicClient(JiraURL, JiraUser, JiraPass string) (err error) {
+func (connector *ConnectorJira) initBasicClient(JiraURL, JiraUser, JiraPass string) (client funnel.Client, err error) {
 	tp := jira.BasicAuthTransport{
 		Username: JiraUser,
 		Password: JiraPass,
 	}
 
-	connector.client, err = jira.NewClient(tp.Client(), JiraURL)
-	return err
+	return tp.Client(), err
 }

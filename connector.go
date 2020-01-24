@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"net/http"
 	"strings"
 	"sync"
 
@@ -22,6 +21,10 @@ type logger interface {
 type ConfigJira interface {
 	EncryptionKey() string
 }
+
+// funnelMap ensures all instances of JIRA don't create separate funnels
+// the key is the URL of the JIRA instance and the value is the API funnel for that instance
+var funnelMap sync.Map
 
 // ConnectorJira is the struct that is used to make API calls against JIRA
 type ConnectorJira struct {
@@ -52,10 +55,10 @@ type PayloadJira struct {
 	// Mappable fields is used by the UI to discern which JIRA fields can be mapped to a field supplied by a cloud provider
 	MappableFields []string `json:"mappable_fields,omitempty"`
 
-	// Maps the Aegis name for a status to the JIRA-specific name for a status
+	// Maps the PDE name for a status to the JIRA-specific name for a status
 	StatusMap map[string]string `json:"status_map"`
 
-	// Maps the Aegis name for a field to the JIRA-specific name for a field
+	// Maps the PDE name for a field to the JIRA-specific name for a field
 	FieldMap map[string]string `json:"field_map"`
 }
 
@@ -98,55 +101,50 @@ func buildConnector(ctx context.Context, payload PayloadJira, config domain.Sour
 	authInfoJSON := config.AuthInfo()
 	if err = json.Unmarshal([]byte(authInfoJSON), authInfo); err == nil {
 
+		var authLayerClient funnel.Client
 		if len(authInfo.PrivateKey) > 0 && len(authInfo.ConsumerKey) > 0 {
-			var client *http.Client
-			client, token, err = connector.getOauthClient(config.Address(), authInfo.PrivateKey, authInfo.ConsumerKey, authInfo.Token)
-			if err == nil {
-				err = connector.initClient(client, config.Address())
-			}
+			authLayerClient, token, err = connector.getOauthClient(config.Address(), authInfo.PrivateKey, authInfo.ConsumerKey, authInfo.Token)
 		} else {
 			connector.lstream.Send(log.Warning("JIRA using basic authentication instead of Oauth", err))
-			err = connector.initBasicClient(config.Address(), authInfo.Username, authInfo.Password)
+			authLayerClient, err = connector.initBasicClient(config.Address(), authInfo.Username, authInfo.Password)
 		}
 
-		if connector.client != nil && err == nil {
+		if err == nil {
 
-			var client funnel.Client
-			if client, err = funnel.New(ctx, &jiraClientWrapper{connector.client}, lstream, authInfo.Delay(), authInfo.Retries(), authInfo.Concurrency()); err == nil {
-
-				connector.funnelClient = client
-
-				// loads the fields, resolutions, statuses, issue types, and workflow
-				err = connector.loadConnectorData()
-			}
-		} else {
-			if err == nil {
-				err = fmt.Errorf("could not authenticate JIRA client")
+			var driverFunnel funnel.Client
+			if clientInterface, ok := funnelMap.Load(config.Address()); ok {
+				if driverFunnel, ok = clientInterface.(funnel.Client); !ok {
+					err = fmt.Errorf("error while loading client [%v] from cache", clientInterface)
+				}
 			} else {
-				err = fmt.Errorf("could not authenticate JIRA client - %s", err.Error())
+				// driverFunnel uses a background context so a completing job doesn't destroy the shared funnel
+				if driverFunnel, err = funnel.New(context.Background(), authLayerClient, lstream, authInfo.Delay(), authInfo.Retries(), authInfo.Concurrency()); err == nil {
+
+					// perform a load or store so if multiple funnels are created due to concurrency, each jira driver still share a single client
+					clientInterface, _ = funnelMap.LoadOrStore(config.Address(), driverFunnel)
+					if driverFunnel, ok = clientInterface.(funnel.Client); !ok {
+						err = fmt.Errorf("error while loading client [%v] from cache", clientInterface)
+					}
+				}
+			}
+
+			if err == nil {
+				// instanceFunnel != driverFunnel as the driver funnel needs a context that cannot be cancelled
+				// instanceFunnel uses the context that can be cancelled by a parent
+				var instanceFunnel funnel.Client
+				if instanceFunnel, err = funnel.New(ctx, driverFunnel, lstream, authInfo.Delay(), authInfo.Retries(), authInfo.Concurrency()); err == nil {
+					connector.funnelClient = instanceFunnel
+
+					if err = connector.initJIRALayerClient(connector.funnelClient, config.Address()); err == nil {
+						// loads the fields, resolutions, statuses, issue types, and workflow
+						err = connector.loadConnectorData()
+					}
+				}
 			}
 		}
 	}
 
 	return connector, token, err
-}
-
-type jiraClientWrapper struct {
-	client *jira.Client
-}
-
-func (wrapper *jiraClientWrapper) Do(req *http.Request) (resp *http.Response, err error) {
-	var jiraResp *jira.Response
-	jiraResp, err = wrapper.client.Do(req, nil)
-	if err == nil {
-		if jiraResp != nil {
-			resp = jiraResp.Response
-		} else {
-			err = fmt.Errorf("nil response")
-		}
-	}
-
-	return resp, err
 }
 
 func ensureAllStatusesExistInMap(statusMap map[string]string) (err error) {
@@ -196,14 +194,14 @@ func ConnectJira(api string, user string, password string, lstream logger) (conn
 					lstream: lstream,
 				}
 
-				if err = connector.initBasicClient(api, user, password); err == nil {
-					if connector.client != nil {
-						if connector.funnelClient, err = funnel.New(context.Background(), &jiraClientWrapper{connector.client}, lstream, 5, 2, 10); err == nil {
+				var authLayerClient funnel.Client
+				if authLayerClient, err = connector.initBasicClient(api, user, password); err == nil {
+					if connector.funnelClient, err = funnel.New(context.Background(), authLayerClient, lstream, 5, 2, 10); err == nil {
+
+						if err = connector.initJIRALayerClient(connector.funnelClient, api); err == nil {
 							// Load the Fields for the connector object
 							connector.Fields, err = connector.getFields()
 						}
-					} else {
-						err = fmt.Errorf("could not authenticate JIRA client")
 					}
 				}
 			} else {

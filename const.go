@@ -88,6 +88,9 @@ const (
 
 	// StatusClosedError is
 	StatusClosedError = "Closed-Error"
+
+	// StatusScanError is used for denoting when a scan failed to reach a device
+	StatusScanError = "Scan-Error"
 )
 
 // API Endpoints

@@ -149,6 +149,14 @@ func (connector *ConnectorJira) UpdateTicket(ticket domain.Ticket, comment strin
 				}
 			}
 
+			if len(ticket.GroupID()) > 0 {
+				field := connector.GetFieldMap(backendGroupID)
+				if field != nil {
+					updateBlock.Fields.GroupID = ticket.GroupID()
+					oldToNewFieldName["groupid"] = field.ID
+				}
+			}
+
 			if ticket.LastChecked() != nil && !ticket.LastChecked().IsZero() {
 				field := connector.GetFieldMap(backendLastChecked)
 				if field != nil {

@@ -75,6 +75,11 @@ func (connector *ConnectorJira) mapDalTicketToJiraIssue(ticket domain.Ticket) (j
 			setJIField(connector, ji, backendScanID, strconv.Itoa(ticket.ScanID()))
 		}
 
+		// group ID may not be necessary for vulnerability remediators, but it is useful for tracking CIS tickets by the cloud account
+		if len(ticket.GroupID()) > 0 {
+			setJIField(connector, ji, backendGroupID, ticket.GroupID())
+		}
+
 		setJIField(connector, ji, backendVulnerabilityID, ticket.VulnerabilityID())
 		setJIField(connector, ji, backendOperatingSystem, ticket.OperatingSystem())
 		setJIField(connector, ji, backendVRRPriority, ticket.Priority()) // TODO: This should default to critical if it's not properly set?
