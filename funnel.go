@@ -106,15 +106,6 @@ func (f *funnel) processRequestWhenAppropriate(reqs chan requestWrapper) {
 func (f *funnel) process(requests chan requestWrapper) {
 	defer f.handle()
 
-	// Must have the context done in the select here otherwise if the ctx is closed
-	// then this will cause a panic because of sending on a closed channel
-	defer func() {
-		select {
-		case <-f.ctx.Done():
-		case f.concurrencyticker <- true:
-		}
-	}()
-
 	select {
 	case <-f.ctx.Done():
 	case req, ok := <-requests:
@@ -136,6 +127,15 @@ func (f *funnel) process(requests chan requestWrapper) {
 }
 
 func (f *funnel) handleRequest(req requestWrapper, requests chan requestWrapper) {
+	// Must have the context done in the select here otherwise if the ctx is closed
+	// then this will cause a panic because of sending on a closed channel
+	defer func() {
+		select {
+		case <-f.ctx.Done():
+		case f.concurrencyticker <- true:
+		}
+	}()
+
 	// increment the attempt counter
 	req.attempts++
 	// Execute a call against the endpoint handling any potential panics from the http client
@@ -145,6 +145,8 @@ func (f *funnel) handleRequest(req requestWrapper, requests chan requestWrapper)
 				err = errors.New("panic occurred while executing http request")
 			}
 		}()
+
+		req.request.Close = true
 
 		// Execute the http request and return the response to the requester
 		resp, err = f.client.Do(req.request)
@@ -163,8 +165,12 @@ func (f *funnel) handleRequest(req requestWrapper, requests chan requestWrapper)
 		req.response <- responseWrapper{resp, err}
 	} else {
 		if resp != nil {
+			defer resp.Body.Close()
+
 			if resp.StatusCode != http.StatusNotFound {
-				f.lstream.Send(log.Warningf(nil, "code: %v - retrying: %s", resp.StatusCode, req.request.URL))
+
+				body, _ := ioutil.ReadAll(resp.Body)
+				f.lstream.Send(log.Warningf(nil, "code: %v - response body: [%s] - retrying: %s", resp.StatusCode, string(body), req.request.URL))
 
 				// Send the request back on the channel
 				go func() {
@@ -193,11 +199,9 @@ func (f *funnel) handleFailedRequest(resp *http.Response) (err error) {
 	if resp != nil && resp.StatusCode >= 300 {
 		err = errors.Errorf("retries exceeded for request | code: %v", resp.StatusCode)
 
-		if resp.Body != nil {
-			defer resp.Body.Close()
-			if body, readErr := ioutil.ReadAll(resp.Body); readErr == nil {
-				err = fmt.Errorf("%v - %v", err.Error(), string(body))
-			}
+		defer resp.Body.Close()
+		if body, readErr := ioutil.ReadAll(resp.Body); readErr == nil {
+			err = fmt.Errorf("%v - %v", err.Error(), string(body))
 		}
 	}
 	return err
