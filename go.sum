@@ -13,6 +13,7 @@ github.com/nortonlifelock/connection v1.0.0 h1:qtUPEZ3RPb1uGb0ityKJsviJ7FLVhzb0A
 github.com/nortonlifelock/connection v1.0.0/go.mod h1:D3AcK+pIIFPt/hKhjuEkhkCRaSYelwSYmw8cKqmba/0=
 github.com/nortonlifelock/domain v1.0.0 h1:U0sSI7nonNHIkneroyU/4M2kNxgM9LUsCoSokKdu5/U=
 github.com/nortonlifelock/domain v1.0.0/go.mod h1:K3X+mz2P0Cx9bOob3jzqDCXM8UmAv4HKqrMUqFCOuh4=
+github.com/nortonlifelock/domain v1.0.1-0.20200127165419-481d9e56f9ae/go.mod h1:HnL3BIG/tzGDi0F4N1ncI5r3Mxrm9MzEQ196bHGOFJM=
 github.com/nortonlifelock/files v1.0.0 h1:AKhTO0ozZsznao9tgrDbNkjaILPFadyBqWIKqSK4ylg=
 github.com/nortonlifelock/files v1.0.0/go.mod h1:ysI+Id+8FykfZXLfd2dflw17naIW8ePei/rgLmTBIfM=
 github.com/nortonlifelock/log v1.0.0 h1:ag8ehu+w+uvfwX8zjuQjYklhMrxDnR1qtJaydxO94E0=
