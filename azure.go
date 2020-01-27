@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"github.com/Azure/azure-sdk-for-go/profiles/latest/network/mgmt/network"
 	"github.com/Azure/azure-sdk-for-go/profiles/latest/resources/mgmt/subscriptions"
-	network2 "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2019-07-01/network"
+	network2 "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2019-09-01/network"
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure/auth"
 	"github.com/nortonlifelock/aws"
