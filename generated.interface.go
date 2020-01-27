@@ -18,7 +18,7 @@ type GeneratedDatabaseConnection interface {
 	connection.DatabaseConnection
 
 	CleanUp() (id int, affectedRows int, err error)
-	CreateAssetGroup(inOrgID string, _GroupID int, _ScannerSourceID string) (id int, affectedRows int, err error)
+	CreateAssetGroup(inOrgID string, _GroupID int, _ScannerSourceID string, _ScannerSourceConfigID string) (id int, affectedRows int, err error)
 	CreateAssetWithIPInstanceID(_State string, _IP string, _MAC string, _SourceID string, _InstanceID string, _Region string, _OrgID string, _OS string, _OsTypeID int) (id int, affectedRows int, err error)
 	CreateCategory(_Category string) (id int, affectedRows int, err error)
 	CreateDBLog(_User string, _Command string, _Endpoint string) (id int, affectedRows int, err error)
@@ -59,7 +59,7 @@ type GeneratedDatabaseConnection interface {
 	GetAllJobConfigs(_OrgID string) ([]JobConfig, error)
 	GetAllJobConfigsWithOrder(_offset int, _limit int, _configID string, _jobid int, _dataInSourceConfigID string, _dataOutSourceConfigID string, _priorityOverride int, _continuous bool, _Payload string, _waitInSeconds int, _maxInstances int, _autoStart bool, _OrgID string, _updatedBy string, _createdBy string, _sortField string, _sortOrder string, _updatedDate time.Time, _createdDate time.Time, _lastJobStart time.Time, _ID string) ([]JobConfig, error)
 	GetAssetGroup(inOrgID string, _GroupID int, _ScannerSourceID string) (AssetGroup, error)
-	GetAssetGroupForOrg(inScannerSource string, inOrgID string) ([]AssetGroup, error)
+	GetAssetGroupForOrg(inScannerSourceConfigID string, inOrgID string) ([]AssetGroup, error)
 	GetAssetGroupsByCloudSource(inOrgID string, inCloudSourceID string) ([]AssetGroup, error)
 	GetAssignmentGroupByIP(_SourceID string, _OrganizationID string, _IP string) ([]AssignmentGroup, error)
 	GetAssignmentGroupByOrgIP(_OrganizationID string, _IP string) ([]AssignmentGroup, error)
