@@ -48,47 +48,45 @@ func (conn *Connection) Discovery(ctx context.Context, matches []domain.Match) <
 
 		if matches != nil {
 
-			if strings.Count(conn.settings.DiscoveryNameFormat, "%s") == 1 {
-				var groupToMatch = make(map[string][]domain.Match)
+			var groupToMatch = make(map[string][]domain.Match)
 
-				for _, detection := range matches {
-					if groupToMatch[detection.GroupID()] == nil {
-						groupToMatch[detection.GroupID()] = make([]domain.Match, 0)
-					}
-
-					groupToMatch[detection.GroupID()] = append(groupToMatch[detection.GroupID()], detection)
+			for _, detection := range matches {
+				if groupToMatch[detection.GroupID()] == nil {
+					groupToMatch[detection.GroupID()] = make([]domain.Match, 0)
 				}
 
-				wg := &sync.WaitGroup{}
-				for groupToRescan, detectionsToRescan := range groupToMatch {
-					wg.Add(1)
-					go func(groupToRescan string, detectionsToRescan []domain.Match) {
-						defer handleRoutinePanic(conn.logger)
-						defer wg.Done()
+				groupToMatch[detection.GroupID()] = append(groupToMatch[detection.GroupID()], detection)
+			}
 
-						if templateID, err := conn.api.DuplicateScanTemplate(conn.settings.DiscoveryTemplate); err == nil {
-							scanName := fmt.Sprintf(conn.settings.ScanNameFormat)
-							var scan *Scan
-							scan, err = conn.createScanForDetections(matches, groupToRescan, scanName, templateID, strconv.Itoa(conn.settings.RescanSite))
+			wg := &sync.WaitGroup{}
+			for groupToRescan, detectionsToRescan := range groupToMatch {
+				wg.Add(1)
+				go func(groupToRescan string, detectionsToRescan []domain.Match) {
+					defer handleRoutinePanic(conn.logger)
+					defer wg.Done()
 
-							if err == nil {
-								select {
-								case <-ctx.Done():
-									return
-								case out <- scan:
-								}
-							} else {
-								conn.logger.Send(log.Errorf(err, "failed to create scan"))
+					if templateID, err := conn.api.DuplicateScanTemplate(conn.settings.DiscoveryTemplate); err == nil {
+						scanName := fmt.Sprintf("%s_%s", conn.settings.DiscoveryNameFormat, time.Now().Format(time.RFC3339))
+
+						var scan *Scan
+						scan, err = conn.createScanForDetections(matches, groupToRescan, scanName, templateID, strconv.Itoa(conn.settings.RescanSite))
+
+						if err == nil {
+							select {
+							case <-ctx.Done():
+								return
+							case out <- scan:
 							}
 						} else {
-							conn.logger.Send(log.Errorf(err, "error while creating copy of discovery scan template"))
+							conn.logger.Send(log.Errorf(err, "failed to create scan"))
 						}
-					}(groupToRescan, detectionsToRescan)
-				}
-				wg.Wait()
-			} else {
-				conn.logger.Send(log.Error("the discovery name template must contain a single %s placeholder", nil))
+					} else {
+						conn.logger.Send(log.Errorf(err, "error while creating copy of discovery scan template"))
+					}
+				}(groupToRescan, detectionsToRescan)
 			}
+			wg.Wait()
+
 		} else {
 			conn.logger.Send(log.Errorf(nil, "nil match slice passed for discovery scan"))
 		}
@@ -135,9 +133,10 @@ func (conn *Connection) Detections(ctx context.Context, groupsIDs []string) (<-c
 }
 
 // ScanResults returns a channel of scan results for the scan
-func (conn *Connection) ScanResults(ctx context.Context, payload []byte) (<-chan domain.Detection, error) {
+func (conn *Connection) ScanResults(ctx context.Context, payload []byte) (<-chan domain.Detection, <-chan domain.KeyValue, error) {
 	var detections chan domain.Detection
 	var err error
+	var deadHostIPToProof = make(chan domain.KeyValue) // TODO how to get these results?
 
 	if len(payload) > 0 {
 		ctx = ctxtest(ctx)
@@ -204,7 +203,7 @@ func (conn *Connection) ScanResults(ctx context.Context, payload []byte) (<-chan
 		conn.logger.Send(log.Error("error while gathering scan results", err))
 	}
 
-	return detections, err
+	return detections, deadHostIPToProof, err
 }
 
 // Scan creates a scan for a set of detections in Nexpose
@@ -213,65 +212,63 @@ func (conn *Connection) Scan(ctx context.Context, detections []domain.Match) (<-
 	var err error
 
 	if detections != nil {
-		if strings.Count(conn.settings.ScanNameFormat, "%s") == 1 {
-			ctx = ctxtest(ctx)
 
-			go func(ctx context.Context, scans chan<- domain.Scan) {
-				defer handleRoutinePanic(conn.logger)
-				defer close(scans)
+		ctx = ctxtest(ctx)
 
-				var groupToMatch = make(map[string][]domain.Match)
+		go func(ctx context.Context, scans chan<- domain.Scan) {
+			defer handleRoutinePanic(conn.logger)
+			defer close(scans)
 
-				for _, detection := range detections {
-					if groupToMatch[detection.GroupID()] == nil {
-						groupToMatch[detection.GroupID()] = make([]domain.Match, 0)
+			var groupToMatch = make(map[string][]domain.Match)
+
+			for _, detection := range detections {
+				if groupToMatch[detection.GroupID()] == nil {
+					groupToMatch[detection.GroupID()] = make([]domain.Match, 0)
+				}
+
+				groupToMatch[detection.GroupID()] = append(groupToMatch[detection.GroupID()], detection)
+			}
+
+			wg := &sync.WaitGroup{}
+			for groupToRescan, detectionsToRescan := range groupToMatch {
+				wg.Add(1)
+				go func(groupToRescan string, detectionsToRescan []domain.Match) {
+					defer handleRoutinePanic(conn.logger)
+					defer wg.Done()
+
+					var vulns = make([]string, 0)
+					var seenVuln = make(map[string]bool)
+
+					for _, detection := range detectionsToRescan {
+						if !seenVuln[detection.Vulnerability()] {
+							seenVuln[detection.Vulnerability()] = true
+							vulns = append(vulns, detection.Vulnerability())
+						}
 					}
 
-					groupToMatch[detection.GroupID()] = append(groupToMatch[detection.GroupID()], detection)
-				}
+					if templateID, err := conn.api.DuplicateScanTemplateWVulns(ctx, conn.settings.ScanTemplate, vulns); err == nil {
+						scanName := fmt.Sprintf("%s_%s", conn.settings.ScanNameFormat, time.Now().Format(time.RFC3339))
 
-				wg := &sync.WaitGroup{}
-				for groupToRescan, detectionsToRescan := range groupToMatch {
-					wg.Add(1)
-					go func(groupToRescan string, detectionsToRescan []domain.Match) {
-						defer handleRoutinePanic(conn.logger)
-						defer wg.Done()
+						var scan *Scan
+						scan, err = conn.createScanForDetections(detectionsToRescan, groupToRescan, scanName, templateID, strconv.Itoa(conn.settings.RescanSite))
 
-						var vulns = make([]string, 0)
-						var seenVuln = make(map[string]bool)
-
-						for _, detection := range detectionsToRescan {
-							if !seenVuln[detection.Vulnerability()] {
-								seenVuln[detection.Vulnerability()] = true
-								vulns = append(vulns, detection.Vulnerability())
-							}
-						}
-
-						if templateID, err := conn.api.DuplicateScanTemplateWVulns(ctx, conn.settings.ScanTemplate, vulns); err == nil {
-							scanName := fmt.Sprintf(conn.settings.ScanNameFormat, time.Now().Format(time.RFC3339))
-
-							var scan *Scan
-							scan, err = conn.createScanForDetections(detectionsToRescan, groupToRescan, scanName, templateID, strconv.Itoa(conn.settings.RescanSite))
-
-							if err == nil {
-								select {
-								case <-ctx.Done():
-									return
-								case scans <- scan:
-								}
-							} else {
-								conn.logger.Send(log.Errorf(err, "failed to create scan"))
+						if err == nil {
+							select {
+							case <-ctx.Done():
+								return
+							case scans <- scan:
 							}
 						} else {
-							conn.logger.Send(log.Errorf(err, "error while creating scan template"))
+							conn.logger.Send(log.Errorf(err, "failed to create scan"))
 						}
-					}(groupToRescan, detectionsToRescan)
-				}
-				wg.Wait()
-			}(ctx, scans)
-		} else {
-			err = errors.New("scan_name_format must contain a single '%s' symbol")
-		}
+					} else {
+						conn.logger.Send(log.Errorf(err, "error while creating scan template"))
+					}
+				}(groupToRescan, detectionsToRescan)
+			}
+			wg.Wait()
+		}(ctx, scans)
+
 	} else {
 		err = fmt.Errorf("nil detection slice")
 	}

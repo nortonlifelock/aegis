@@ -82,6 +82,7 @@ func (a *asset) Vulnerabilities(ctx context.Context) (<-chan domain.Detection, e
 										proof:           result.Proof,
 										port:            int(result.Port),
 										protocol:        result.Protocol,
+										updated:         finding.Since,
 									}:
 									}
 								}

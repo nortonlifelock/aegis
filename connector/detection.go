@@ -19,6 +19,7 @@ type detection struct {
 	proof           string
 	port            int
 	protocol        string
+	updated         string
 }
 
 // ID returns the Aegis database ID, which is not present in the Nexpose object
@@ -36,7 +37,7 @@ func (d *detection) VulnerabilityID() (ID string) {
 
 		// TODO: Add hashing here
 		// concat the two together
-		ID = fmt.Sprintf("%s;%s", ID, resultID)
+		ID = fmt.Sprintf("%s%s%s", ID, domain.VulnPathConcatenator, resultID)
 	}
 
 	return ID
@@ -67,6 +68,15 @@ func (d *detection) Port() int {
 
 func (d *detection) Protocol() string {
 	return d.protocol
+}
+
+func (d *detection) IgnoreID() (*string, error) {
+	return nil, fmt.Errorf("ignore id not retrievable from Nexpose")
+}
+
+// Updated - Nexpose doesn't return the date the last time the detection was updated
+func (d *detection) Updated() time.Time {
+	return time.Time{}
 }
 
 // ActiveKernel is not implemented in nexpose
