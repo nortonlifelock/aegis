@@ -636,7 +636,7 @@ func (builder *builder) assignClassMap(class *structDescriptor, imports *map[str
 
 func (builder *builder) calculateClassMap(class *structDescriptor, i int, cmap string, pname string) string {
 	if class.PArray[i].GoType == "bool" || class.PArray[i].GoType == "*bool" {
-		cmap += fmt.Sprintf("%svar: my%s[0] > 0, // converts uint8 to bool \n", pname, pname)
+		cmap += fmt.Sprintf("%svar: my%s[0] > 0 && my%s[0] != 48, // converts uint8 to bool (48 is ASCII code for 0, which is reserved for false) \n", pname, pname, pname)
 	} else if class.PArray[i].IsMapType {
 		if class.PArray[i].MapSingle {
 			cmap += fmt.Sprintf("%svar: nil, \n", pname)
