@@ -58,37 +58,19 @@ func (session *QsSession) createCopyOfOptionProfile(optionProfileToCopy int) (op
 }
 
 func (session *QsSession) createOptionProfileWithSearchList(QIDs []string, optionProfileToCopy int) (optionProfileID string, searchListID string, err error) {
-	if searchListID, err = session.apiSession.CreateSearchList(QIDs, session.payload.SearchListFormatString); err == nil {
+	var searchListTitle string
+	if searchListID, searchListTitle, err = session.apiSession.CreateSearchList(QIDs, session.payload.SearchListFormatString); err == nil {
 		var optionProfileTemplate *qualys.OptionProfiles
 		if optionProfileTemplate, err = session.apiSession.GetOptionProfile(optionProfileToCopy); err == nil {
 
 			var title = fmt.Sprintf(session.payload.OptionProfileFormatString, strconv.Itoa(time.Now().Nanosecond()))
 			optionProfileTemplate.OptionProfile.BasicInfo.GroupName = title
+			optionProfileTemplate.OptionProfile.Scan.VulnerabilityDetection.CustomList.Custom = append(optionProfileTemplate.OptionProfile.Scan.VulnerabilityDetection.CustomList.Custom, qualys.SearchListEntry{
+				ID:    searchListID,
+				Title: searchListTitle,
+			})
 
-			var foundSearchListToOverwrite bool
-			// need to find the search list template to overwrite
-			for index, searchList := range optionProfileTemplate.OptionProfile.Scan.VulnerabilityDetection.CustomList.Custom {
-				if searchList.ID == strconv.Itoa(session.payload.SearchListID) {
-					foundSearchListToOverwrite = true
-					var overwriteSearchList = &optionProfileTemplate.OptionProfile.Scan.VulnerabilityDetection.CustomList.Custom[index]
-					overwriteSearchList.ID = searchListID
-					overwriteSearchList.Title = title
-					break
-				}
-			}
-
-			if foundSearchListToOverwrite {
-				optionProfileID, err = session.apiSession.CreateOptionProfile(optionProfileTemplate)
-			} else {
-				// failed while setting up the option profile, clean up by deleting the search list that will not be used
-				err = session.apiSession.DeleteSearchList(searchListID)
-				if err == nil {
-					err = fmt.Errorf("failed to find the search list ID to overwrite [%d] in the option profile", session.payload.SearchListID)
-				} else {
-					err = fmt.Errorf("failed to find the search list ID to overwrite [%d] in the option profile AND failure while deleting search list [%s]", session.payload.SearchListID, searchListID)
-				}
-			}
-
+			optionProfileID, err = session.apiSession.CreateOptionProfile(optionProfileTemplate)
 		} else {
 			err = fmt.Errorf("error while gathering the option profile template - %s", err.Error())
 		}

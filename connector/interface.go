@@ -109,12 +109,20 @@ func (session *QsSession) Detections(ctx context.Context, groupsIDs []string) (d
 }
 
 // ScanResults takes a scanID and returns a series of detections that were found by the corresponding scan
-func (session *QsSession) ScanResults(ctx context.Context, payload []byte) (detections <-chan domain.Detection, err error) {
+func (session *QsSession) ScanResults(ctx context.Context, payload []byte) (<-chan domain.Detection, <-chan domain.KeyValue, error) {
 	var out = make(chan domain.Detection)
+	var deadIPToProof = make(chan domain.KeyValue)
 
-	go func(out chan<- domain.Detection) {
+	go func(out chan<- domain.Detection, deadIPToProof chan<- domain.KeyValue) {
 		defer handleRoutinePanic(session.lstream)
 		defer close(out)
+
+		var needToClose = true
+		defer func() {
+			if needToClose {
+				close(deadIPToProof)
+			}
+		}()
 
 		scanInfo := &scan{session: session}
 		if err := json.Unmarshal(payload, scanInfo); err == nil {
@@ -133,6 +141,23 @@ func (session *QsSession) ScanResults(ctx context.Context, payload []byte) (dete
 
 						var deadHostIPToProof map[string]string
 						if deadHostIPToProof, err = session.getDeadHostsForScan(scanInfo.ScanID, scanInfo.Created); err == nil {
+
+							needToClose = false
+							go func() {
+								defer close(deadIPToProof)
+
+								for deadIP, proof := range deadHostIPToProof {
+									select {
+									case <-ctx.Done():
+										return
+									case deadIPToProof <- deadIPProofCombo{
+										ip:    deadIP,
+										proof: proof,
+									}:
+									}
+								}
+							}()
+
 							if session.pushDetectionsOnChannel(ctx, output, deadHostIPToProof, out) {
 								return
 							}
@@ -174,9 +199,9 @@ func (session *QsSession) ScanResults(ctx context.Context, payload []byte) (dete
 			session.lstream.Send(log.Errorf(err, "error while unmarshalling scan"))
 		}
 
-	}(out)
+	}(out, deadIPToProof)
 
-	return out, err
+	return out, deadIPToProof, nil
 }
 
 func (session *QsSession) pushDetectionsOnChannel(ctx context.Context, output *qualys.QHostListDetectionOutput, deadHostIPToProof map[string]string, out chan<- domain.Detection) bool {
@@ -186,6 +211,8 @@ func (session *QsSession) pushDetectionsOnChannel(ctx context.Context, output *q
 			if len(deadHostIPToProof[h.IPAddress]) > 0 {
 				d.Status = domain.DeadHost
 				d.Proof = deadHostIPToProof[h.IPAddress]
+			} else if d.Status == "Fixed" {
+				d.Status = domain.Fixed
 			}
 
 			select {
@@ -205,6 +232,19 @@ func (session *QsSession) pushDetectionsOnChannel(ctx context.Context, output *q
 	}
 
 	return false
+}
+
+type deadIPProofCombo struct {
+	ip    string
+	proof string
+}
+
+func (d deadIPProofCombo) Key() string {
+	return d.ip
+}
+
+func (d deadIPProofCombo) Value() string {
+	return d.proof
 }
 
 // Discovery kicks of a Qualys scan to identify which devices corresponding to the IPs are online
@@ -263,15 +303,7 @@ func (session *QsSession) Scan(ctx context.Context, detections []domain.Match) (
 		defer handleRoutinePanic(session.lstream)
 		defer close(out)
 
-		// TODO should chop these up more intelligently
-		const batchSize = 400
-		for i := 0; i < len(detections); i += batchSize {
-			if i+batchSize <= len(detections) {
-				session.createScanForDetections(ctx, detections[i:i+batchSize], out)
-			} else {
-				session.createScanForDetections(ctx, detections[i:], out)
-			}
-		}
+		session.createScanForDetections(ctx, detections, out)
 	}(out)
 
 	return out, err

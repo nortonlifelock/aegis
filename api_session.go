@@ -11,6 +11,12 @@ import (
 	"time"
 )
 
+// each endpoint has a separate rate limit, so we create a funnel for each endpoint
+var (
+	funnelMap  = make(map[string]funnel.Client)
+	funnelLock = &sync.Mutex{}
+)
+
 type logger interface {
 	Send(log log.Log)
 }
@@ -21,10 +27,6 @@ type Session struct {
 
 	// Source configuration which holds the authentication information for the Qualys API
 	Config domain.SourceConfig
-
-	// each endpoint has a separate rate limit, so we create a funnel for each endpoint
-	funnelMap  map[string]funnel.Client
-	funnelLock *sync.Mutex
 
 	ctx              context.Context
 	concurrencyLimit int
@@ -37,9 +39,6 @@ func NewQualysAPISession(ctx context.Context, lstream logger, config domain.Sour
 	session = &Session{
 		lstream: lstream,
 		Config:  config,
-
-		funnelMap:  make(map[string]funnel.Client),
-		funnelLock: &sync.Mutex{},
 
 		ctx: ctx,
 	}
@@ -71,11 +70,12 @@ func NewQualysAPISession(ctx context.Context, lstream logger, config domain.Sour
 }
 
 func (session *Session) getFunnelForEndpoint(endpoint string) (client funnel.Client) {
-	session.funnelLock.Lock()
-	defer session.funnelLock.Unlock()
+	funnelLock.Lock()
+	defer funnelLock.Unlock()
 
-	if session.funnelMap[endpoint] != nil {
-		client = session.funnelMap[endpoint]
+	mapKey := fmt.Sprintf("%s;%s", session.Config.Address(), endpoint)
+	if funnelMap[mapKey] != nil {
+		client = funnelMap[mapKey]
 	} else {
 		if session.concurrencyLimit < 1 {
 			session.concurrencyLimit = 1
@@ -86,8 +86,8 @@ func (session *Session) getFunnelForEndpoint(endpoint string) (client funnel.Cli
 		}
 
 		var err error
-		if client, err = funnel.New(session.ctx, &http.Client{}, session.lstream, session.rateLimit*time.Second, 1, session.concurrencyLimit); err == nil && client != nil {
-			session.funnelMap[endpoint] = client
+		if client, err = funnel.New(context.Background(), &http.Client{}, session.lstream, session.rateLimit*time.Second, 1, session.concurrencyLimit); err == nil && client != nil {
+			funnelMap[mapKey] = client
 		} else {
 			session.lstream.Send(log.Error("error while creating a Qualys funnel, defaulting to http client", err))
 			client = &http.Client{}

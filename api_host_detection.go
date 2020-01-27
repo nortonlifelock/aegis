@@ -82,10 +82,11 @@ func (session *Session) GetHostSpecificDetections(ip []string, kernelFilterFlag 
 		fields["action"] = "list"
 
 		// TODO: Correct this so that there can be more than 10000 results and we recurse over them
-		fields["truncation_limit"] = "10000" // Truncate results at a max of 10000
-
-		fields["show_reopened_info"] = "1"        // Pull groups of 2500 assets at a time until all assets are loaded
-		fields["status"] = "New,Active,Re-Opened" // Exclude "Fixed" vulnerabilities from the results
+		fields["truncation_limit"] = "0"   // 0 means no limit
+		fields["show_reopened_info"] = "1" // Show the additional information related to vulnerabilities that have been Reopened in Qualys
+		//if !includeFixed {
+		//	fields["status"] = "New,Active,Re-Opened" // Exclude "Fixed" vulnerabilities from the results
+		//}
 		fields["arf_kernel_filter"] = strconv.Itoa(kernelFilterFlag)
 
 		// Concatenate the IP addresses together in a comma separated list of values

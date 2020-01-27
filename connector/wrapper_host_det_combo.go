@@ -1,6 +1,7 @@
 package connector
 
 import (
+	"fmt"
 	"strings"
 	"time"
 
@@ -78,6 +79,14 @@ func (combo *hostDetectionCombo) Protocol() string {
 		protocol = *combo.detection.d.Protocol
 	}
 	return protocol
+}
+
+func (combo *hostDetectionCombo) IgnoreID() (*string, error) {
+	return nil, fmt.Errorf("ignore id not retrievable from Nexpose")
+}
+
+func (combo *hostDetectionCombo) Updated() time.Time {
+	return combo.detection.d.LastUpdate
 }
 
 func (combo *hostDetectionCombo) Device() (domain.Device, error) {

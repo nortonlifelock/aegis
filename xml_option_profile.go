@@ -71,12 +71,8 @@ type OptionProfiles struct {
 			VulnerabilityDetection struct {
 				Text       string `xml:",chardata"`
 				CustomList struct {
-					Text   string `xml:",chardata"`
-					Custom []struct {
-						Text  string `xml:",chardata"`
-						ID    string `xml:"ID"`
-						Title string `xml:"TITLE"`
-					} `xml:"CUSTOM"`
+					Text   string            `xml:",chardata"`
+					Custom []SearchListEntry `xml:"CUSTOM"`
 				} `xml:"CUSTOM_LIST"`
 				DetectionInclude struct {
 					Text                string `xml:",chardata"`
@@ -144,4 +140,11 @@ type OptionProfiles struct {
 			} `xml:"PACKET_OPTIONS"`
 		} `xml:"ADDITIONAL"`
 	} `xml:"OPTION_PROFILE"`
+}
+
+// SearchListEntry is a member of OptionProfiles and must be exported in order to be marshalled
+type SearchListEntry struct {
+	Text  string `xml:",chardata"`
+	ID    string `xml:"ID"`
+	Title string `xml:"TITLE"`
 }

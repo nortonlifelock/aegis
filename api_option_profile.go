@@ -70,7 +70,7 @@ func (session *Session) GetOptionProfile(optionProfileID int) (optionProfiles *O
 }
 
 // CreateSearchList creates a search list in Qualys which specifies the vulnerabilities for Qualys to scan
-func (session *Session) CreateSearchList(qIDs []string, searchListFormatString string) (searchListID string, err error) {
+func (session *Session) CreateSearchList(qIDs []string, searchListFormatString string) (searchListID string, searchListTitle string, err error) {
 	const idKey = "id"
 
 	var fields = make(map[string]string)
@@ -78,7 +78,8 @@ func (session *Session) CreateSearchList(qIDs []string, searchListFormatString s
 
 	// TODO what do we want the search list title convention to be?
 	// TODO should it be configurable?
-	fields["title"] = fmt.Sprintf(searchListFormatString, time.Now().Nanosecond())
+	searchListTitle = fmt.Sprintf(searchListFormatString, strconv.Itoa(time.Now().Nanosecond()))
+	fields["title"] = searchListTitle
 
 	fields["qids"] = strings.Join(qIDs, ",")
 	var response = &simpleReturn{}
@@ -93,7 +94,7 @@ func (session *Session) CreateSearchList(qIDs []string, searchListFormatString s
 		}
 	}
 
-	return searchListID, err
+	return searchListID, searchListTitle, err
 }
 
 // DeleteSearchList calls the Qualys endpoint to delete a search list (which specifies the vulnerabilities to
