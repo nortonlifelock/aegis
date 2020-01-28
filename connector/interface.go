@@ -208,9 +208,10 @@ func (session *QsSession) pushDetectionsOnChannel(ctx context.Context, output *q
 	for _, h := range output.Hosts {
 		for _, d := range h.Detections {
 
-			if len(deadHostIPToProof[h.IPAddress]) > 0 {
+			var deadHostProof = session.getProofForDeadHost(h.IPAddress, deadHostIPToProof)
+			if len(deadHostProof) > 0 {
 				d.Status = domain.DeadHost
-				d.Proof = deadHostIPToProof[h.IPAddress]
+				d.Proof = deadHostProof
 			} else if d.Status == "Fixed" {
 				d.Status = domain.Fixed
 			}
