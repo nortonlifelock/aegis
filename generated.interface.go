@@ -39,7 +39,7 @@ type GeneratedDatabaseConnection interface {
 	CreateTag(_DeviceID string, _TagKeyID string, _Value string) (id int, affectedRows int, err error)
 	CreateTagKey(_KeyValue string) (id int, affectedRows int, err error)
 	CreateTagMap(_TicketingSourceID string, _TicketingTag string, _CloudSourceID string, _CloudTag string, _Options string, _OrganizationID string) (id int, affectedRows int, err error)
-	CreateTicket(_Title string, _Status string, _DetectionID string, _OrganizationID string, _DueDate time.Time, _UpdatedDate time.Time) (id int, affectedRows int, err error)
+	CreateTicket(_Title string, _Status string, _DetectionID string, _OrganizationID string, _DueDate time.Time, _UpdatedDate time.Time, _ResolutionDate time.Time, _DefaultTime time.Time) (id int, affectedRows int, err error)
 	CreateTicketingJob(GroupID int, OrgID string, ScanStartDate string) (id int, affectedRows int, err error)
 	CreateUser(_Username string, _FirstName string, _LastName string, _Email string) (id int, affectedRows int, err error)
 	CreateUserPermissions(_UserID string, _OrgID string) (id int, affectedRows int, err error)
