@@ -45,10 +45,12 @@ func ProcessSprocs(dbConn idb, sprocPath string, domainEngPath, sprocGenPath, te
 			// Create domain objects in the database package
 			path := sprocGenPath + "/dal/"
 
-			if _, err = os.Stat(path); err != nil {
-				// this error will overwrite the error that brought us to this block.
-				// if MkdirAll is successful, the error should be nil and the next block should enter
-				err = os.MkdirAll(path, 0775)
+			if generateFiles {
+				if _, err = os.Stat(path); err != nil {
+					// this error will overwrite the error that brought us to this block.
+					// if MkdirAll is successful, the error should be nil and the next block should enter
+					err = os.MkdirAll(path, 0775)
+				}
 			}
 
 			if err == nil {
