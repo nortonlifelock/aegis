@@ -28,6 +28,7 @@ type config interface {
 	LogMQ() bool
 	DebugLogs() bool
 	SNSTopicID() string
+	SNSRegion() string
 	PreserveFileLogs() bool
 }
 
