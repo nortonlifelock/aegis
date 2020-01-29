@@ -4,6 +4,10 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	install_config "github.com/nortonlifelock/aegis/setup/install-config"
+	install_org "github.com/nortonlifelock/aegis/setup/install-org"
+	"os"
+	"os/exec"
 
 	"github.com/nortonlifelock/config"
 	"github.com/nortonlifelock/database"
@@ -20,6 +24,8 @@ import (
 )
 
 func main() {
+	installationFlagCheck()
+
 	var err error
 
 	// Setting up config arguments for starting the jobObj runner
@@ -151,4 +157,56 @@ func populateAutoStartJobs(dbconn domain.DatabaseConnection) (err error) {
 	}
 
 	return err
+}
+
+func installationFlagCheck() {
+	if len(os.Args) == 2 {
+		if os.Args[1] == "init" {
+			install_config.InstallConfig()
+			executeScaffolding()
+			install_org.InstallOrg()
+
+			os.Exit(0)
+		} else if os.Args[1] == "init-org" {
+			install_org.InstallOrg()
+
+			os.Exit(0)
+		} else if os.Args[1] == "init-config" {
+			install_config.InstallConfig()
+
+			os.Exit(0)
+		} else if os.Args[1] == "scaffold" {
+			fmt.Println("here")
+			executeScaffolding()
+
+			os.Exit(0)
+		}
+	}
+}
+
+func executeScaffolding() {
+	goPath, exists := os.LookupEnv("GOPATH")
+	if !exists {
+		fmt.Println("GOPATH environment variable not set")
+		os.Exit(1)
+	}
+
+	cmd := exec.Command(
+		"aegis-scaffold",
+		"-config", "app.json",
+		"-cpath", fmt.Sprintf("%s/src/github/nortonlifelock", goPath),
+		"-sproc", fmt.Sprintf("-sproc %s/src/github/nortonlifelock/aegis-db/procedures", goPath),
+		"-migrate", fmt.Sprintf("-migrate %s/src/github/nortonlifelock/aegis-db/migrations", goPath),
+		"-tpath", fmt.Sprintf("-tpath %s/src/github/nortonlifelock/aegis-scaffold", goPath),
+		"-m",
+		"-p",
+	)
+
+	stdout, err := cmd.Output()
+	if err != nil {
+		fmt.Println(err.Error())
+		os.Exit(1)
+	}
+
+	fmt.Println(string(stdout))
 }

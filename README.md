@@ -5,11 +5,77 @@
 [![GoDoc](https://godoc.org/github.com/nortonlifelock/aegis?status.svg)](https://godoc.org/github.com/nortonlifelock/aegis)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0) [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](http://makeapullrequest.com)
 
-aegis
-
 **NOTE: We're still building the Readme files for Aegis.**
 
 Installing Aegis:
+
+- Go 1.11 or higher installed
+- `$GOPATH` set
+- Have `~/.aws/credentials` and `~/.aws/config` setup (or some other form of [AWS authentication](https://docs.aws.amazon.com/sdk-for-go/v1/developer-guide/configuring-sdk.html#specifying-credentials))
+
+## Have ready
+
+- Credentials for all API accounts
+- An enumeration of the asset groups you plan on rescanning (comma separated)
+- AWS KMS encryption key
+  - Must be `symmetric`
+
+### Nexpose
+
+- Templates for your vulnerability/discovery scans existing in your Nexpose instance and their IDs
+- Nexpose site ID (integer) that you will be using for vulnerability rescans
+
+### Qualys
+
+- SearchList and OptionProfile for your vulnerability scans in your Qualys instance and their integer IDs
+- OptionProfile for your discovery scans in your Qualys instance and it's integer ID
+- A list of all the group IDs that require external scanners (comma separated)
+
+### JIRA
+
+- The project key for the project you plan on storing tickets
+- If using your own ticket transition workflow/ticket schema, mapping must be done in the JIRA source config
+- (optional) a separate CERF project for tickets that remediators create for tracking exceptions and false-positives
+- (optional) JIRA supports Oauth, if you have Oauth credentials, they can be set in the JIRA source config in the database after installation
+
+### Database
+
+- Create a schema in your database for Aegis to utilize
+
+## Installation
+
+```sh
+cd $GOPATH/src
+mkdir -p github.com
+cd $GOPATH/src/github.com
+mkdir -p nortonlifelock
+cd $GOPATH/src/github.com/nortonlifelock
+
+git clone https://github.com/nortonlifelock/aegis
+git clone https://github.com/nortonlifelock/aegis-scaffold.git
+git clone https://github.com/nortonlifelock/aegis-api.git
+git clone https://github.com/nortonlifelock/aegis-db.git
+git clone https://github.com/nortonlifelock/aegis-ui.git
+
+cd $GOPATH/src/github.com/nortonlifelock/aegis
+go install aegis.go
+
+cd $GOPATH/src/github/nortonlifelock/aegis-api || exit
+go install aegis-api.go
+
+cd $GOPATH/src/github/nortonlifelock/aegis-scaffold || exit
+go install aegis-scaffold.go
+
+aegis init
+```
+
+## Running Aegis
+
+```sh
+aegis –cpath $GOPATH/src/github.com/nortonlifelock
+```
+
+
 
 - Step 0: Create a JIRA project for vulnerability management by Aegis
 - Step 1: Create the database schema for Aegis (*we use Aegis*)
@@ -58,7 +124,7 @@ db_username
     The username that is used to authenticate against the database
 db_password
     The (encrypted) password that is used to authenticate against the database
-    The password is encrypted for you by the install-config scirpt
+    The password is encrypted with the KMS key you provide by the install-config scirpt
 db_schema
     The name of the schema that Aegis will utilize
 
