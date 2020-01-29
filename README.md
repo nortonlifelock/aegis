@@ -35,6 +35,7 @@ Installing Aegis:
 
 - The project key for the project you plan on storing tickets
 - If using your own ticket transition workflow/ticket schema, mapping must be done in the JIRA source config
+    - The default ticket schema utilized by Aegis is outlines in setup/jira_ticket_schema.csv if you do not want to do the mapping
 - (optional) a separate CERF project for tickets that remediators create for tracking exceptions and false-positives
 - (optional) JIRA supports Oauth, if you have Oauth credentials, they can be set in the JIRA source config in the database after installation
 
@@ -42,7 +43,7 @@ Installing Aegis:
 
 - Create a schema in your database for Aegis to utilize
 
-## Installation
+## Installation (Mac/Linux)
 
 ```sh
 cd $GOPATH/src
@@ -69,10 +70,10 @@ go install aegis-scaffold.go
 aegis init
 ```
 
-## Running Aegis
+## Aegis commands
 
 ```sh
-# Start Aegis
+# Run Aegis
 aegis –cpath $GOPATH/src/github.com/nortonlifelock
 
 # Create/update DB schema

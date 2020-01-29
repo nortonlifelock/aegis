@@ -1,5 +1,4 @@
 dev.json
-*.csv
 exceptions/
 *app.json
 scaffold.json

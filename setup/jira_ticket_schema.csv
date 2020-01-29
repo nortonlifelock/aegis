@@ -1,0 +1,39 @@
+Field Name, Field Type
+Epic Name,Name of Epic
+Method of Discovery,Select List (single choice)
+Summary,System field
+Hostname,Text Field (single line)
+IP Address,Text Field (single line)
+MAC Address,Text Field (single line)
+Service Port,Text Field (single line)
+Description,System field
+Criticality,Select List (single choice)
+Scan/Alert Date,Date Picker
+Assets Affected,Text Field (multi-line)
+Assignee,System field
+ScanID,Text Field (single line)
+Assignment Group,Group Picker (single group)
+CVE References,Text Field (multi-line)
+Resolution Date,Date Time Picker
+Due Date,System field
+Operating System,Select List (single choice)
+Vulnerablility,Text Field (single line)
+cvss_score,Select List (single choice)
+GroupID,Text Field (single line)
+DeviceID,Text Field (single line)
+VulnerabilityID,Text Field (single line)
+Org,Text Field (single line)
+AutomationID,Text Field (single line)
+Reopen Reason,Text Field (multi-line)
+VendorRef,Text Field (multi-line)
+Linked Exception,Query issue linker custom field
+Last Rescan,Date Time Picker
+Reference,URL Field
+Latest Detection Date,Date Picker
+OS_Detailed,Text Field (single line)
+Solution,Text Field (multi-line)
+CloudID,Text Field (single line)
+Config,Select List (single choice)
+LastChecked,Date Picker
+Application,Text Field (single line)
+Application Type,Select List (single choice)
