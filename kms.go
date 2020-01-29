@@ -17,9 +17,6 @@ import (
 )
 
 const (
-	// UsEast defines the AWS region in which KMS is operating
-	usEast = "us-east-1"
-
 	// EncryptionType256 is a flag that tells the KMS client to encrypt using AES 256
 	encryptionType256 = "AES_256"
 
@@ -46,7 +43,7 @@ type KMSClient struct {
 
 // CreateKMSClientWithProfile creates a KMSClient object. The keyID is the AWS KMS key ID. The profile is optional and may be passed as
 // an empty string
-func CreateKMSClientWithProfile(keyID string, profile string) (client *KMSClient, err error) {
+func CreateKMSClientWithProfile(keyID string, profile string, region string) (client *KMSClient, err error) {
 	var kmsClient *kms.KMS
 	var sess *session.Session
 	if sess, err = session.NewSessionWithOptions(session.Options{
@@ -56,7 +53,7 @@ func CreateKMSClientWithProfile(keyID string, profile string) (client *KMSClient
 		var verifyCred credentials.Value
 		if verifyCred, err = sess.Config.Credentials.Get(); err == nil {
 			if len(verifyCred.AccessKeyID) > 0 && len(verifyCred.SecretAccessKey) > 0 {
-				kmsClient = kms.New(sess, aws.NewConfig().WithRegion(usEast))
+				kmsClient = kms.New(sess, aws.NewConfig().WithRegion(region))
 				client = &KMSClient{kmsClient, keyID, encryptionType256}
 			} else {
 				err = errors.Errorf("kms could not find profile [%s] in ~/.aws/credentials", profile)
@@ -68,14 +65,14 @@ func CreateKMSClientWithProfile(keyID string, profile string) (client *KMSClient
 }
 
 // createKMSClient performs the same operation as CreateKMSClientWithProfile, but does not use an associated profile
-func createKMSClient(keyID string) (client *KMSClient, err error) {
+func createKMSClient(keyID string, region string) (client *KMSClient, err error) {
 	var kmsClient *kms.KMS
 	sess, err := session.NewSession(&aws.Config{
-		Region: aws.String(usEast),
+		Region: aws.String(region),
 	})
 
 	if err == nil {
-		kmsClient = kms.New(sess, aws.NewConfig().WithRegion(usEast))
+		kmsClient = kms.New(sess, aws.NewConfig().WithRegion(region))
 		client = &KMSClient{kmsClient, keyID, encryptionType256}
 	}
 	return client, err
@@ -150,12 +147,12 @@ func (kmsClient *KMSClient) Decrypt(encryptedText string) (message string, err e
 }
 
 // kmsDoEncryption performs either an encryption or decryption operation depending on EDFlag using the AWS encryption key
-func kmsDoEncryption(encryptionKey string, EDFlag int, message string, profile string) (enOrDe string, err error) {
+func kmsDoEncryption(encryptionKey string, EDFlag int, message string, profile string, region string) (enOrDe string, err error) {
 	var client Client
 	if len(profile) > 0 {
-		client, err = CreateKMSClientWithProfile(encryptionKey, profile)
+		client, err = CreateKMSClientWithProfile(encryptionKey, profile, region)
 	} else {
-		client, err = createKMSClient(encryptionKey)
+		client, err = createKMSClient(encryptionKey, region)
 	}
 
 	if err == nil {

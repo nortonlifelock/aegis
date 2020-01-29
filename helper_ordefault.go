@@ -18,6 +18,8 @@ func sord(in *string) (out string) {
 
 type config interface {
 	EncryptionKey() string
+	KMSRegion() string
+	KMSProfile() string
 }
 
 const (
@@ -47,7 +49,7 @@ func DecryptSourceConfig(ms domain.DatabaseConnection, sourceConfig domain.Sourc
 
 			var client Client
 			if len(config.EncryptionKey()) > 0 {
-				client, err = NewEncryptionClient(AES256, ms, config.EncryptionKey(), sourceConfig.OrganizationID())
+				client, err = NewEncryptionClient(AES256, ms, config.EncryptionKey(), sourceConfig.OrganizationID(), config.KMSProfile(), config.KMSRegion())
 				if err == nil {
 					var authInfo map[string]interface{}
 					if err = json.Unmarshal([]byte(sourceConfig.AuthInfo()), &authInfo); err == nil {

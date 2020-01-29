@@ -33,21 +33,11 @@ const (
 // The organization encryption key in the database itself is encrypted using the KMS application level encryption key
 // The organization encryption key must be pulled from the database and decrypted before the client is created
 // The application level encryption key should only exist in the root organization of an organization hierarchy
-func NewEncryptionClient(clientType string, db domain.DatabaseConnection, applicationEncryptionKey string, orgID string) (client Client, err error) {
+func NewEncryptionClient(clientType string, db domain.DatabaseConnection, applicationEncryptionKey string, orgID string, profile string, region string) (client Client, err error) {
 	var orgKey string
-	orgKey, err = decryptOrganizationKey(db, applicationEncryptionKey, orgID, "")
+	orgKey, err = decryptOrganizationKey(db, applicationEncryptionKey, orgID, profile, region)
 	if err == nil {
-		client, err = NewEncryptionClientWithDirectKey(clientType, orgKey)
-	}
-
-	return client, err
-}
-
-func NewEncryptionClientWithProfile(clientType string, db domain.DatabaseConnection, applicationEncryptionKey string, orgID string, profile string) (client Client, err error) {
-	var orgKey string
-	orgKey, err = decryptOrganizationKey(db, applicationEncryptionKey, orgID, profile)
-	if err == nil {
-		client, err = NewEncryptionClientWithDirectKey(clientType, orgKey)
+		client, err = NewEncryptionClientWithDirectKey(clientType, orgKey, region)
 	}
 
 	return client, err
@@ -55,12 +45,13 @@ func NewEncryptionClientWithProfile(clientType string, db domain.DatabaseConnect
 
 // NewEncryptionClientWithDirectKey takes the key used for encryption as a direct argument, and does not grab an encrypted, organization specific key from
 // the database like NewEncryptionClient does
-func NewEncryptionClientWithDirectKey(clientType string, key string) (client Client, err error) {
+// region is only needed for kms encryption and can be empty when and AES client is being created
+func NewEncryptionClientWithDirectKey(clientType string, key string, region string) (client Client, err error) {
 	switch clientType {
 	case AES256:
 		client, err = createAESClient(key)
 	case KMS:
-		client, err = createKMSClient(key)
+		client, err = createKMSClient(key, region)
 	default:
 		err = fmt.Errorf("unrecognized encryption type [%s]", clientType)
 	}
@@ -69,14 +60,14 @@ func NewEncryptionClientWithDirectKey(clientType string, key string) (client Cli
 }
 
 // The organization key is encrypted using KMS
-func decryptOrganizationKey(db domain.DatabaseConnection, applicationEncryptionKey string, orgID string, profile string) (orgKey string, err error) {
+func decryptOrganizationKey(db domain.DatabaseConnection, applicationEncryptionKey string, orgID string, profile string, region string) (orgKey string, err error) {
 	if len(orgID) > 0 {
 		var rootOrg domain.Organization
 		rootOrg, err = getRootOrganization(db, orgID)
 		if err == nil {
 			if rootOrg != nil {
 				if len(sord(rootOrg.EncryptionKey())) > 0 {
-					orgKey, err = kmsDoEncryption(applicationEncryptionKey, DecryptMode, sord(rootOrg.EncryptionKey()), profile)
+					orgKey, err = kmsDoEncryption(applicationEncryptionKey, DecryptMode, sord(rootOrg.EncryptionKey()), profile, region)
 				} else {
 					err = fmt.Errorf("root organization [%s] did not have an encryption key in the database", orgID)
 				}
