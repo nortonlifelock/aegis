@@ -20,6 +20,8 @@ type logger interface {
 // ConfigJira is an interface that defines the fields that JIRA requires from the app config
 type ConfigJira interface {
 	EncryptionKey() string
+	KMSRegion() string
+	KMSProfile() string
 }
 
 // funnelMap ensures all instances of JIRA don't create separate funnels

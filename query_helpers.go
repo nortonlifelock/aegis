@@ -472,7 +472,7 @@ func (connector *ConnectorJira) getDeviceTicketsQueries(issues []domain.Ticket) 
 	if issues != nil {
 		//We getting all the statues except for this status
 		var statuses = []string{connector.GetStatusMap(StatusOpen), connector.GetStatusMap(StatusReopened), connector.GetStatusMap(StatusInProgress), connector.GetStatusMap(StatusResolvedRemediated),
-			connector.GetStatusMap(StatusResolvedFalsePositive), connector.GetStatusMap(StatusResolvedDecom), StatusResolvedException}
+			connector.GetStatusMap(StatusResolvedFalsePositive), connector.GetStatusMap(StatusResolvedDecom), connector.GetStatusMap(StatusResolvedException)}
 
 		//This map is created to not process the same device_ID again if exist in another issue
 		var devices = make(map[string]bool)
