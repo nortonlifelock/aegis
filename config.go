@@ -22,6 +22,8 @@ type DBConfig interface {
 // EncryptionConfig defines an interface which returns methods for encryption / decryption
 type EncryptionConfig interface {
 	EncryptionKey() string
+	KMSRegion() string
+	KMSProfile() string
 }
 
 // LogConfig defines an interface which returns the methods for logging configurations for the application
