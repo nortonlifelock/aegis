@@ -3,7 +3,6 @@ package install_config
 import (
 	"bufio"
 	"encoding/json"
-	"flag"
 	"fmt"
 	"github.com/nortonlifelock/config"
 	"github.com/nortonlifelock/crypto"
@@ -13,20 +12,13 @@ import (
 	"strings"
 )
 
-func InstallConfig() {
-	aegisPath := flag.String("path", "", "")
-	flag.Parse()
-
-	if len(*aegisPath) == 0 {
-		panic("Must provide a path to Aegis with -path")
-	}
-
+func InstallConfig(path string) {
 	conf := config.AppConfig{}
 	var err error
 
 	reader := bufio.NewReader(os.Stdin)
 
-	conf.PathToAegis = *aegisPath
+	conf.PathToAegis = path
 
 	fmt.Print("Enter a url or IP pointing to your database (url recommended if IP is dynamic): ")
 	conf.DatabasePath = getInput(reader)
@@ -61,7 +53,7 @@ func InstallConfig() {
 	conf.LogFilePath = getInput(reader)
 
 	if strings.Index(conf.LogFilePath, "/") < 0 && strings.Index(conf.LogFilePath, "\\") < 0 {
-		conf.LogFilePath = fmt.Sprintf("%s/%s", *aegisPath, conf.LogFilePath)
+		conf.LogFilePath = fmt.Sprintf("%s/%s", path, conf.LogFilePath)
 	}
 
 	if _, err := os.Stat(conf.LogFilePath); os.IsNotExist(err) {
@@ -107,10 +99,10 @@ func InstallConfig() {
 	// the reader leaves trailing escaped newlines from their input
 	body = []byte(strings.Replace(string(body), "\\n", "", -1))
 
-	err = ioutil.WriteFile(fmt.Sprintf("%s/app.json", *aegisPath), body, os.ModePerm)
+	err = ioutil.WriteFile(fmt.Sprintf("%s/app.json", path), body, os.ModePerm)
 	check(err)
 
-	fmt.Println("Created app config, stored at", fmt.Sprintf("%s/app.json", *aegisPath))
+	fmt.Println("Created app config, stored at", fmt.Sprintf("%s/app.json", path))
 }
 
 func getInput(reader *bufio.Reader) (userInput string) {

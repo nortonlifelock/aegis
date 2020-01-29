@@ -5,7 +5,6 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"encoding/json"
-	"flag"
 	"fmt"
 	"github.com/nortonlifelock/config"
 	"github.com/nortonlifelock/crypto"
@@ -36,15 +35,12 @@ const (
 	ticketSyncJob  = "TicketSyncJob"
 )
 
-func InstallOrg() {
-	path := flag.String("path", "", "")
-	flag.Parse()
-
-	if len(*path) == 0 {
+func InstallOrg(path string) {
+	if len(path) == 0 {
 		panic("must provide a -path flag leading to the application config (app.json)")
 	}
 
-	db, appConfig := loadDatabaseConnectionAppConfig(*path)
+	db, appConfig := loadDatabaseConnectionAppConfig(path)
 
 	reader := bufio.NewReader(os.Stdin)
 
