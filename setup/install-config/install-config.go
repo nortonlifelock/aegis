@@ -44,7 +44,7 @@ func InstallConfig(path string) {
 	fmt.Print("Enter AWS KMS key ID that will be used for encryption (not optional): ")
 	conf.EKey = getInput(reader)
 
-	fmt.Print("Enter the region that the AWS KMS key exists in (e.g. us-west-1)")
+	fmt.Print("Enter the region that the AWS KMS key exists in (e.g. us-west-1): ")
 	conf.RegionKMS = getInput(reader)
 
 	conf.ProfileKMS = "default"

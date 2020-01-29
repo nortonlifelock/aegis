@@ -176,7 +176,7 @@ func installationFlagCheck() {
 
 			os.Exit(0)
 		} else if os.Args[1] == "init-org" {
-			install_org.InstallOrg(aegisPath)
+			install_org.InstallOrg(fmt.Sprintf("%s/app.json", aegisPath))
 
 			os.Exit(0)
 		} else if os.Args[1] == "init-config" {
