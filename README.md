@@ -72,15 +72,18 @@ aegis init
 ## Running Aegis
 
 ```sh
+# Start Aegis
 aegis –cpath $GOPATH/src/github.com/nortonlifelock
+
+# Create/update DB schema
+aegis scaffold
+
+# Create a new application config (same process that's done "aegis init")
+aegis init-config
+
+# Create a new organization (same process that's done during "aegis init")
+aegis init-org
 ```
-
-
-
-- Step 0: Create a JIRA project for vulnerability management by Aegis
-- Step 1: Create the database schema for Aegis (*we use Aegis*)
-- Step 2: Execute the Aegis Scaffold (github.com/nortonlifelock/aegis-scaffold)
-- Step 3: Setup your Aegis Configuration File
 
 Base Json Configuration File: 
 ```json

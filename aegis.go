@@ -184,7 +184,6 @@ func installationFlagCheck() {
 
 			os.Exit(0)
 		} else if os.Args[1] == "scaffold" {
-			fmt.Println("here")
 			executeScaffolding(goPath)
 
 			os.Exit(0)
@@ -197,9 +196,9 @@ func executeScaffolding(goPath string) {
 		"aegis-scaffold",
 		"-config", "app.json",
 		"-cpath", fmt.Sprintf("%s/src/github.com/nortonlifelock", goPath),
-		"-sproc", fmt.Sprintf("-sproc %s/src/github.com/nortonlifelock/aegis-db/procedures", goPath),
-		"-migrate", fmt.Sprintf("-migrate %s/src/github.com/nortonlifelock/aegis-db/migrations", goPath),
-		"-tpath", fmt.Sprintf("-tpath %s/src/github.com/nortonlifelock/aegis-scaffold", goPath),
+		"-sproc", fmt.Sprintf("%s/src/github.com/nortonlifelock/aegis-db/procedures", goPath),
+		"-migrate", fmt.Sprintf("%s/src/github.com/nortonlifelock/aegis-db/migrations", goPath),
+		"-tpath", fmt.Sprintf("%s/src/github.com/nortonlifelock/aegis-scaffold", goPath),
 		"-m",
 		"-p",
 	)
