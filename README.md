@@ -60,10 +60,10 @@ git clone https://github.com/nortonlifelock/aegis-ui.git
 cd $GOPATH/src/github.com/nortonlifelock/aegis
 go install aegis.go
 
-cd $GOPATH/src/github/nortonlifelock/aegis-api || exit
+cd $GOPATH/src/github.com/nortonlifelock/aegis-api || exit
 go install aegis-api.go
 
-cd $GOPATH/src/github/nortonlifelock/aegis-scaffold || exit
+cd $GOPATH/src/github.com/nortonlifelock/aegis-scaffold || exit
 go install aegis-scaffold.go
 
 aegis init
