@@ -74,7 +74,8 @@ aegis init
 
 ```sh
 # Run Aegis
-aegis –cpath $GOPATH/src/github.com/nortonlifelock
+# -config defaults to app.json if not specified
+aegis -config app.json -cpath "path to configuration file"
 
 # Create/update DB schema
 aegis scaffold
