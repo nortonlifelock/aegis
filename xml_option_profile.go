@@ -87,6 +87,7 @@ type OptionProfiles struct {
 				DissolvableAgentEnable        string `xml:"DISSOLVABLE_AGENT_ENABLE"`
 				WindowsShareEnumerationEnable string `xml:"WINDOWS_SHARE_ENUMERATION_ENABLE"`
 			} `xml:"DISSOLVABLE_AGENT"`
+			HostAliveTesting string `xml:"HOST_ALIVE_TESTING"`
 		} `xml:"SCAN"`
 		MAP struct {
 			Text                 string `xml:",chardata"`
