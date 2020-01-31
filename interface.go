@@ -51,7 +51,7 @@ func NewEncryptionClientWithDirectKey(clientType string, key string, region stri
 	case AES256:
 		client, err = createAESClient(key)
 	case KMS:
-		client, err = createKMSClient(key, region)
+		client, err = CreateKMSClient(key, region)
 	default:
 		err = fmt.Errorf("unrecognized encryption type [%s]", clientType)
 	}

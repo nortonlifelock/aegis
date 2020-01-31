@@ -64,8 +64,8 @@ func CreateKMSClientWithProfile(keyID string, profile string, region string) (cl
 	return client, err
 }
 
-// createKMSClient performs the same operation as CreateKMSClientWithProfile, but does not use an associated profile
-func createKMSClient(keyID string, region string) (client *KMSClient, err error) {
+// CreateKMSClient performs the same operation as CreateKMSClientWithProfile, but does not use an associated profile
+func CreateKMSClient(keyID string, region string) (client *KMSClient, err error) {
 	var kmsClient *kms.KMS
 	sess, err := session.NewSession(&aws.Config{
 		Region: aws.String(region),
@@ -152,7 +152,7 @@ func kmsDoEncryption(encryptionKey string, EDFlag int, message string, profile s
 	if len(profile) > 0 {
 		client, err = CreateKMSClientWithProfile(encryptionKey, profile, region)
 	} else {
-		client, err = createKMSClient(encryptionKey, region)
+		client, err = CreateKMSClient(encryptionKey, region)
 	}
 
 	if err == nil {
