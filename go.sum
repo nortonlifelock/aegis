@@ -146,6 +146,8 @@ github.com/nortonlifelock/implementations v1.0.1-0.20200128212611-6c9b49b4c443 h
 github.com/nortonlifelock/implementations v1.0.1-0.20200128212611-6c9b49b4c443/go.mod h1:Xik3aJmyyoRgvNEw13EoYW9eIr/MXahNfGcEKSZ2Das=
 github.com/nortonlifelock/implementations v1.0.1-0.20200131203141-120951e8954b h1:3zJ7fWiwDS6I0OggmIyV2/USOiw7BhnWckqUyUdBZ9w=
 github.com/nortonlifelock/implementations v1.0.1-0.20200131203141-120951e8954b/go.mod h1:AI/R0EnXi7HF9K+weWzOUseklfIo5q3s5cAk+FVFlkE=
+github.com/nortonlifelock/implementations v1.0.1-0.20200131203540-a2e9e294ae7a h1:7mDMLJFLDpQW3NCJ+8+jeFYzgM9gMYQLKv2NrMPOs2k=
+github.com/nortonlifelock/implementations v1.0.1-0.20200131203540-a2e9e294ae7a/go.mod h1:AI/R0EnXi7HF9K+weWzOUseklfIo5q3s5cAk+FVFlkE=
 github.com/nortonlifelock/integrations v1.0.0 h1:nIv/+U39hLdT/ALSNHp67oQm/1YfQHlHmURlET5Xezk=
 github.com/nortonlifelock/integrations v1.0.0/go.mod h1:/Pglw1JHBB9LIDlVetv9DpBHig59xBQQYKdPSZ63Ihc=
 github.com/nortonlifelock/integrations v1.0.1-0.20200127165438-9631cf499858 h1:hSn3leu4IONxsi1yhrtcCgTM4UJOvzleG5SPAaqhGzE=
