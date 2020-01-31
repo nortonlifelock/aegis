@@ -46,28 +46,24 @@ Installing Aegis:
 ## Installation (Mac/Linux)
 
 ```sh
-cd $GOPATH/src
-mkdir -p github.com
-cd $GOPATH/src/github.com
-mkdir -p nortonlifelock
-cd $GOPATH/src/github.com/nortonlifelock
-
 git clone https://github.com/nortonlifelock/aegis
 git clone https://github.com/nortonlifelock/aegis-scaffold.git
 git clone https://github.com/nortonlifelock/aegis-api.git
 git clone https://github.com/nortonlifelock/aegis-db.git
 git clone https://github.com/nortonlifelock/aegis-ui.git
 
-cd $GOPATH/src/github.com/nortonlifelock/aegis
+cd ./aegis || exit
 go install aegis.go
 
-cd $GOPATH/src/github.com/nortonlifelock/aegis-api || exit
+cd ../aegis-api || exit
 go install aegis-api.go
 
-cd $GOPATH/src/github.com/nortonlifelock/aegis-scaffold || exit
+cd ../aegis-scaffold || exit
 go install aegis-scaffold.go
 
-aegis init
+cd ..
+
+aegis -init-config -init-scaffold -init-org -cpath $PWD -sproc $PWD/aegis-db/procedures -migrate $PWD/aegis-db/migrations -tpath $PWD/aegis-scaffold
 ```
 
 ## Aegis commands

@@ -24,8 +24,6 @@ import (
 )
 
 func main() {
-	installationFlagCheck()
-
 	var err error
 
 	// Setting up config arguments for starting the jobObj runner
@@ -36,7 +34,19 @@ func main() {
 	jobRunnerWait := flag.Int("run_wait", 60, "The amount of seconds the job runner waits between checking the database for pending jobs")
 	jobScheduleWait := flag.Int("schedule_wait", 30, "The amount of seconds the job runner waits between checking the database for scheduled jobs")
 
+	// Setting up config arguments for initialization processes
+	configInit := flag.Bool("init-config", false, "")
+	scaffoldInit := flag.Bool("init-scaffold", false, "")
+	orgInit := flag.Bool("init-org", false, "")
+
+	// Setting up config arguments for running scaffolding
+	sprocPath := flag.String("sproc", "", "The path to where the stored procedures waiting for generation are located.")
+	schemaMigrationPath := flag.String("migrate", "", "The path where the migrate files are located.")
+	templatePath := flag.String("tpath", "", "The path where the 'templates' directory is located.")
+
 	flag.Parse()
+
+	installationFlagCheck(*configInit, *scaffoldInit, *orgInit, *configFile, *configPath, *sprocPath, *schemaMigrationPath, *templatePath)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -159,46 +169,32 @@ func populateAutoStartJobs(dbconn domain.DatabaseConnection) (err error) {
 	return err
 }
 
-func installationFlagCheck() {
-	if len(os.Args) == 2 {
-		goPath, exists := os.LookupEnv("GOPATH")
-		if !exists {
-			fmt.Println("GOPATH environment variable not set")
-			os.Exit(1)
-		}
+func installationFlagCheck(configInit, scaffoldInit, orgInit bool, configFile, configPath, sprocPath, migratePath, templatePath string) {
+	if configInit {
+		install_config.InstallConfig(configPath)
+	}
 
-		aegisPath := fmt.Sprintf("%s/src/github.com/nortonlifelock", goPath)
+	if scaffoldInit {
+		executeScaffolding(configFile, configPath, sprocPath, migratePath, templatePath)
+	}
 
-		if os.Args[1] == "init" {
-			install_config.InstallConfig(aegisPath)
-			executeScaffolding(goPath)
-			install_org.InstallOrg(aegisPath)
+	if orgInit {
+		install_org.InstallOrg(fmt.Sprintf("%s/%s", configPath, configFile))
+	}
 
-			os.Exit(0)
-		} else if os.Args[1] == "init-org" {
-			install_org.InstallOrg(fmt.Sprintf("%s/app.json", aegisPath))
-
-			os.Exit(0)
-		} else if os.Args[1] == "init-config" {
-			install_config.InstallConfig(aegisPath)
-
-			os.Exit(0)
-		} else if os.Args[1] == "scaffold" {
-			executeScaffolding(goPath)
-
-			os.Exit(0)
-		}
+	if configInit || scaffoldInit || orgInit {
+		os.Exit(0)
 	}
 }
 
-func executeScaffolding(goPath string) {
+func executeScaffolding(configFile, configPath, sprocPath, migratePath, templatePath string) {
 	cmd := exec.Command(
 		"aegis-scaffold",
-		"-config", "app.json",
-		"-cpath", fmt.Sprintf("%s/src/github.com/nortonlifelock", goPath),
-		"-sproc", fmt.Sprintf("%s/src/github.com/nortonlifelock/aegis-db/procedures", goPath),
-		"-migrate", fmt.Sprintf("%s/src/github.com/nortonlifelock/aegis-db/migrations", goPath),
-		"-tpath", fmt.Sprintf("%s/src/github.com/nortonlifelock/aegis-scaffold", goPath),
+		"-config", configFile,
+		"-cpath", configPath,
+		"-sproc", sprocPath,
+		"-migrate", migratePath,
+		"-tpath", templatePath,
 		"-m",
 		"-p",
 	)
