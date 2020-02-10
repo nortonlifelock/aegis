@@ -697,6 +697,7 @@ func (connector *ConnectorJira) GetOpenTicketsByGroupID(methodOfDiscovery string
 	statuses[connector.GetStatusMap(StatusResolvedDecom)] = true
 	statuses[connector.GetStatusMap(StatusResolvedException)] = true
 	statuses[connector.GetStatusMap(StatusResolvedFalsePositive)] = true
+	statuses[connector.GetStatusMap(StatusClosedException)] = true
 
 	tickets, err = connector.getOpenTicketsByGroupID(statuses, methodOfDiscovery, orgCode, groupID)
 	return tickets, err
