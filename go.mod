@@ -8,7 +8,7 @@ require (
 	github.com/nortonlifelock/database v1.0.1-0.20200131202803-7ada08c09229
 	github.com/nortonlifelock/domain v1.0.1-0.20200131202818-36fd209d3c7b
 	github.com/nortonlifelock/files v1.0.1-0.20200127165427-5178f1323f54
-	github.com/nortonlifelock/implementations v1.0.1-0.20200131203540-a2e9e294ae7a
+	github.com/nortonlifelock/implementations v1.0.1-0.20200210205353-5bc03152c039
 	github.com/nortonlifelock/integrations v1.0.1-0.20200129171309-51d43a7fc1c1
 	github.com/nortonlifelock/jira v1.0.1-0.20200210182625-eae6f78e78a9
 	github.com/nortonlifelock/job v1.0.1-0.20200127165455-ca80a64d226c
