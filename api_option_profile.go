@@ -15,6 +15,10 @@ func (session *Session) CreateOptionProfile(optionProfile *OptionProfiles) (opti
 	var fields = make(map[string]string)
 	fields["action"] = "import"
 
+	if len(optionProfile.OptionProfile.Scan.HostAliveTesting) == 0 {
+		optionProfile.OptionProfile.Scan.HostAliveTesting = "0"
+	}
+
 	if len(optionProfile.OptionProfile.Scan.Ports.TCPPorts.TCPPortsAdditional.HasAdditional) == 0 {
 		optionProfile.OptionProfile.Scan.Ports.TCPPorts.TCPPortsAdditional.HasAdditional = "0"
 	}
