@@ -99,8 +99,8 @@ func (connector *ConnectorJira) getResolutions() (resolutions map[string]*jira.R
 
 // TurnXMLWorkFlowToJSON takes in the JIRA workflow (describes the transitions between JIRA statuses) and turns it into JSON so it can be stored in the Payload of the Source Config for the JIRA connection
 // How to find the JIRA workflow in your JIRA instance: go to JIRA Administration (cog) -> Projects -> Workflows (on left) -> Select "actions" button next to desired workflow -> Export as XML
-func TurnXMLWorkFlowToJSON(xmlWorkFlow string) (transitionMap string, err error) {
-	var fromToTransition = make(map[string]map[string][]workflowTransition)
+func TurnXMLWorkFlowToMap(xmlWorkFlow string) (fromToTransition map[string]map[string][]workflowTransition, err error) {
+	fromToTransition = make(map[string]map[string][]workflowTransition)
 	workflow := &workflow{}
 
 	err = xml.Unmarshal([]byte(xmlWorkFlow), workflow)
@@ -141,10 +141,7 @@ func TurnXMLWorkFlowToJSON(xmlWorkFlow string) (transitionMap string, err error)
 		err = fmt.Errorf("error while unmarshalling JIRA workflow - %s", err.Error())
 	}
 
-	var transitionMapBody []byte
-	transitionMapBody, err = json.Marshal(fromToTransition)
-
-	return string(transitionMapBody), err
+	return fromToTransition, err
 }
 
 // Get the complete list of Statuses for the JIRA system and store them in a map
