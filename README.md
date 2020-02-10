@@ -49,21 +49,14 @@ Installing Aegis:
 
 ```sh
 git clone https://github.com/nortonlifelock/aegis
-git clone https://github.com/nortonlifelock/aegis-scaffold.git
-git clone https://github.com/nortonlifelock/aegis-api.git
-git clone https://github.com/nortonlifelock/aegis-db.git
-git clone https://github.com/nortonlifelock/aegis-ui.git
 
-cd ./aegis || exit
+cd ./aegis/cmd || exit
 go install aegis.go
 
-cd ../aegis-api || exit
+cd aegis-api || exit
 go install aegis-api.go
 
-cd ../aegis-scaffold || exit
-go install aegis-scaffold.go
-
-cd ..
+cd ../..
 
 aegis -init-config -init-scaffold -init-org -cpath $PWD -sproc $PWD/aegis-db/procedures -migrate $PWD/aegis-db/migrations -tpath $PWD/aegis-scaffold
 ```

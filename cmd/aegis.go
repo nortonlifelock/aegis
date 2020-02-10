@@ -1,11 +1,11 @@
-package main
+package cmd
 
 import (
 	"context"
 	"flag"
 	"fmt"
-	install_config "github.com/nortonlifelock/aegis/setup/install-config"
-	install_org "github.com/nortonlifelock/aegis/setup/install-org"
+	install_config "github.com/nortonlifelock/aegis/internal/setup/install-config"
+	install_org "github.com/nortonlifelock/aegis/internal/setup/install-org"
 	"os"
 	"os/exec"
 

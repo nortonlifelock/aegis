@@ -1,0 +1,99 @@
+[submodule "internal/implementations"]
+	path = internal/implementations
+	url = git@github.com:nortonlifelock/implementations.git
+[submodule "tools/layer-encrypt"]
+	path = tools/layer-encrypt
+	url = git@github.com:nortonlifelock/layer-encrypt.git
+[submodule "pkg/jira"]
+	path = pkg/jira
+	url = git@github.com:nortonlifelock/jira.git
+[submodule "internal/aegis-db"]
+	path = internal/aegis-db
+	url = git@github.com:nortonlifelock/aegis-db.git
+[submodule "internal/domain"]
+	path = internal/domain
+	url = git@github.com:nortonlifelock/domain.git
+[submodule "internal/database"]
+	path = internal/database
+	url = git@github.com:nortonlifelock/database.git
+[submodule "internal/aegis-scaffold"]
+	path = internal/aegis-scaffold
+	url = git@github.com:nortonlifelock/aegis-scaffold.git
+[submodule "pkg/crypto"]
+	path = pkg/crypto
+	url = git@github.com:nortonlifelock/crypto.git
+[submodule "pkg/qualys"]
+	path = pkg/qualys
+	url = git@github.com:nortonlifelock/qualys.git
+[submodule "pkg/log"]
+	path = pkg/log
+	url = git@github.com:nortonlifelock/log.git
+[submodule "internal/integrations"]
+	path = internal/integrations
+	url = git@github.com:nortonlifelock/integrations.git
+[submodule "internal/config"]
+	path = internal/config
+	url = https://github.com/nortonlifelock/config
+[submodule "pkg/scaffold"]
+	path = pkg/scaffold
+	url = git@github.com:nortonlifelock/scaffold.git
+[submodule "cmd/aegis-api"]
+	path = cmd/aegis-api
+	url = git@github.com:nortonlifelock/aegis-api.git
+[submodule "tools/qualys-export"]
+	path = tools/qualys-export
+	url = git@github.com:nortonlifelock/qualys-export.git
+[submodule "pkg/nexpose"]
+	path = pkg/nexpose
+	url = git@github.com:nortonlifelock/nexpose.git
+[submodule "tools/kms-tool"]
+	path = tools/kms-tool
+	url = git@github.com:nortonlifelock/kms-tool.git
+[submodule "pkg/job"]
+	path = pkg/job
+	url = git@github.com:nortonlifelock/job.git
+[submodule "tools/jira-tool"]
+	path = tools/jira-tool
+	url = git@github.com:nortonlifelock/jira-tool.git
+[submodule "tools/jira-oauth"]
+	path = tools/jira-oauth
+	url = git@github.com:nortonlifelock/jira-oauth.git
+[submodule "tools/jira-export"]
+	path = tools/jira-export
+	url = git@github.com:nortonlifelock/jira-export.git
+[submodule "pkg/funnel"]
+	path = pkg/funnel
+	url = git@github.com:nortonlifelock/funnel.git
+[submodule "api/endpoints"]
+	path = api/endpoints
+	url = git@github.com:nortonlifelock/endpoints.git
+[submodule "pkg/dome9"]
+	path = pkg/dome9
+	url = git@github.com:nortonlifelock/dome9.git
+[submodule "internal/connection"]
+	path = internal/connection
+	url = git@github.com:nortonlifelock/connection.git
+[submodule "pkg/azure"]
+	path = pkg/azure
+	url = git@github.com:nortonlifelock/azure.git
+[submodule "pkg/aws"]
+	path = pkg/aws
+	url = git@github.com:nortonlifelock/aws.git
+[submodule "tools/assignment-import"]
+	path = tools/assignment-import
+	url = git@github.com:nortonlifelock/assignment-import.git
+[submodule "tools/template-deletion"]
+	path = tools/template-deletion
+	url = git@github.com:nortonlifelock/template-deletion.git
+[submodule "internal/files"]
+	path = internal/files
+	url = git@github.com:nortonlifelock/files.git
+[submodule "pkg/ttl"]
+	path = pkg/ttl
+	url = git@github.com:nortonlifelock/ttl.git
+[submodule "internal/template"]
+	path = internal/template
+	url = git@github.com:nortonlifelock/template.git
+[submodule "tools/keygen"]
+	path = tools/keygen
+	url = git@github.com:nortonlifelock/keygen.git
