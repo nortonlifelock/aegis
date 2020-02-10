@@ -3,8 +3,8 @@ package jira
 import "encoding/xml"
 
 type workflowTransition struct {
-	id   string
-	name string
+	ID   string `json:"id"`
+	Name string `json:"name"`
 }
 
 // workflow is used to parse the JIRA.workflow file so the code can find a series of transitions to move from one status to another

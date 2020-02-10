@@ -62,6 +62,9 @@ type PayloadJira struct {
 
 	// Maps the PDE name for a field to the JIRA-specific name for a field
 	FieldMap map[string]string `json:"field_map"`
+
+	// TransitionMap has two keys - the first key being the starting status, the second key being the ending status, and the value being the series of transitions (in order) required to get from the starting status to the ending status
+	TransitionMap map[string]map[string][]workflowTransition `json:"transition_map"`
 }
 
 // NewJiraConnector creates a new JIRA connector for interacting with a JIRA system
@@ -88,11 +91,12 @@ func NewJiraConnector(ctx context.Context, lstream logger, config domain.SourceC
 
 func buildConnector(ctx context.Context, payload PayloadJira, config domain.SourceConfig, lstream logger) (connector *ConnectorJira, token string, err error) {
 	connector = &ConnectorJira{
-		project:   payload.Project,
-		config:    config,
-		lstream:   lstream,
-		payload:   payload,
-		statusMap: payload.StatusMap,
+		project:       payload.Project,
+		config:        config,
+		lstream:       lstream,
+		payload:       payload,
+		statusMap:     payload.StatusMap,
+		TransitionMap: payload.TransitionMap,
 	}
 
 	if checkStatus := ensureAllStatusesExistInMap(connector.payload.StatusMap); checkStatus != nil {
@@ -178,7 +182,9 @@ func (connector *ConnectorJira) loadConnectorData() (err error) {
 
 				// Load the issue types for the connector object
 				if connector.IssueTypes, err = connector.getIssueTypes(); err == nil {
-					err = connector.getWorkflow()
+					if len(connector.TransitionMap) == 0 {
+						err = fmt.Errorf("transition map not present in JIRA source config payload")
+					}
 				}
 			}
 		}

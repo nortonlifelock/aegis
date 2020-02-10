@@ -248,15 +248,8 @@ func (connector *ConnectorJira) UpdateTicket(ticket domain.Ticket, comment strin
 			field := connector.GetFieldMap(backendOrg)
 
 			if field != nil {
-				if existingTicket.OrgCode() != nil {
-					if *existingTicket.OrgCode() != *ticket.OrgCode() {
-						updateBlock.Fields.OrgCode = existingTicket.OrgCode()
-						oldToNewFieldName["org"] = field.ID
-					}
-				} else {
-					updateBlock.Fields.OrgCode = ticket.OrgCode()
-					oldToNewFieldName["org"] = field.ID
-				}
+				updateBlock.Fields.OrgCode = ticket.OrgCode()
+				oldToNewFieldName["org"] = field.ID
 			}
 			//}
 
@@ -567,7 +560,7 @@ func (connector *ConnectorJira) Transition(ticket domain.Ticket, toStatus string
 								var transition = transitionSeries[transitionIndex]
 
 								for checkIndex := range trans {
-									if trans[checkIndex].ID == transition.id {
+									if trans[checkIndex].ID == transition.ID {
 										apiHasTransition = true
 										break
 									}
@@ -576,7 +569,7 @@ func (connector *ConnectorJira) Transition(ticket domain.Ticket, toStatus string
 								if apiHasTransition {
 									err = executeTransition(transition, assignTo, connector, ticket, comment)
 								} else {
-									err = errors.Errorf("Transition %s is not available for ticket %s. It is likely your JIRA account lacks a specific permission or your workflow is out of date", transition.name, ticket.Title())
+									err = errors.Errorf("Transition %s is not available for ticket %s. It is likely your JIRA account lacks a specific permission or your workflow is out of date", transition.Name, ticket.Title())
 								}
 
 							} else {

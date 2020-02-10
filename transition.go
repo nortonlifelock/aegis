@@ -82,7 +82,7 @@ func (connector *ConnectorJira) calculateTransitionSeries(fromStatus, toStatus s
 
 func executeTransition(transition workflowTransition, assignTo string, connector *ConnectorJira, ticket domain.Ticket, Comment string) (err error) {
 	payload := TransitionPayload{
-		ID:       transition.id,
+		ID:       transition.ID,
 		Assignee: &assignTo,
 		Unknowns: make(tcontainer.MarshalMap),
 	}
@@ -104,7 +104,7 @@ func executeTransition(transition workflowTransition, assignTo string, connector
 			UpdateBlock: Update{Comment: []UpdateObjects{{AddBody{Comment}}}},
 		}
 
-		if strings.Index(strings.ToLower(transition.name), "reopen") >= 0 {
+		if strings.Index(strings.ToLower(transition.Name), "reopen") >= 0 {
 			if tpayload.Fields == nil {
 				tpayload.Fields = &FieldStruct{}
 			}

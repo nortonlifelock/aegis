@@ -97,11 +97,13 @@ func (connector *ConnectorJira) getResolutions() (resolutions map[string]*jira.R
 	return resolutions, err
 }
 
-func (connector *ConnectorJira) getWorkflow() (err error) {
+// TurnXMLWorkFlowToJSON takes in the JIRA workflow (describes the transitions between JIRA statuses) and turns it into JSON so it can be stored in the Payload of the Source Config for the JIRA connection
+// How to find the JIRA workflow in your JIRA instance: go to JIRA Administration (cog) -> Projects -> Workflows (on left) -> Select "actions" button next to desired workflow -> Export as XML
+func TurnXMLWorkFlowToJSON(xmlWorkFlow string) (transitionMap string, err error) {
 	var fromToTransition = make(map[string]map[string][]workflowTransition)
 	workflow := &workflow{}
 
-	err = xml.Unmarshal([]byte(projectWorkflow), workflow)
+	err = xml.Unmarshal([]byte(xmlWorkFlow), workflow)
 	var transitionIDToName = buildTransitionIDToNameMap(workflow)
 	var commonActionMap = buildCommonActionMap(workflow)
 
@@ -117,8 +119,8 @@ func (connector *ConnectorJira) getWorkflow() (err error) {
 				var idForStatusArrivedAtByTakingTransition = action.TransitionDetails.DestinationStatusID
 				var toStatus = strings.ToLower(transitionIDToName[idForStatusArrivedAtByTakingTransition])
 				var singleTrans = workflowTransition{
-					id:   action.ActionID,
-					name: action.TransitionName,
+					ID:   action.ActionID,
+					Name: action.TransitionName,
 				}
 				fromToTransition[fromStatus][toStatus] = []workflowTransition{singleTrans}
 			}
@@ -128,8 +130,8 @@ func (connector *ConnectorJira) getWorkflow() (err error) {
 				var idForStatusArrivedAtByTakingTransition = action.TransitionDetails.DestinationStatusID
 				var toStatus = strings.ToLower(transitionIDToName[idForStatusArrivedAtByTakingTransition])
 				var singleTrans = workflowTransition{
-					id:   commonActionMap[commonActionID.ID].ActionID,
-					name: commonActionMap[commonActionID.ID].TransitionName,
+					ID:   commonActionMap[commonActionID.ID].ActionID,
+					Name: commonActionMap[commonActionID.ID].TransitionName,
 				}
 				fromToTransition[fromStatus][toStatus] = []workflowTransition{singleTrans}
 			}
@@ -139,9 +141,10 @@ func (connector *ConnectorJira) getWorkflow() (err error) {
 		err = fmt.Errorf("error while unmarshalling JIRA workflow - %s", err.Error())
 	}
 
-	connector.TransitionMap = fromToTransition
+	var transitionMapBody []byte
+	transitionMapBody, err = json.Marshal(fromToTransition)
 
-	return err
+	return string(transitionMapBody), err
 }
 
 // Get the complete list of Statuses for the JIRA system and store them in a map
