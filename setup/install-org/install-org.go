@@ -10,6 +10,7 @@ import (
 	"github.com/nortonlifelock/crypto"
 	"github.com/nortonlifelock/database"
 	"github.com/nortonlifelock/domain"
+	"github.com/nortonlifelock/files"
 	"github.com/nortonlifelock/implementations"
 	"github.com/nortonlifelock/integrations"
 	"github.com/nortonlifelock/jira"
@@ -110,7 +111,7 @@ func createJobConfigs(db domain.DatabaseConnection, orgID, scannerSCID, ticketSC
 
 	_, _, err = db.CreateJobConfigWPayload(jobNameToJobID[rescanJob], orgID, 0, false, 0, 0, false, "INSTALLER", scannerSCID, ticketSCID, "{}")
 	check(err)
-	_, _, err = db.CreateJobConfigWPayload(jobNameToJobID[ticketingJob], orgID, 0, false, 0, 0, false, "INSTALLER", scannerSCID, ticketSCID, string(ticketingBody))
+	_, _, err = db.CreateJobConfigWPayload(jobNameToJobID[ticketingJob], orgID, 0, false, 0, 1, false, "INSTALLER", scannerSCID, ticketSCID, string(ticketingBody))
 	check(err)
 	_, _, err = db.CreateJobConfigWPayload(jobNameToJobID[scanSyncJob], orgID, 0, true, 120, 1, true, "INSTALLER", scannerSCID, scannerSCID, "{}")
 	check(err)
@@ -184,6 +185,15 @@ func createTicketSourceConfig(reader *bufio.Reader, aesClient crypto.Client, db 
 
 		fmt.Println("What JIRA project are you using?")
 		payload.Project = getInput(reader)
+
+		fmt.Println("\nNow lets grab your JIRA status workflow! You'll need to export it a XML and give us the file path so we can parse and store it. You can delete it after")
+		fmt.Println("You can find your workflow XML in your JIRA instance by going to JIRA Administration (cog) -> Projects -> Workflows (on left) -> Select \"actions\" button next to desired workflow -> Export as XML")
+		fmt.Println("Workflow XML path: ")
+		workflowXMLPath := getInput(reader)
+		workflowXML, err := files.GetStringFromFile(workflowXMLPath)
+		check(err)
+		payload.TransitionMap, err = jira.TurnXMLWorkFlowToMap(workflowXML)
+		check(err)
 
 		// If your ticket status do not align with the statuses that Aegis uses for tracking, you can map your status to our status in the payload of the JIRA source config in the database
 		// the Aegis recognized statuses are the keys, and your custom status is the value

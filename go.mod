@@ -7,9 +7,10 @@ require (
 	github.com/nortonlifelock/crypto v1.0.1-0.20200131192356-607bf4aedea4
 	github.com/nortonlifelock/database v1.0.1-0.20200131202803-7ada08c09229
 	github.com/nortonlifelock/domain v1.0.1-0.20200131202818-36fd209d3c7b
+	github.com/nortonlifelock/files v1.0.1-0.20200127165427-5178f1323f54
 	github.com/nortonlifelock/implementations v1.0.1-0.20200131203540-a2e9e294ae7a
 	github.com/nortonlifelock/integrations v1.0.1-0.20200129171309-51d43a7fc1c1
-	github.com/nortonlifelock/jira v1.0.1-0.20200129171924-64d17e636b47
+	github.com/nortonlifelock/jira v1.0.1-0.20200210182625-eae6f78e78a9
 	github.com/nortonlifelock/job v1.0.1-0.20200127165455-ca80a64d226c
 	github.com/nortonlifelock/log v1.0.1-0.20200129171320-c4a4dd839ed8
 	github.com/nortonlifelock/nexpose v1.0.1-0.20200127180156-5a974d158c2e
