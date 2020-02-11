@@ -48,6 +48,7 @@ func (session *QsSession) getDeadHostsForScan(scanID string, created time.Time) 
 
 // returns all IPs within a range of IPs (e.g. 100.0.0.0 - 100.0.0.100). If it is not a range, returns only the input IP
 func getAllIPsInRange(ipRange string) (allIPsInRange []string) {
+
 	hyphenIndex := strings.Index(ipRange, "-")
 	if hyphenIndex > 0 {
 
@@ -65,6 +66,8 @@ func getAllIPsInRange(ipRange string) (allIPsInRange []string) {
 		)
 
 		for bytes.Compare(traverseRangeIP, secondRangeIP) <= 0 {
+			allIPsInRange = append(allIPsInRange, net.ParseIP(fmt.Sprintf("%v.%v.%v.%v", traverseRangeIP[leftmostTuple], traverseRangeIP[secondTuple], traverseRangeIP[thirdTuple], traverseRangeIP[rightmostTuple])).String())
+
 			traverseRangeIP[rightmostTuple]++
 			if traverseRangeIP[rightmostTuple] == 0 {
 
@@ -78,8 +81,9 @@ func getAllIPsInRange(ipRange string) (allIPsInRange []string) {
 					}
 				}
 			}
-			allIPsInRange = append(allIPsInRange, net.ParseIP(fmt.Sprintf("%v.%v.%v.%v", traverseRangeIP[leftmostTuple], traverseRangeIP[secondTuple], traverseRangeIP[thirdTuple], traverseRangeIP[rightmostTuple])).String())
 		}
+	} else {
+		allIPsInRange = append(allIPsInRange, ipRange)
 	}
 
 	return allIPsInRange
