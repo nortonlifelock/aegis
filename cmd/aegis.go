@@ -1,18 +1,17 @@
-package cmd
+package main
 
 import (
 	"context"
 	"flag"
 	"fmt"
+	aegis_scaffold "github.com/nortonlifelock/aegis-scaffold"
 	install_config "github.com/nortonlifelock/aegis/internal/setup/install-config"
 	install_org "github.com/nortonlifelock/aegis/internal/setup/install-org"
-	"os"
-	"os/exec"
-
 	"github.com/nortonlifelock/config"
 	"github.com/nortonlifelock/database"
 	"github.com/nortonlifelock/domain"
 	"github.com/pkg/errors"
+	"os"
 
 	// Shadowed import for registering the jobs into the job runner. There is no need for a direct import here
 	// as the jobs are used from a registry for the dispatcher.
@@ -175,7 +174,7 @@ func installationFlagCheck(configInit, scaffoldInit, orgInit bool, configFile, c
 	}
 
 	if scaffoldInit {
-		executeScaffolding(configFile, configPath, sprocPath, migratePath, templatePath)
+		aegis_scaffold.RunScaffold(configFile, configPath, "", "", sprocPath, migratePath, templatePath, true, false, true, false)
 	}
 
 	if orgInit {
@@ -185,25 +184,4 @@ func installationFlagCheck(configInit, scaffoldInit, orgInit bool, configFile, c
 	if configInit || scaffoldInit || orgInit {
 		os.Exit(0)
 	}
-}
-
-func executeScaffolding(configFile, configPath, sprocPath, migratePath, templatePath string) {
-	cmd := exec.Command(
-		"aegis-scaffold",
-		"-config", configFile,
-		"-cpath", configPath,
-		"-sproc", sprocPath,
-		"-migrate", migratePath,
-		"-tpath", templatePath,
-		"-m",
-		"-p",
-	)
-
-	stdout, err := cmd.Output()
-	if err != nil {
-		fmt.Println(err.Error())
-		os.Exit(1)
-	}
-
-	fmt.Println(string(stdout))
 }
