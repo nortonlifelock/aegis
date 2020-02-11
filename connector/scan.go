@@ -244,7 +244,7 @@ func (session *QsSession) prepareIPsAndAGMapping(ips []string) (groupIDToScanBun
 						}
 
 						if !found {
-							session.lstream.Send(log.Errorf(fmt.Errorf("could not find asset group with online engine for %s", device), "no online engines found"))
+							session.lstream.Send(log.Errorf(fmt.Errorf("could not find asset group with online engine for %s, check to see if it's asset group is in the Qualys source config payload", device), "no online engines found"))
 						}
 
 					} else {
