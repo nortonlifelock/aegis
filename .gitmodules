@@ -7,9 +7,6 @@
 [submodule "pkg/jira"]
 	path = pkg/jira
 	url = git@github.com:nortonlifelock/jira.git
-[submodule "internal/aegis-db"]
-	path = internal/aegis-db
-	url = git@github.com:nortonlifelock/aegis-db.git
 [submodule "internal/domain"]
 	path = internal/domain
 	url = git@github.com:nortonlifelock/domain.git
@@ -91,9 +88,6 @@
 [submodule "pkg/ttl"]
 	path = pkg/ttl
 	url = git@github.com:nortonlifelock/ttl.git
-[submodule "internal/template"]
-	path = internal/template
-	url = git@github.com:nortonlifelock/template.git
 [submodule "tools/keygen"]
 	path = tools/keygen
 	url = git@github.com:nortonlifelock/keygen.git
