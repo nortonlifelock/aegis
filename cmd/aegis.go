@@ -34,18 +34,20 @@ func main() {
 	jobScheduleWait := flag.Int("schedule_wait", 30, "The amount of seconds the job runner waits between checking the database for scheduled jobs")
 
 	// Setting up config arguments for initialization processes
-	configInit := flag.Bool("init-config", false, "")
-	scaffoldInit := flag.Bool("init-scaffold", false, "")
-	orgInit := flag.Bool("init-org", false, "")
+	configInit := flag.Bool("init-config", false, "Create a new application configuration (app.json")
+	orgInit := flag.Bool("init-org", false, "Create an organization along with it's configurations")
+	scaffoldInit := flag.Bool("scaffold", false, "Update the Aegis database")
 
 	// Setting up config arguments for running scaffolding
 	sprocPath := flag.String("sproc", "", "The path to where the stored procedures waiting for generation are located.")
 	schemaMigrationPath := flag.String("migrate", "", "The path where the migrate files are located.")
 	templatePath := flag.String("tpath", "", "The path where the 'templates' directory is located.")
+	dalPath := flag.String("dal", "", "The path where the generated files for interacting with the database are stored")
+	domainPath := flag.String("domain", "", "The path to where the generated interface file is stored")
 
 	flag.Parse()
 
-	installationFlagCheck(*configInit, *scaffoldInit, *orgInit, *configFile, *configPath, *sprocPath, *schemaMigrationPath, *templatePath)
+	installationFlagCheck(*configInit, *scaffoldInit, *orgInit, *configFile, *configPath, *dalPath, *domainPath, *sprocPath, *schemaMigrationPath, *templatePath)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -168,13 +170,17 @@ func populateAutoStartJobs(dbconn domain.DatabaseConnection) (err error) {
 	return err
 }
 
-func installationFlagCheck(configInit, scaffoldInit, orgInit bool, configFile, configPath, sprocPath, migratePath, templatePath string) {
+func installationFlagCheck(configInit, scaffoldInit, orgInit bool, configFile, configPath, dalPath, domainPath, sprocPath, migratePath, templatePath string) {
 	if configInit {
 		install_config.InstallConfig(configPath)
 	}
 
 	if scaffoldInit {
-		aegis_scaffold.RunScaffold(configFile, configPath, "", "", sprocPath, migratePath, templatePath, true, false, true, false)
+		var generateFiles bool
+		if len(dalPath) > 0 && len(domainPath) > 0 {
+			generateFiles = true
+		}
+		aegis_scaffold.RunScaffold(configFile, configPath, domainPath, dalPath, sprocPath, migratePath, templatePath, true, generateFiles, true, generateFiles)
 	}
 
 	if orgInit {
