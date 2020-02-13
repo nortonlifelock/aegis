@@ -7,6 +7,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/kms"
 	"github.com/pkg/errors"
+	"os"
 )
 
 const (
@@ -49,6 +50,7 @@ func CreateKMSClientWithProfile(keyID string, profile string, region string) (cl
 }
 
 // CreateKMSClient performs the same operation as CreateKMSClientWithProfile, but does not use an associated profile
+// CreateKMSClient searches for the environment variables AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY before using the shared credentials file (~/.aws/credentials)
 func CreateKMSClient(keyID string, region string) (client *KMSClient, err error) {
 	var kmsClient *kms.KMS
 	sess, err := session.NewSession(&aws.Config{
@@ -98,7 +100,15 @@ func (kmsClient *KMSClient) Decrypt(encryptedText string) (message string, err e
 // kmsDoEncryption performs either an encryption or decryption operation depending on EDFlag using the AWS encryption key
 func kmsDoEncryption(encryptionKey string, EDFlag int, message string, profile string, region string) (enOrDe string, err error) {
 	var client Client
-	if len(profile) > 0 {
+
+	// The AWS SDK has the environment variables take precedence over the credentials in the shared file. CreateKMSClientWithProfile forces the loading of credentials from
+	// the shared file, so if we have environment variables present we have to make sure that method isn't called
+	var environmentVarsPresent bool
+	if len(os.Getenv("AWS_ACCESS_KEY_ID")) > 0 && len(os.Getenv("AWS_SECRET_ACCESS_KEY")) > 0 {
+		environmentVarsPresent = true
+	}
+
+	if len(profile) > 0 && !environmentVarsPresent {
 		client, err = CreateKMSClientWithProfile(encryptionKey, profile, region)
 	} else {
 		client, err = CreateKMSClient(encryptionKey, region)
