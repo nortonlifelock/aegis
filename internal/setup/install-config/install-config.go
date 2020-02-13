@@ -87,7 +87,20 @@ func InstallConfig(path string) {
 	// The url that the UI is being served at
 	conf.UI = "localhost:4200"
 
-	kmsClient, err := crypto.CreateKMSClientWithProfile(conf.EncryptionKey(), conf.ProfileKMS, conf.RegionKMS)
+	// The AWS SDK has the environment variables take precedence over the credentials in the shared file. CreateKMSClientWithProfile forces the loading of credentials from
+	// the shared file, so if we have environment variables present we have to make sure that method isn't called
+	var environmentVarsPresent bool
+	if len(os.Getenv("AWS_ACCESS_KEY_ID")) > 0 && len(os.Getenv("AWS_SECRET_ACCESS_KEY")) > 0 {
+		environmentVarsPresent = true
+	}
+
+	var kmsClient crypto.Client
+	if environmentVarsPresent {
+		kmsClient, err = crypto.CreateKMSClient(conf.EncryptionKey(), conf.RegionKMS)
+	} else {
+		kmsClient, err = crypto.CreateKMSClientWithProfile(conf.EncryptionKey(), conf.ProfileKMS, conf.RegionKMS)
+	}
+
 	check(err)
 
 	conf.DatabasePassword, err = kmsClient.Encrypt(conf.DatabasePassword)
