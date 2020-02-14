@@ -2,7 +2,7 @@ package database
 
 import (
 	"database/sql"
-	"github.com/nortonlifelock/aegis/interal/connection"
+	"github.com/nortonlifelock/aegis/internal/connection"
 	"github.com/nortonlifelock/aegis/internal/domain"
 	"github.com/pkg/errors"
 )

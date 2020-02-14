@@ -10,7 +10,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/nortonlifelock/aegis/interal/database/dal"
+	"github.com/nortonlifelock/aegis/internal/database/dal"
 	"github.com/nortonlifelock/aegis/internal/domain"
 	"github.com/nortonlifelock/aegis/internal/integrations"
 	"github.com/nortonlifelock/jira"

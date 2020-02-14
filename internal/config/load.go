@@ -3,7 +3,7 @@ package config
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/nortonlifelock/aegis/interal/files"
+	"github.com/nortonlifelock/aegis/internal/files"
 	"github.com/nortonlifelock/crypto"
 	"os"
 )
