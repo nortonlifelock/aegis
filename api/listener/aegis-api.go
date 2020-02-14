@@ -4,16 +4,16 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"encoding/json"
-	"flag"
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 
 	"github.com/benjivesterby/validator"
+	"github.com/nortonlifelock/aegis/api/endpoints"
 	"github.com/nortonlifelock/aegis/internal/config"
 	"github.com/nortonlifelock/aegis/internal/database"
 	"github.com/nortonlifelock/domain"
-	"github.com/nortonlifelock/endpoints"
 	"github.com/rs/cors"
 )
 
@@ -24,7 +24,7 @@ var (
 	apiPort int
 )
 
-func main() {
+func RunListener() {
 	var err error
 	endpoints.SigningKey, err = generateSigningKey(256)
 	if err == nil {
@@ -117,13 +117,9 @@ func generateSigningKey(keyLength int) (string, error) {
 	return retVal, err
 }
 
-func init() {
-	path := flag.String("p", "", "")
-	file := flag.String("f", "", "")
-	flag.Parse()
+func startup(path string) {
 
-	if path != nil && file != nil && len(*path) > 0 && len(*file) > 0 {
-
+	if len(path) > 0 {
 		if appConfig, err := config.LoadConfig(*path, *file); err == nil {
 			if validator.IsValid(appConfig) {
 
@@ -134,10 +130,12 @@ func init() {
 				if dbConn, err = database.NewConnection(appConfig); err == nil {
 					endpoints.Ms = dbConn.(domain.DatabaseConnection)
 					if endpoints.OrgADConfigs, err = loadOrganizationADSettings(dbConn); err != nil {
-						panic("error while loading AD organization information - " + err.Error())
+						print("error while loading AD organization information - " + err.Error())
+						os.Exit(1)
 					}
 				} else {
-					panic("Error while opening database connection " + err.Error())
+					print("Error while opening database connection " + err.Error())
+					os.Exit(1)
 				}
 
 				if appConfig.APIPort() > 0 {
@@ -150,24 +148,29 @@ func init() {
 						if len(appConfig.AegisPath()) > 0 {
 							endpoints.WorkingDir = appConfig.AegisPath()
 						} else {
-							panic("app.json must supply a path_to_aegis")
+							print("app.json must supply a path_to_aegis")
+							os.Exit(1)
 						}
 					} else {
-						panic("app.json must supply a key_id for KMS")
+						print("app.json must supply a key_id for KMS")
+						os.Exit(1)
 					}
 
 				} else {
-					panic("app.json must supply an api_port to listen on")
+					print("app.json must supply an api_port to listen on")
+					os.Exit(1)
 				}
 
 			} else {
-				panic("Invalid app.json")
+				print("Invalid app.json")
+				os.Exit(1)
 			}
 		} else {
-			panic(fmt.Sprintf("Could not load app.json - %s", err.Error()))
+			print(fmt.Sprintf("Could not load app.json - %s", err.Error()))
+			os.Exit(1)
 		}
 	} else {
-		panic("A path to the app.json must be supplied with the -p flag, " +
-			" the config file name must be supplied with the -f flag")
+		print("A path to the app.json must be supplied")
+		os.Exit(1)
 	}
 }

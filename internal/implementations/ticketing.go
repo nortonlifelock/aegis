@@ -892,7 +892,8 @@ func (job *TicketingJob) createIndividualTicket(payload *vulnerabilityPayload) {
 				jira.StatusOpen,
 				payload.combo.ID(),
 				job.config.OrganizationID(),
-				tord(payload.ticket.DueDate()),
+				tord1970(payload.ticket.CreatedDate()),
+				tord1970(payload.ticket.DueDate()),
 				time.Now(),
 				tord1970(payload.ticket.ResolutionDate()),
 				tord1970(nil), // used to set the resolution date to nil in the DB if the ticket doesn't have one
@@ -994,6 +995,7 @@ func (job *TicketingJob) payloadToTicket(payload *vulnerabilityPayload) (newtix 
 		var cvss = job.getCVSSScore(payload.vuln)
 		var fullOSName = payload.device.OS()
 		var reportedBy = job.getCachedReportedBy()
+		var created = time.Now()
 
 		newtix = &dal.Ticket{
 			DeviceIDvar: sord(payload.device.SourceID()),
@@ -1024,9 +1026,10 @@ func (job *TicketingJob) payloadToTicket(payload *vulnerabilityPayload) (newtix 
 			VendorReferencesvar: &vendorRefs,
 			CVEReferencesvar:    &cves,
 
-			AlertDatevar: &alertdate,
-			DueDatevar:   &duedate,
-			OrgCodevar:   &payload.orgCode,
+			CreatedDatevar: &created,
+			AlertDatevar:   &alertdate,
+			DueDatevar:     &duedate,
+			OrgCodevar:     &payload.orgCode,
 		}
 	}
 

@@ -4,7 +4,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"github.com/nortonlifelock/aegis/init"
+	aegis_init "github.com/nortonlifelock/aegis/init"
 	"github.com/nortonlifelock/aegis/internal/config"
 	"github.com/nortonlifelock/aegis/internal/database"
 	"github.com/nortonlifelock/domain"
@@ -170,7 +170,7 @@ func populateAutoStartJobs(dbconn domain.DatabaseConnection) (err error) {
 
 func installationFlagCheck(configInit, scaffoldInit, orgInit bool, configFile, configPath, dalPath, domainPath, sprocPath, migratePath, templatePath string) {
 	if configInit {
-		init.InstallConfig(configPath)
+		aegis_init.InstallConfig(configPath)
 	}
 
 	if scaffoldInit {
@@ -178,11 +178,11 @@ func installationFlagCheck(configInit, scaffoldInit, orgInit bool, configFile, c
 		if len(dalPath) > 0 && len(domainPath) > 0 {
 			generateFiles = true
 		}
-		init.RunScaffold(configFile, configPath, domainPath, dalPath, sprocPath, migratePath, templatePath, true, generateFiles, true, generateFiles)
+		aegis_init.RunScaffold(configFile, configPath, domainPath, dalPath, sprocPath, migratePath, templatePath, true, generateFiles, true, generateFiles)
 	}
 
 	if orgInit {
-		init.InstallOrg(fmt.Sprintf("%s/%s", configPath, configFile))
+		aegis_init.InstallOrg(fmt.Sprintf("%s/%s", configPath, configFile))
 	}
 
 	if configInit || scaffoldInit || orgInit {

@@ -94,8 +94,9 @@ func (job *TicketSyncJob) processTicket(tic domain.Ticket, orgID string) {
 					sord(tic.Status()),
 					detection.ID(),
 					job.config.OrganizationID(),
-					tord(tic.DueDate()),
-					tord(tic.UpdatedDate()),
+					tord1970(tic.DueDate()),
+					tord1970(tic.CreatedDate()),
+					tord1970(tic.UpdatedDate()),
 					tord1970(tic.ResolutionDate()),
 					tord1970(nil), // used to set the resolution date to nil in the DB if the ticket doesn't have one
 				)
@@ -111,7 +112,10 @@ func (job *TicketSyncJob) processTicket(tic domain.Ticket, orgID string) {
 				tic.Title(),
 				sord(tic.Status()),
 				job.config.OrganizationID(),
-				tord(tic.UpdatedDate()),
+				sord(tic.AssignmentGroup()),
+				sord(tic.AssignedTo()),
+				tord1970(tic.CreatedDate()),
+				tord1970(tic.UpdatedDate()),
 				tord1970(tic.ResolutionDate()),
 				tord1970(nil), // used to set the resolution date to nil in the DB if the ticket doesn't have one
 			)

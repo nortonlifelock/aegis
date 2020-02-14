@@ -3,7 +3,7 @@ package database
 import (
 	"database/sql"
 	"github.com/nortonlifelock/connection"
-	"github.com/nortonlifelock/aegis/internal/database/dal"
+	"github.com/nortonlifelock/database/dal"
 	"github.com/nortonlifelock/domain"
 	"time"
 )
@@ -682,11 +682,11 @@ func (conn *dbconn) CreateTagMap(_TicketingSourceID string, _TicketingTag string
 }
 
 // CreateTicket executes the stored procedure CreateTicket against the database
-func (conn *dbconn) CreateTicket(_Title string, _Status string, _DetectionID string, _OrganizationID string, _DueDate time.Time, _UpdatedDate time.Time, _ResolutionDate time.Time, _DefaultTime time.Time) (id int, affectedRows int, err error) {
+func (conn *dbconn) CreateTicket(_Title string, _Status string, _DetectionID string, _OrganizationID string, _DueDate time.Time, _CreatedDate time.Time, _UpdatedDate time.Time, _ResolutionDate time.Time, _DefaultTime time.Time) (id int, affectedRows int, err error) {
 
 	conn.Exec(&connection.Procedure{
 		Proc:       "CreateTicket",
-		Parameters: []interface{}{_Title, _Status, _DetectionID, _OrganizationID, _DueDate, _UpdatedDate, _ResolutionDate, _DefaultTime},
+		Parameters: []interface{}{_Title, _Status, _DetectionID, _OrganizationID, _DueDate, _CreatedDate, _UpdatedDate, _ResolutionDate, _DefaultTime},
 		Callback: func(results interface{}, dberr error) {
 			err = dberr
 
@@ -8013,11 +8013,11 @@ func (conn *dbconn) UpdateTagMap(_TicketingSourceID string, _TicketingTag string
 }
 
 // UpdateTicket executes the stored procedure UpdateTicket against the database
-func (conn *dbconn) UpdateTicket(_Title string, _Status string, _OrganizationID string, _UpdatedDate time.Time, _ResolutionDate time.Time, _DefaultTime time.Time) (id int, affectedRows int, err error) {
+func (conn *dbconn) UpdateTicket(_Title string, _Status string, _OrganizationID string, _AssignmentGroup string, _Assignee string, _CreatedDate time.Time, _UpdatedDate time.Time, _ResolutionDate time.Time, _DefaultTime time.Time) (id int, affectedRows int, err error) {
 
 	conn.Exec(&connection.Procedure{
 		Proc:       "UpdateTicket",
-		Parameters: []interface{}{_Title, _Status, _OrganizationID, _UpdatedDate, _ResolutionDate, _DefaultTime},
+		Parameters: []interface{}{_Title, _Status, _OrganizationID, _AssignmentGroup, _Assignee, _CreatedDate, _UpdatedDate, _ResolutionDate, _DefaultTime},
 		Callback: func(results interface{}, dberr error) {
 			err = dberr
 
