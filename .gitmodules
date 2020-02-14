@@ -22,9 +22,6 @@
 [submodule "pkg/funnel"]
 	path = pkg/funnel
 	url = git@github.com:nortonlifelock/funnel.git
-[submodule "api/endpoints"]
-	path = api/endpoints
-	url = git@github.com:nortonlifelock/endpoints.git
 [submodule "pkg/dome9"]
 	path = pkg/dome9
 	url = git@github.com:nortonlifelock/dome9.git
