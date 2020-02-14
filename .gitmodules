@@ -67,3 +67,12 @@
 [submodule "tools/keygen"]
 	path = tools/keygen
 	url = git@github.com:nortonlifelock/keygen.git
+[submodule "pkg/domain"]
+	path = pkg/domain
+	url = git@github.com:nortonlifelock/domain.git
+[submodule "pkg/files"]
+	path = pkg/files
+	url = git@github.com:nortonlifelock/files.git
+[submodule "pkg/connection"]
+	path = pkg/connection
+	url = git@github.com:nortonlifelock/connection.git

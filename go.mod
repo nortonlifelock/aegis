@@ -10,7 +10,9 @@ require (
 	github.com/nortonlifelock/aws v1.0.0
 	github.com/nortonlifelock/azure v1.0.1-0.20200127180045-bed3edc24747
 	github.com/nortonlifelock/crypto v1.0.1-0.20200213175907-562e87a94143
+	github.com/nortonlifelock/domain v1.0.1-0.20200131202818-36fd209d3c7b
 	github.com/nortonlifelock/dome9 v1.0.0
+	github.com/nortonlifelock/files v1.0.1-0.20200127165427-5178f1323f54
 	github.com/nortonlifelock/implementations v1.0.1-0.20200213180005-0c6576ebef01 // indirect
 	github.com/nortonlifelock/integrations v1.0.1-0.20200129171309-51d43a7fc1c1 // indirect
 	github.com/nortonlifelock/jira v1.0.1-0.20200210182625-eae6f78e78a9

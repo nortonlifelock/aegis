@@ -6,9 +6,9 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/nortonlifelock/aegis/backend/config"
-	"github.com/nortonlifelock/aegis/backend/connection"
-	"github.com/nortonlifelock/aegis/backend/files"
+	"github.com/nortonlifelock/aegis/internal/config"
+	"github.com/nortonlifelock/connection"
+	"github.com/nortonlifelock/files"
 	"github.com/nortonlifelock/scaffold"
 )
 

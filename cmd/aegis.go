@@ -4,10 +4,10 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"github.com/nortonlifelock/aegis/backend/config"
-	"github.com/nortonlifelock/aegis/backend/database"
-	"github.com/nortonlifelock/aegis/backend/domain"
 	"github.com/nortonlifelock/aegis/init"
+	"github.com/nortonlifelock/aegis/internal/config"
+	"github.com/nortonlifelock/aegis/internal/database"
+	"github.com/nortonlifelock/domain"
 	"github.com/pkg/errors"
 	"os"
 
@@ -15,7 +15,7 @@ import (
 	// as the jobs are used from a registry for the dispatcher.
 	"time"
 
-	_ "github.com/nortonlifelock/aegis/backend/implementations"
+	_ "github.com/nortonlifelock/aegis/internal/implementations"
 	"github.com/nortonlifelock/job"
 	"github.com/nortonlifelock/log"
 )
