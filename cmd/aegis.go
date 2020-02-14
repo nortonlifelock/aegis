@@ -4,12 +4,12 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	aegis_scaffold "github.com/nortonlifelock/aegis-scaffold"
+	aegis_scaffold "github.com/nortonlifelock/aegis/interal/aegis-scaffold"
+	"github.com/nortonlifelock/aegis/interal/config"
+	"github.com/nortonlifelock/aegis/interal/database"
+	"github.com/nortonlifelock/aegis/internal/domain"
 	install_config "github.com/nortonlifelock/aegis/internal/setup/install-config"
 	install_org "github.com/nortonlifelock/aegis/internal/setup/install-org"
-	"github.com/nortonlifelock/config"
-	"github.com/nortonlifelock/database"
-	"github.com/nortonlifelock/domain"
 	"github.com/pkg/errors"
 	"os"
 
@@ -17,7 +17,7 @@ import (
 	// as the jobs are used from a registry for the dispatcher.
 	"time"
 
-	_ "github.com/nortonlifelock/implementations"
+	_ "github.com/nortonlifelock/aegis/interal/implementations"
 	"github.com/nortonlifelock/job"
 	"github.com/nortonlifelock/log"
 )

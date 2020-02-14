@@ -5,8 +5,8 @@ import (
 
 	"github.com/pkg/errors"
 
+	"github.com/nortonlifelock/aegis/internal/domain"
 	"github.com/nortonlifelock/crypto"
-	"github.com/nortonlifelock/domain"
 	"github.com/nortonlifelock/dome9"
 )
 

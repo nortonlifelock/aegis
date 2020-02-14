@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/nortonlifelock/domain"
-	"github.com/nortonlifelock/integrations"
+	"github.com/nortonlifelock/aegis/internal/domain"
+	"github.com/nortonlifelock/aegis/internal/integrations"
 	"github.com/nortonlifelock/log"
 	"github.com/pkg/errors"
 )

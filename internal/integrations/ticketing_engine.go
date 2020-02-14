@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/nortonlifelock/aegis/internal/domain"
 	"github.com/nortonlifelock/crypto"
-	"github.com/nortonlifelock/domain"
 	"github.com/nortonlifelock/jira"
 	"github.com/pkg/errors"
 )

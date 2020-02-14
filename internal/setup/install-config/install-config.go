@@ -4,7 +4,7 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
-	"github.com/nortonlifelock/config"
+	"github.com/nortonlifelock/aegis/interal/config"
 	"github.com/nortonlifelock/crypto"
 	"golang.org/x/crypto/ssh/terminal"
 	"io/ioutil"

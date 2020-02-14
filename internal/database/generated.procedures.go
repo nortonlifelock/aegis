@@ -2,9 +2,9 @@ package database
 
 import (
 	"database/sql"
-	"github.com/nortonlifelock/connection"
-	"github.com/nortonlifelock/database/dal"
-	"github.com/nortonlifelock/domain"
+	"github.com/nortonlifelock/aegis/interal/connection"
+	"github.com/nortonlifelock/aegis/interal/database/dal"
+	"github.com/nortonlifelock/aegis/internal/domain"
 	"time"
 )
 

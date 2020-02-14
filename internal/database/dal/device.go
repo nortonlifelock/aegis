@@ -3,7 +3,7 @@ package dal
 import (
 	"context"
 	"fmt"
-	"github.com/nortonlifelock/domain"
+	"github.com/nortonlifelock/aegis/internal/domain"
 )
 
 // Device implements the domain.Device interface and utilizes the DeviceInfo object (which is tied to the database table Device)
