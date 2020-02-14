@@ -167,7 +167,7 @@ type GeneratedDatabaseConnection interface {
 	UpdateInstanceIDOfDevice(_ID string, _InstanceID string, _CloudSourceID string, _State string, _Region string, _OrgID string) (id int, affectedRows int, err error)
 	UpdateJobConfig(_ID string, _DataInSourceID string, _DataOutSourceID string, _Autostart bool, _PriorityOverride int, _Continuous bool, _WaitInSeconds int, _MaxInstances int, _UpdatedBy string, _OrgID string) (id int, affectedRows int, err error)
 	UpdateJobConfigLastRun(_ID string, _LastRun time.Time) (id int, affectedRows int, err error)
-	UpdateJobHistory(_ID string, _Status int, _ConfigID string, _Payload string, _UpdatedBy string) (id int, affectedRows int, err error)
+	UpdateJobHistory(_ID string, _ConfigID string, _Payload string, _UpdatedBy string) (id int, affectedRows int, err error)
 	UpdateJobHistoryStatus(_ID string, _Status int) (id int, affectedRows int, err error)
 	UpdateJobHistoryStatusDetailed(_ID string, _Status int, _UpdatedBy string) (id int, affectedRows int, err error)
 	UpdateOrganization(_ID string, _Description string, _TimezoneOffset float32, _UpdatedBy string) (id int, affectedRows int, err error)
