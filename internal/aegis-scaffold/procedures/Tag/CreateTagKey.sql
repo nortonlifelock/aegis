@@ -1,0 +1,6 @@
+DROP PROCEDURE IF EXISTS `CreateTagKey`;
+
+CREATE PROCEDURE `CreateTagKey`(_KeyValue NVARCHAR(255))
+
+  #BEGIN#
+  INSERT INTO TagKey (KeyValue) VALUES (_KeyValue);

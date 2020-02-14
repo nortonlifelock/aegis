@@ -1,0 +1,28 @@
+// %pname executes the stored procedure %pname against the database and returns the read results
+func (conn *dbconn) %pname(%parameters) (%returns error) {
+var err error
+%initreturn
+
+conn.Read(&connection.Procedure{
+Proc:"%procedure",
+Parameters:[]interface{}{%dbparams},
+Callback:func(results interface{}, dberr error) {
+err = dberr
+
+if err == nil {
+
+err = conn.getRows(results,
+func(rows *sql.Rows) (err error) {
+if err = rows.Err(); err == nil {
+%retmap
+}
+
+return err
+})
+}
+},
+})
+
+return %rname, err
+}
+

@@ -1,21 +1,9 @@
-[submodule "internal/implementations"]
-	path = internal/implementations
-	url = git@github.com:nortonlifelock/implementations.git
 [submodule "tools/layer-encrypt"]
 	path = tools/layer-encrypt
 	url = git@github.com:nortonlifelock/layer-encrypt.git
 [submodule "pkg/jira"]
 	path = pkg/jira
 	url = git@github.com:nortonlifelock/jira.git
-[submodule "internal/domain"]
-	path = internal/domain
-	url = git@github.com:nortonlifelock/domain.git
-[submodule "internal/database"]
-	path = internal/database
-	url = git@github.com:nortonlifelock/database.git
-[submodule "internal/aegis-scaffold"]
-	path = internal/aegis-scaffold
-	url = git@github.com:nortonlifelock/aegis-scaffold.git
 [submodule "pkg/crypto"]
 	path = pkg/crypto
 	url = git@github.com:nortonlifelock/crypto.git
@@ -25,12 +13,6 @@
 [submodule "pkg/log"]
 	path = pkg/log
 	url = git@github.com:nortonlifelock/log.git
-[submodule "internal/integrations"]
-	path = internal/integrations
-	url = git@github.com:nortonlifelock/integrations.git
-[submodule "internal/config"]
-	path = internal/config
-	url = https://github.com/nortonlifelock/config
 [submodule "pkg/scaffold"]
 	path = pkg/scaffold
 	url = git@github.com:nortonlifelock/scaffold.git
@@ -67,9 +49,6 @@
 [submodule "pkg/dome9"]
 	path = pkg/dome9
 	url = git@github.com:nortonlifelock/dome9.git
-[submodule "internal/connection"]
-	path = internal/connection
-	url = git@github.com:nortonlifelock/connection.git
 [submodule "pkg/azure"]
 	path = pkg/azure
 	url = git@github.com:nortonlifelock/azure.git
@@ -82,9 +61,6 @@
 [submodule "tools/template-deletion"]
 	path = tools/template-deletion
 	url = git@github.com:nortonlifelock/template-deletion.git
-[submodule "internal/files"]
-	path = internal/files
-	url = git@github.com:nortonlifelock/files.git
 [submodule "pkg/ttl"]
 	path = pkg/ttl
 	url = git@github.com:nortonlifelock/ttl.git

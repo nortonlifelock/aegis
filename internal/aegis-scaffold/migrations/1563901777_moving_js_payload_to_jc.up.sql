@@ -1,0 +1,1 @@
+ALTER TABLE `JobSchedule` DROP COLUMN Payload;

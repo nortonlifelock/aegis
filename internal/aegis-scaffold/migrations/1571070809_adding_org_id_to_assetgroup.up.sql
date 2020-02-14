@@ -1,0 +1,2 @@
+ALTER TABLE AssetGroup ADD COLUMN OrganizationID VARCHAR(36) NOT NULL AFTER GroupID;
+ALTER TABLE AssetGroup ADD CONSTRAINT `fk_vm_assetg_o` FOREIGN KEY (`OrganizationID`) REFERENCES `Organization` (`Id`);

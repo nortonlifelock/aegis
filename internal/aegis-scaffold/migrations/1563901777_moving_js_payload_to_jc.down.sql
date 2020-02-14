@@ -1,0 +1,1 @@
+ALTER TABLE `JobSchedule` ADD COLUMN Payload TEXT NULL AFTER TimeOfDay;

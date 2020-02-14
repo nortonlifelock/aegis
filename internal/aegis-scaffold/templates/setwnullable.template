@@ -1,0 +1,4 @@
+// Set%parameter sets the %parameter parameter from the %class struct
+func (my%class *%class) Set%parameter(val %type) {
+my%class.%pparametervar = &val
+}

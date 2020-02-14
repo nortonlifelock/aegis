@@ -1,0 +1,18 @@
+package database
+
+import (
+"database/sql"
+"github.com/nortonlifelock/database/dal"
+"github.com/nortonlifelock/domain"
+"github.com/nortonlifelock/connection"
+%imports
+)
+
+//**********************************************************
+// GENERATED CODE - DO NOT CHANGE
+// This file is generated using scaffolding. Any changes to
+// this file will be overwritten on the next build
+//**********************************************************
+
+
+%methods

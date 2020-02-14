@@ -1,0 +1,1 @@
+DELETE FROM `Job` WHERE `Struct` = 'CISRescanJob';

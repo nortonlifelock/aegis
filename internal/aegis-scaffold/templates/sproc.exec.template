@@ -1,0 +1,29 @@
+// %pname executes the stored procedure %pname against the database
+func (conn *dbconn) %pname(%parameters) (id int, affectedRows int, err error) {
+
+conn.Exec(&connection.Procedure{
+Proc:"%procedure",
+Parameters:[]interface{}{%dbparams},
+Callback:func(results interface{}, dberr error) {
+err = dberr
+
+if result, ok := results.(sql.Result); ok {
+var idOut int64
+
+// Get the id of the last inserted record
+if idOut, err = result.LastInsertId(); err == nil {
+id = int(idOut)
+}
+
+// Get the number of affected rows for the execution
+if idOut, err = result.RowsAffected(); ok {
+affectedRows = int(idOut)
+}
+}
+
+},
+})
+
+return id, affectedRows, err
+}
+

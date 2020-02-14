@@ -1,0 +1,21 @@
+package domain
+
+import (
+"github.com/nortonlifelock/connection"
+%imports
+)
+
+//**********************************************************
+// GENERATED CODE - DO NOT CHANGE
+// This file is generated using scaffolding. Any changes to
+// this file will be overwritten on the next build
+//**********************************************************
+
+// GeneratedDatabaseConnection outlines all the stored procedures used by the application. This interface can
+// be used to mock the connection for the purpose of testing
+type GeneratedDatabaseConnection interface {
+connection.DatabaseConnection
+
+%methods
+}
+

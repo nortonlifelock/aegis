@@ -1,0 +1,4 @@
+// %parameter returns the %parameter parameter from the %class struct
+func (my%class *%class) %parameter() (param %type) {
+return my%class.%pparametervar
+}

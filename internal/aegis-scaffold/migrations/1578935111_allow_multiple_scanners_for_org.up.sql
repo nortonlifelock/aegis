@@ -1,0 +1,2 @@
+ALTER TABLE ScanSummary ADD COLUMN ScannerSourceConfigID VARCHAR(36) NULL AFTER OrgID;
+ALTER TABLE `ScanSummary` ADD CONSTRAINT fk_vm_ss_sc FOREIGN KEY (ScannerSourceConfigID) REFERENCES SourceConfig(ID);

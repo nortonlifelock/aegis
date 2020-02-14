@@ -1,0 +1,34 @@
+package dal
+
+//**********************************************************
+// GENERATED CODE - DO NOT CHANGE
+// This file is generated using scaffolding. Any changes to
+// this file will be overwritten on the next build
+//**********************************************************
+
+import (
+"encoding/json"
+%imports
+)
+
+//**********************************************************
+// Struct Declaration
+//**********************************************************
+
+// %class defines the struct that implements the %class interface
+type %class struct {
+%parameters
+}
+
+//**********************************************************
+// Struct Methods
+//**********************************************************
+
+// MarshalJSON marshals the struct by converting it to a map
+func (my%class %class) MarshalJSON() ([]byte, error) {
+return json.Marshal(map[string]interface{}{
+%json
+})
+}
+
+%methods

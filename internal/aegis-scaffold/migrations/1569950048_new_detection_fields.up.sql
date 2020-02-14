@@ -1,0 +1,3 @@
+ALTER TABLE Detection ADD COLUMN `Port` INT NOT NULL AFTER `Proof`;
+ALTER TABLE Detection ADD COLUMN `Protocol` VARCHAR(20) NOT NULL AFTER `Port`;
+ALTER TABLE Detection ADD COLUMN `ActiveKernel` INT NULL AFTER `Protocol`;

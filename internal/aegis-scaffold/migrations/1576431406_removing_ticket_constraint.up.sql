@@ -1,0 +1,1 @@
+DROP INDEX ticket_unique_det_org_id ON Ticket;

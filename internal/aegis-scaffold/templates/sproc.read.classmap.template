@@ -1,0 +1,14 @@
+
+%variables
+
+if err = rows.Scan(
+
+%vparams
+); err == nil {
+
+new%class := &dal.%class{
+%map
+}
+
+ret%class = append(ret%class, new%class)
+}

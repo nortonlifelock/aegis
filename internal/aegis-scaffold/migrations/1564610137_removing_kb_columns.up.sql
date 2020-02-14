@@ -1,0 +1,1 @@
+ALTER TABLE `VulnerabilityInfo` DROP `Severity`, DROP `CVSSVector`, DROP `CVSS3Vector`;

@@ -1,0 +1,1 @@
+INSERT INTO `Job` (Struct, Priority, CreatedBy) VALUE ('CISRescanJob', 5, 'ryan_everhart@symantec.com');
