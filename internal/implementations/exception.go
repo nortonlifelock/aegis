@@ -6,8 +6,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/nortonlifelock/aegis/internal/integrations"
 	"github.com/nortonlifelock/domain"
-	"github.com/nortonlifelock/integrations"
 	"github.com/nortonlifelock/log"
 )
 

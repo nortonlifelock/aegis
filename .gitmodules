@@ -1,6 +1,3 @@
-[submodule "tools/layer-encrypt"]
-	path = tools/layer-encrypt
-	url = git@github.com:nortonlifelock/layer-encrypt.git
 [submodule "pkg/jira"]
 	path = pkg/jira
 	url = git@github.com:nortonlifelock/jira.git
@@ -16,36 +13,15 @@
 [submodule "pkg/scaffold"]
 	path = pkg/scaffold
 	url = git@github.com:nortonlifelock/scaffold.git
-[submodule "cmd/aegis-api"]
-	path = cmd/aegis-api
-	url = git@github.com:nortonlifelock/aegis-api.git
-[submodule "tools/qualys-export"]
-	path = tools/qualys-export
-	url = git@github.com:nortonlifelock/qualys-export.git
 [submodule "pkg/nexpose"]
 	path = pkg/nexpose
 	url = git@github.com:nortonlifelock/nexpose.git
-[submodule "tools/kms-tool"]
-	path = tools/kms-tool
-	url = git@github.com:nortonlifelock/kms-tool.git
 [submodule "pkg/job"]
 	path = pkg/job
 	url = git@github.com:nortonlifelock/job.git
-[submodule "tools/jira-tool"]
-	path = tools/jira-tool
-	url = git@github.com:nortonlifelock/jira-tool.git
-[submodule "tools/jira-oauth"]
-	path = tools/jira-oauth
-	url = git@github.com:nortonlifelock/jira-oauth.git
-[submodule "tools/jira-export"]
-	path = tools/jira-export
-	url = git@github.com:nortonlifelock/jira-export.git
 [submodule "pkg/funnel"]
 	path = pkg/funnel
 	url = git@github.com:nortonlifelock/funnel.git
-[submodule "api/endpoints"]
-	path = api/endpoints
-	url = git@github.com:nortonlifelock/endpoints.git
 [submodule "pkg/dome9"]
 	path = pkg/dome9
 	url = git@github.com:nortonlifelock/dome9.git
@@ -55,15 +31,15 @@
 [submodule "pkg/aws"]
 	path = pkg/aws
 	url = git@github.com:nortonlifelock/aws.git
-[submodule "tools/assignment-import"]
-	path = tools/assignment-import
-	url = git@github.com:nortonlifelock/assignment-import.git
-[submodule "tools/template-deletion"]
-	path = tools/template-deletion
-	url = git@github.com:nortonlifelock/template-deletion.git
 [submodule "pkg/ttl"]
 	path = pkg/ttl
 	url = git@github.com:nortonlifelock/ttl.git
-[submodule "tools/keygen"]
-	path = tools/keygen
-	url = git@github.com:nortonlifelock/keygen.git
+[submodule "pkg/domain"]
+	path = pkg/domain
+	url = git@github.com:nortonlifelock/domain.git
+[submodule "pkg/files"]
+	path = pkg/files
+	url = git@github.com:nortonlifelock/files.git
+[submodule "pkg/connection"]
+	path = pkg/connection
+	url = git@github.com:nortonlifelock/connection.git

@@ -279,6 +279,8 @@ func (job *BulkUpdateJob) processFileAfterCompletion(commandFailure *int, lineNu
 		//	job.lstream.Send(log.Infof("Error while writing failed csv [%s]", err.Error()))
 		//}
 
+		_, _ = err, fileName
+
 		message := BulkUpdateMessage{
 			User:       job.Payload.UsernameOfRequester,
 			Repeat:     failedFileContents,

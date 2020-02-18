@@ -53,12 +53,12 @@ git clone https://github.com/nortonlifelock/aegis
 cd ./aegis/cmd || exit
 go install aegis.go
 
-cd aegis-api || exit
+cd ../api/listener || exit
 go install aegis-api.go
 
 cd ../..
 
-aegis -init-config -scaffold -init-org -cpath $PWD -sproc $PWD/internal/aegis-scaffold/procedures -migrate $PWD/internal/aegis-scaffold/migrations -tpath $PWD/internal/aegis-scaffold
+aegis -init-config -scaffold -init-org -cpath $PWD -sproc $PWD/internal/init/procedures -migrate $PWD/internal/init/migrations -tpath $PWD/internal/init
 ```
 
 ## Aegis commands

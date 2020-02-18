@@ -1,7 +1,7 @@
 package database
 
 import (
-	"github.com/nortonlifelock/database/dal"
+	"github.com/nortonlifelock/aegis/internal/database/dal"
 	"github.com/nortonlifelock/domain"
 	"time"
 )
