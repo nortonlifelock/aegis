@@ -44,6 +44,7 @@ type GeneratedDatabaseConnection interface {
 	CreateVulnInfo(_SourceVulnID string, _Title string, _SourceID string, _CVSSScore float32, _CVSS3Score float32, _Description string, _Solution string, _Software string, _DetectionInformation string) (id int, affectedRows int, err error)
 	CreateVulnInfoNoCVSS3(_SourceVulnID string, _Title string, _SourceID string, _CVSSScore float32, _Description string, _Solution string, _Software string, _DetectionInformation string) (id int, affectedRows int, err error)
 	CreateVulnRef(_VulnInfoID string, _SourceID string, _Reference string, _RefType int) (id int, affectedRows int, err error)
+	DeleteDecomIgnoreForDevice(_sourceID string, _devID string, _orgID string) (id int, affectedRows int, err error)
 	DeleteIgnoreForDevice(_sourceID string, _devID string, _orgID string) (id int, affectedRows int, err error)
 	DeleteSessionByToken(_SessionKey string) (id int, affectedRows int, err error)
 	DeleteTagMap(_TicketingSourceID string, _TicketingTag string, _CloudSourceID string, _CloudTag string, _OrganizationID string) (id int, affectedRows int, err error)
