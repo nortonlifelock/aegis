@@ -400,12 +400,24 @@ func createOrganization(reader *bufio.Reader, appConfig config.AppConfig, db dom
 	code = strings.ToUpper(code)
 
 	fmt.Println("Encrypting Organization encryption key using KMS...")
-	kmsClient, err := crypto.CreateKMSClientWithProfile(appConfig.EncryptionKey(), appConfig.KMSProfile(), appConfig.KMSRegion())
-	check(err)
-	fmt.Println("Done")
+	// The AWS SDK has the environment variables take precedence over the credentials in the shared file. CreateKMSClientWithProfile forces the loading of credentials from
+	// the shared file, so if we have environment variables present we have to make sure that method isn't called
+	var environmentVarsPresent bool
+	if len(os.Getenv("AWS_ACCESS_KEY_ID")) > 0 && len(os.Getenv("AWS_SECRET_ACCESS_KEY")) > 0 {
+		environmentVarsPresent = true
+	}
 
+	var kmsClient crypto.Client
+	var err error
+	if environmentVarsPresent {
+		kmsClient, err = crypto.CreateKMSClient(appConfig.EncryptionKey(), appConfig.KMSRegion())
+	} else {
+		kmsClient, err = crypto.CreateKMSClientWithProfile(appConfig.EncryptionKey(), appConfig.KMSProfile(), appConfig.KMSRegion())
+	}
+	check(err)
 	encryptedOrganizationKey, err := kmsClient.Encrypt(generateSecureEncryptionKey())
 	check(err)
+	fmt.Println("Done")
 
 	const defaultPayload = `{"lowest_ticketed_cvss":4,"cvss_version":2,"severities":[{"name":"Medium","duration":90,"cvss_min":4},{"name":"High","duration":60,"cvss_min":7},{"name":"Critical","duration":30,"cvss_min":9}],"ad_servers":[""],"ad_ldap_tls_port":636,"ad_base_dn":"","ad_skip_verify":false,"ad_member_of_attribute":"memberOf","ad_search_string":"(accountName=%s)"}`
 
