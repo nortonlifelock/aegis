@@ -166,9 +166,11 @@ func (job *AssetSyncJob) processGroup(vscanner integrations.Vscanner, groupID in
 						job.lstream.Send(log.Infof("Working on %d detections for %s", len(detections), deviceID))
 
 						if asset, err := detections[0].Device(); err == nil {
+
+							decomIgnoreID, err := job.getDecommIgnoreEntryForAsset(deviceID, job.insources.ID(), detections)
 							err = job.addDeviceInformationToDB(asset, groupID)
 							if err == nil {
-								job.processAsset(deviceID, asset, detections, groupID)
+								job.processAsset(deviceID, asset, detections, groupID, decomIgnoreID)
 							} else {
 								job.lstream.Send(log.Errorf(err, "error while adding asset information to the database"))
 							}
@@ -185,8 +187,45 @@ func (job *AssetSyncJob) processGroup(vscanner integrations.Vscanner, groupID in
 	}
 }
 
+func (job *AssetSyncJob) getDecommIgnoreEntryForAsset(deviceID string, scannerSourceID string, detections []domain.Detection) (decomIgnoreID string, err error) {
+	if len(deviceID) > 0 {
+		var decommIgnoreEntry domain.Ignore
+		if decommIgnoreEntry, err = job.db.HasDecommissioned(deviceID, scannerSourceID, job.config.OrganizationID()); err == nil {
+			if decommIgnoreEntry != nil {
+				var allDetectionsFoundBeforeDecommDate = true
+				for _, detection := range detections {
+					if detectedDate, err := detection.Detected(); err == nil && !detectedDate.IsZero() {
+						dueDate := decommIgnoreEntry.DueDate()
+						if !dueDate.IsZero() && detectedDate.After(*dueDate) {
+							allDetectionsFoundBeforeDecommDate = false
+
+							// we found a vulnerability after the device was marked as decommissioned in the database
+							job.lstream.Send(log.Warningf(nil, "Device [%s] has a vulnerability found after it's decommission date [%s after %s], deleting it's ignore entry in the database", deviceID, detectedDate.Format(time.RFC822Z), dueDate.Format(time.RFC822Z)))
+
+							_, _, err = job.db.DeleteDecomIgnoreForDevice(scannerSourceID, deviceID, job.config.OrganizationID())
+							if err != nil {
+								job.lstream.Send(log.Errorf(err, "Error while deleting ignore entry to [%s]", deviceID))
+							}
+
+							break
+						}
+					}
+				}
+
+				if allDetectionsFoundBeforeDecommDate {
+					decomIgnoreID = decommIgnoreEntry.ID()
+				}
+			}
+		}
+	} else {
+		err = fmt.Errorf("malformed device ID - [%s]", deviceID)
+	}
+
+	return decomIgnoreID, err
+}
+
 // Only process the asset if it has not been processed by another group
-func (job *AssetSyncJob) processAsset(deviceID string, asset domain.Device, detections []domain.Detection, groupID int) {
+func (job *AssetSyncJob) processAsset(deviceID string, asset domain.Device, detections []domain.Detection, groupID int, decomIgnoreID string) {
 	var err error
 
 	if len(sord(asset.SourceID())) > 0 {
@@ -203,7 +242,7 @@ func (job *AssetSyncJob) processAsset(deviceID string, asset domain.Device, dete
 						defer wg.Done()
 
 						if detection != nil {
-							_ = job.processAssetDetections(existingDeviceInDb, sord(asset.SourceID()), detection)
+							_ = job.processAssetDetections(existingDeviceInDb, sord(asset.SourceID()), detection, decomIgnoreID)
 						} else {
 							job.lstream.Send(log.Errorf(err, "nil detection found for", sord(asset.SourceID())))
 						}
@@ -322,9 +361,9 @@ func (job *AssetSyncJob) enterAssetInformationInDB(asset domain.Device, osTypeID
 // This method creates a detection entry in the database for the device/vulnerability combo
 // If the detection entry already exists, it increments the amount of times it has been seen by this job by one
 // This method is also responsible for gathering detections for the vulnerability
-func (job *AssetSyncJob) processAssetDetections(deviceInDb domain.Device, assetID string, vuln domain.Detection) (err error) {
+func (job *AssetSyncJob) processAssetDetections(deviceInDb domain.Device, assetID string, vuln domain.Detection, decomIgnoreID string) (err error) {
 	// the result ID may be concatenated to the end of the vulnerability ID. we chop it off the result from the vulnerability ID with the following line
-	vulnID := strings.Split(vuln.VulnerabilityID(), ";")[0]
+	vulnID := strings.Split(vuln.VulnerabilityID(), domain.VulnPathConcatenator)[0]
 
 	var vulnInfo domain.VulnerabilityInfo
 	if vulnInfoInterface, ok := job.vulnCache.Load(vulnID); ok {
@@ -340,7 +379,7 @@ func (job *AssetSyncJob) processAssetDetections(deviceInDb domain.Device, assetI
 
 	if err == nil {
 		if vulnInfo != nil {
-			job.createOrUpdateDetection(deviceInDb, vulnInfo, vuln, assetID)
+			job.createOrUpdateDetection(deviceInDb, vulnInfo, vuln, assetID, decomIgnoreID)
 		} else {
 			job.lstream.Send(log.Error("could not find vulnerability in database", fmt.Errorf("[%s] does not have an entry in the database", vulnID)))
 		}
@@ -352,20 +391,24 @@ func (job *AssetSyncJob) processAssetDetections(deviceInDb domain.Device, assetI
 	return err
 }
 
-func (job *AssetSyncJob) getExceptionID(assetID string, vulnInfo domain.VulnerabilityInfo) (exceptionID string) {
-	if exception, err := job.db.GetExceptionByVulnIDOrg(assetID, vulnInfo.SourceVulnID(), job.config.OrganizationID()); err == nil {
-		if exception != nil {
-			exceptionID = exception.ID()
+func (job *AssetSyncJob) getExceptionID(assetID string, vulnInfo domain.VulnerabilityInfo, decomIgnoreID string) (exceptionID string) {
+	if len(decomIgnoreID) == 0 {
+		if exception, err := job.db.GetExceptionByVulnIDOrg(assetID, vulnInfo.SourceVulnID(), job.config.OrganizationID()); err == nil {
+			if exception != nil {
+				exceptionID = exception.ID()
+			}
+		} else {
+			job.lstream.Send(log.Errorf(err, "Error while gathering exceptions for device [%v]", assetID))
 		}
 	} else {
-		job.lstream.Send(log.Errorf(err, "Error while gathering exceptions for device [%v]", assetID))
+		exceptionID = decomIgnoreID
 	}
 
 	return exceptionID
 }
 
 // This method creates a detection entry if one does not exist, and updates the entry if one does
-func (job *AssetSyncJob) createOrUpdateDetection(deviceInDb domain.Device, vulnInfo domain.VulnerabilityInfo, detectionFromScanner domain.Detection, assetID string) {
+func (job *AssetSyncJob) createOrUpdateDetection(deviceInDb domain.Device, vulnInfo domain.VulnerabilityInfo, detectionFromScanner domain.Detection, assetID string, decomIgnoreID string) {
 	var err error
 
 	var detectionInDB domain.Detection
@@ -375,7 +418,7 @@ func (job *AssetSyncJob) createOrUpdateDetection(deviceInDb domain.Device, vulnI
 		if detectionStatus = job.getDetectionStatus(detectionFromScanner.Status()); detectionStatus != nil {
 
 			if detectionInDB == nil {
-				job.createDetection(detectionFromScanner, job.getExceptionID(assetID, vulnInfo), deviceInDb, vulnInfo, assetID, detectionStatus.ID())
+				job.createDetection(detectionFromScanner, job.getExceptionID(assetID, vulnInfo, decomIgnoreID), deviceInDb, vulnInfo, assetID, detectionStatus.ID())
 			} else {
 
 				var canSkipUpdate bool
@@ -389,7 +432,7 @@ func (job *AssetSyncJob) createOrUpdateDetection(deviceInDb domain.Device, vulnI
 					_, _, err = job.db.UpdateDetectionTimesSeen(
 						sord(deviceInDb.SourceID()),
 						vulnInfo.ID(),
-						job.getExceptionID(assetID, vulnInfo),
+						job.getExceptionID(assetID, vulnInfo, decomIgnoreID),
 						detectionFromScanner.TimesSeen(),
 						detectionStatus.ID(),
 					)
@@ -418,70 +461,20 @@ func (job *AssetSyncJob) createDetection(vuln domain.Detection, exceptionID stri
 	var detected *time.Time
 	if detected, err = vuln.Detected(); err == nil {
 		if detected != nil {
-			if len(exceptionID) == 0 {
-
-				if vuln.ActiveKernel() == nil {
-					_, _, err = job.db.CreateDetection(
-						job.config.OrganizationID(),
-						job.insources.SourceID(),
-						sord(deviceInDb.SourceID()),
-						vulnInfo.ID(),
-						*detected,
-						vuln.Proof(),
-						vuln.Port(),
-						vuln.Protocol(),
-						detectionStatusID,
-						vuln.TimesSeen(),
-					)
-				} else {
-					_, _, err = job.db.CreateDetectionActiveKernel(
-						job.config.OrganizationID(),
-						job.insources.SourceID(),
-						sord(deviceInDb.SourceID()),
-						vulnInfo.ID(),
-						*detected,
-						vuln.Proof(),
-						vuln.Port(),
-						vuln.Protocol(),
-						iord(vuln.ActiveKernel()),
-						detectionStatusID,
-						vuln.TimesSeen(),
-					)
-				}
-
-			} else {
-
-				if vuln.ActiveKernel() == nil {
-					_, _, err = job.db.CreateDetectionWithIgnore(
-						job.config.OrganizationID(),
-						job.insources.SourceID(),
-						sord(deviceInDb.SourceID()),
-						vulnInfo.ID(),
-						exceptionID,
-						*detected,
-						vuln.Proof(),
-						vuln.Port(),
-						vuln.Protocol(),
-						detectionStatusID,
-						vuln.TimesSeen(),
-					)
-				} else {
-					_, _, err = job.db.CreateDetectionWithIgnoreActiveKernel(
-						job.config.OrganizationID(),
-						job.insources.SourceID(),
-						sord(deviceInDb.SourceID()),
-						vulnInfo.ID(),
-						exceptionID,
-						*detected,
-						vuln.Proof(),
-						vuln.Port(),
-						vuln.Protocol(),
-						iord(vuln.ActiveKernel()),
-						detectionStatusID,
-						vuln.TimesSeen(),
-					)
-				}
-			}
+			_, _, err = job.db.CreateDetection(
+				job.config.OrganizationID(),
+				job.insources.SourceID(),
+				sord(deviceInDb.SourceID()),
+				vulnInfo.ID(),
+				exceptionID,
+				*detected,
+				vuln.Proof(),
+				vuln.Port(),
+				vuln.Protocol(),
+				iord(vuln.ActiveKernel()),
+				detectionStatusID,
+				vuln.TimesSeen(),
+			)
 		} else {
 			err = fmt.Errorf("could not find the time of the detection")
 		}
