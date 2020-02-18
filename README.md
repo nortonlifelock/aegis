@@ -58,7 +58,7 @@ go install aegis-api.go
 
 cd ../..
 
-aegis -init-config -scaffold -init-org -cpath $PWD -sproc $PWD/internal/init/procedures -migrate $PWD/internal/init/migrations -tpath $PWD/internal/init
+aegis -init-config -scaffold -init-org -cpath $PWD -sproc $PWD/init/procedures -migrate $PWD/init/migrations -tpath $PWD/init
 ```
 
 ## Aegis commands
