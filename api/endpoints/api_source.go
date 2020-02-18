@@ -142,7 +142,7 @@ func (source *Source) create(user domain.User, permission domain.Permission) (ge
 	status = http.StatusBadRequest
 
 	var client crypto.Client
-	client, err = crypto.NewEncryptionClient(crypto.AES256, Ms, EncryptionKey, permission.OrgID(), KMSProfile(), KMSRegion())
+	client, err = crypto.NewEncryptionClient(crypto.AES256, Ms, EncryptionKey, permission.OrgID(), AppConfig.KMSProfile(), AppConfig.KMSRegion())
 	if err == nil {
 		var encryptedPassword string
 		var encryptedPrivateKey string
@@ -327,7 +327,7 @@ func (source *Source) extractFieldsToUpdateThatRequireDecryption(bodyString stri
 	var client crypto.Client
 	var err error
 
-	client, err = crypto.NewEncryptionClient(crypto.AES256, Ms, EncryptionKey, permission.OrgID(), KMSProfile(), KMSRegion())
+	client, err = crypto.NewEncryptionClient(crypto.AES256, Ms, EncryptionKey, permission.OrgID(), AppConfig.KMSProfile(), AppConfig.KMSRegion())
 	if err == nil {
 		if strings.Index(bodyString, "private_key") < 0 {
 			privateKey = allAuth.PrivateKey

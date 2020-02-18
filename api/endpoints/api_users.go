@@ -16,7 +16,7 @@ import (
 // instead, we encrypt using the application-level KMS key
 func encryptOrDecryptUserFields(first, last, email string, encryptOrDecrypt int) (outFirst, outLast, outEmail string, err error) {
 	var client crypto.Client
-	client, err = crypto.NewEncryptionClientWithDirectKey(crypto.KMS, EncryptionKey, KMSRegion())
+	client, err = crypto.NewEncryptionClientWithDirectKey(crypto.KMS, EncryptionKey, AppConfig.KMSRegion())
 
 	if err == nil {
 		var encryptOrDecryptMethod func(string) (string, error)

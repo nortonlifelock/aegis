@@ -4,10 +4,11 @@ import (
 	"crypto/tls"
 	"encoding/base64"
 	"fmt"
+	"github.com/dgrijalva/jwt-go"
+	"gopkg.in/ldap.v3"
 	"strings"
 	"time"
 
-	"github.com/nortonlifelock/aegis/internal/database/dal"
 	"github.com/nortonlifelock/domain"
 	"github.com/pkg/errors"
 	auth "gopkg.in/korylprince/go-ad-auth.v2"
@@ -156,7 +157,7 @@ func generateJWT(username string, orgID string) (webToken string, err error) {
 
 			if err == nil {
 				if permissions != nil {
-					tokenPerm := &tokenPermission{permissions.(*dal.Permission)}
+					tokenPerm := &tokenPermission{permissions}
 
 					claims := customClaims{
 						jwt.StandardClaims{

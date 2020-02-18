@@ -258,12 +258,10 @@ type (
 
 	// GeneralResp acts as a container for the response to a user's API apiRequest
 	GeneralResp struct {
-		Response interface{} `json:"response,omitempty"`
-		Message  string      `json:"message,omitempty"`
-		Success  bool        `json:"success,omitempty"`
-		// TODO return permissions by marshalling dal object
-		Permissions  *PublicPermission `json:"permissions,omitempty"`
-		TotalRecords int               `json:"totalrecords,omitempty"`
+		Response     interface{} `json:"response,omitempty"`
+		Message      string      `json:"message,omitempty"`
+		Success      bool        `json:"success,omitempty"`
+		TotalRecords int         `json:"totalrecords,omitempty"`
 	}
 )
 
@@ -276,26 +274,8 @@ func newResponse(obj interface{}, totalRecords int) (resp *GeneralResp) {
 	return resp
 }
 
-// PublicPermission is a member of GeneralResp and must be exported in order to be marshaled
-type PublicPermission struct {
-	CanDeleteJob        bool `json:"candeletejob,omitempty"`
-	CanDeleteConfig     bool `json:"candeleteconfig,omitempty"`
-	CanUpdateSource     bool `json:"canupdatesource,omitempty"`
-	CanReadJobHistories bool `json:"canreadjobhistories,omitempty"`
-	UserID              int  `json:"userid,omitempty"`
-	CanCreateJob        bool `json:"cancreatejob,omitempty"`
-	CanCreateSource     bool `json:"cancreatesource,omitempty"`
-	CanDeleteOrg        bool `json:"candeleteorg,omitempty"`
-	CanCreateConfig     bool `json:"cancreateconfig,omitempty"`
-	CanUpdateConfig     bool `json:"canupdateconfig,omitempty"`
-	CanUpdateJob        bool `json:"canupdatejob,omitempty"`
-	CanDeleteSource     bool `json:"candeletesource,omitempty"`
-	CanCreateOrg        bool `json:"cancreateorg,omitempty"`
-	CanUpdateOrg        bool `json:"canupdateorg ,omitempty"`
-}
-
 type tokenPermission struct {
-	*dal.Permission
+	domain.Permission
 }
 
 func dalPermissionToPermissionArray(permission domain.Permission) (permissionArray []*Permission, err error) {

@@ -5,6 +5,7 @@ go 1.13
 require (
 	github.com/PuerkitoBio/goquery v1.5.0
 	github.com/benjivesterby/validator v1.0.1-0.20200101181545-cfd93a3612a2
+	github.com/dgrijalva/jwt-go v3.2.0+incompatible
 	github.com/gorilla/mux v1.7.4
 	github.com/gorilla/websocket v1.4.1
 	github.com/nortonlifelock/aws v1.0.0
@@ -20,11 +21,11 @@ require (
 	github.com/nortonlifelock/job v1.0.1-0.20200127165455-ca80a64d226c
 	github.com/nortonlifelock/log v1.0.1-0.20200129171320-c4a4dd839ed8
 	github.com/nortonlifelock/nexpose v1.0.1-0.20200127180156-5a974d158c2e
-	github.com/nortonlifelock/qualys v1.0.1-0.20200211162435-f3e1837dbe01
+	github.com/nortonlifelock/qualys v1.0.1-0.20200218201455-a7faa9e3a6ff
 	github.com/nortonlifelock/scaffold v1.0.1-0.20200128220520-41da8a42d6d5
 	github.com/pkg/errors v0.9.1
 	github.com/rs/cors v1.7.0
 	golang.org/x/crypto v0.0.0-20200128174031-69ecbb4d6d5d
 	gopkg.in/korylprince/go-ad-auth.v2 v2.2.0
-	gopkg.in/ldap.v3 v3.1.0 // indirect
+	gopkg.in/ldap.v3 v3.1.0
 )

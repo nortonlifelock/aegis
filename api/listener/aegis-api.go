@@ -1,9 +1,10 @@
-package listener
+package main
 
 import (
 	"crypto/rand"
 	"encoding/base64"
 	"encoding/json"
+	"flag"
 	"fmt"
 	"log"
 	"net/http"
@@ -24,7 +25,7 @@ var (
 	apiPort int
 )
 
-func RunListener() {
+func main() {
 	var err error
 	endpoints.SigningKey, err = generateSigningKey(256)
 	if err == nil {
@@ -117,10 +118,12 @@ func generateSigningKey(keyLength int) (string, error) {
 	return retVal, err
 }
 
-func startup(path string) {
+func init() {
+	path := flag.String("p", "", "The path to your app.json")
+	flag.Parse()
 
-	if len(path) > 0 {
-		if appConfig, err := config.LoadConfig(*path, *file); err == nil {
+	if len(*path) > 0 {
+		if appConfig, err := config.LoadConfigByPath(*path); err == nil {
 			if validator.IsValid(appConfig) {
 
 				endpoints.AppConfig = appConfig
