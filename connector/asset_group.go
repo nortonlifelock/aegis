@@ -19,7 +19,7 @@ func (session *QsSession) GetAGsForIPs(ips []string) (ipToAGs map[string][]int, 
 			if ipToAGs[ip] != nil {
 				sort.Ints(ipToAGs[ip])
 			} else {
-				err = fmt.Errorf("could not find the assignment groups for [%s]", ip)
+				err = fmt.Errorf("could not find the asset groups from Qualys API for [%s]", ip)
 				break
 			}
 		}
