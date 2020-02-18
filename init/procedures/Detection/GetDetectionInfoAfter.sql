@@ -36,4 +36,4 @@ SELECT
     D.TimesSeen,
     D.Updated
 FROM Detection D
-WHERE D.OrganizationID = _OrgID AND (D.Updated > _After OR D.Created > _After) ORDER BY Created;
+WHERE D.OrganizationID = _OrgID AND D.IgnoreID IS NULL AND (D.Updated > _After OR D.Created > _After) ORDER BY Created;

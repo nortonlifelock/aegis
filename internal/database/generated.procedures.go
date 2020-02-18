@@ -160,97 +160,10 @@ func (conn *dbconn) CreateDBLog(_User string, _Command string, _Endpoint string)
 }
 
 // CreateDetection executes the stored procedure CreateDetection against the database
-func (conn *dbconn) CreateDetection(_OrgID string, _SourceID string, _DeviceID string, _VulnID string, _AlertDate time.Time, _Proof string, _Port int, _Protocol string, _DetectionStatusID int, _TimesSeen int) (id int, affectedRows int, err error) {
+func (conn *dbconn) CreateDetection(_OrgID string, _SourceID string, _DeviceID string, _VulnID string, _IgnoreID string, _AlertDate time.Time, _Proof string, _Port int, _Protocol string, _ActiveKernel int, _DetectionStatusID int, _TimesSeen int) (id int, affectedRows int, err error) {
 
 	conn.Exec(&connection.Procedure{
 		Proc:       "CreateDetection",
-		Parameters: []interface{}{_OrgID, _SourceID, _DeviceID, _VulnID, _AlertDate, _Proof, _Port, _Protocol, _DetectionStatusID, _TimesSeen},
-		Callback: func(results interface{}, dberr error) {
-			err = dberr
-
-			if result, ok := results.(sql.Result); ok {
-				var idOut int64
-
-				// Get the id of the last inserted record
-				if idOut, err = result.LastInsertId(); err == nil {
-					id = int(idOut)
-				}
-
-				// Get the number of affected rows for the execution
-				if idOut, err = result.RowsAffected(); ok {
-					affectedRows = int(idOut)
-				}
-			}
-
-		},
-	})
-
-	return id, affectedRows, err
-}
-
-// CreateDetectionActiveKernel executes the stored procedure CreateDetectionActiveKernel against the database
-func (conn *dbconn) CreateDetectionActiveKernel(_OrgID string, _SourceID string, _DeviceID string, _VulnID string, _AlertDate time.Time, _Proof string, _Port int, _Protocol string, _ActiveKernel int, _DetectionStatusID int, _TimesSeen int) (id int, affectedRows int, err error) {
-
-	conn.Exec(&connection.Procedure{
-		Proc:       "CreateDetectionActiveKernel",
-		Parameters: []interface{}{_OrgID, _SourceID, _DeviceID, _VulnID, _AlertDate, _Proof, _Port, _Protocol, _ActiveKernel, _DetectionStatusID, _TimesSeen},
-		Callback: func(results interface{}, dberr error) {
-			err = dberr
-
-			if result, ok := results.(sql.Result); ok {
-				var idOut int64
-
-				// Get the id of the last inserted record
-				if idOut, err = result.LastInsertId(); err == nil {
-					id = int(idOut)
-				}
-
-				// Get the number of affected rows for the execution
-				if idOut, err = result.RowsAffected(); ok {
-					affectedRows = int(idOut)
-				}
-			}
-
-		},
-	})
-
-	return id, affectedRows, err
-}
-
-// CreateDetectionWithIgnore executes the stored procedure CreateDetectionWithIgnore against the database
-func (conn *dbconn) CreateDetectionWithIgnore(_OrgID string, _SourceID string, _DeviceID string, _VulnID string, _IgnoreID string, _AlertDate time.Time, _Proof string, _Port int, _Protocol string, _DetectionStatusID int, _TimesSeen int) (id int, affectedRows int, err error) {
-
-	conn.Exec(&connection.Procedure{
-		Proc:       "CreateDetectionWithIgnore",
-		Parameters: []interface{}{_OrgID, _SourceID, _DeviceID, _VulnID, _IgnoreID, _AlertDate, _Proof, _Port, _Protocol, _DetectionStatusID, _TimesSeen},
-		Callback: func(results interface{}, dberr error) {
-			err = dberr
-
-			if result, ok := results.(sql.Result); ok {
-				var idOut int64
-
-				// Get the id of the last inserted record
-				if idOut, err = result.LastInsertId(); err == nil {
-					id = int(idOut)
-				}
-
-				// Get the number of affected rows for the execution
-				if idOut, err = result.RowsAffected(); ok {
-					affectedRows = int(idOut)
-				}
-			}
-
-		},
-	})
-
-	return id, affectedRows, err
-}
-
-// CreateDetectionWithIgnoreActiveKernel executes the stored procedure CreateDetectionWithIgnoreActiveKernel against the database
-func (conn *dbconn) CreateDetectionWithIgnoreActiveKernel(_OrgID string, _SourceID string, _DeviceID string, _VulnID string, _IgnoreID string, _AlertDate time.Time, _Proof string, _Port int, _Protocol string, _ActiveKernel int, _DetectionStatusID int, _TimesSeen int) (id int, affectedRows int, err error) {
-
-	conn.Exec(&connection.Procedure{
-		Proc:       "CreateDetectionWithIgnoreActiveKernel",
 		Parameters: []interface{}{_OrgID, _SourceID, _DeviceID, _VulnID, _IgnoreID, _AlertDate, _Proof, _Port, _Protocol, _ActiveKernel, _DetectionStatusID, _TimesSeen},
 		Callback: func(results interface{}, dberr error) {
 			err = dberr
