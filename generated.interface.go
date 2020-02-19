@@ -82,7 +82,7 @@ type GeneratedDatabaseConnection interface {
 	GetDevicesInfoByCloudSourceID(_CloudSourceID string, _OrgID string) ([]DeviceInfo, error)
 	GetDevicesInfoBySourceID(_SourceID string, _OrgID string) ([]DeviceInfo, error)
 	GetExceptionByVulnIDOrg(_DeviceID string, _VulnID string, _OrgID string) (Ignore, error)
-	GetExceptionDetections(_offset int, _limit int, _orgID string, _sortField string, _sortOrder string, _Title string, _IP string, _Hostname string, _VulnID string, _VulnTitle string, _Approval string, _DueDate time.Time, _AssignmentGroup string, _OS string, _OSRegex string) ([]ExceptionDetection, error)
+	GetExceptionDetections(_offset int, _limit int, _orgID string, _sortField string, _sortOrder string, _Title string, _IP string, _Hostname string, _VulnID string, _VulnTitle string, _Approval string, _DueDate time.Time, _AssignmentGroup string, _OS string, _OSRegex string) ([]ExceptedDetection, error)
 	GetExceptionTypes() ([]ExceptionType, error)
 	GetExceptionsDueNext30Days() ([]CERF, error)
 	GetExceptionsLength(inSourceID string, inOrgID string, inTypeID int, inVulnID string, inDevID string, inDueDate time.Time, inPort string, inApproval string, inActive bool, inDBCreatedDate time.Time, inDBUpdatedDate time.Time, inUpdatedBy string, inCreatedBy string) (QueryData, error)
