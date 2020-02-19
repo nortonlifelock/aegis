@@ -160,6 +160,7 @@ type GeneratedDatabaseConnection interface {
 	SaveScanSummary(_ScanID string, _ScanStatus string) (id int, affectedRows int, err error)
 	SetScheduleLastRun(_ID string) (id int, affectedRows int, err error)
 	UpdateAssetIDOsTypeIDOfDevice(_ID string, _AssetID string, _ScannerSourceID string, _GroupID int, _OS string, _HostName string, _OsTypeID int, _OrgID string) (id int, affectedRows int, err error)
+	UpdateDetectionIgnore(_DeviceID string, _VulnID string, _ExceptionID string) (id int, affectedRows int, err error)
 	UpdateDetectionTimesSeen(_DeviceID string, _VulnID string, _ExceptionID string, _TimesSeen int, _StatusID int) (id int, affectedRows int, err error)
 	UpdateExpirationDateByCERF(_CERForm string, _OrganizationID string, _DueDate time.Time) (id int, affectedRows int, err error)
 	UpdateInstanceIDOfDevice(_ID string, _InstanceID string, _CloudSourceID string, _State string, _Region string, _OrgID string) (id int, affectedRows int, err error)
