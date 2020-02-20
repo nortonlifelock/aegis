@@ -9,7 +9,7 @@ type ExceptedDetection interface {
 	VulnerabilityID() *string
 	VulnerabilityTitle() *string
 	Approval() *string
-	Expires() *time.Time
+	DueDate() *time.Time
 	AssignmentGroup() *string
 	OS() *string
 	IgnoreID() string
