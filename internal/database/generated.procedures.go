@@ -2,8 +2,8 @@ package database
 
 import (
 	"database/sql"
+	"github.com/nortonlifelock/aegis/internal/database/dal"
 	"github.com/nortonlifelock/connection"
-	"github.com/nortonlifelock/database/dal"
 	"github.com/nortonlifelock/domain"
 	"time"
 )
@@ -2959,6 +2959,80 @@ func (conn *dbconn) GetExceptionByVulnIDOrg(_DeviceID string, _VulnID string, _O
 	})
 
 	return retIgnore, err
+}
+
+// GetExceptionDetections executes the stored procedure GetExceptionDetections against the database and returns the read results
+func (conn *dbconn) GetExceptionDetections(_offset int, _limit int, _orgID string, _sortField string, _sortOrder string, _Title string, _IP string, _Hostname string, _VulnID string, _VulnTitle string, _Approval string, _DueDate string, _AssignmentGroup string, _OS string, _OSRegex string) ([]domain.ExceptedDetection, error) {
+	var err error
+	var retExceptedDetection = make([]domain.ExceptedDetection, 0)
+
+	conn.Read(&connection.Procedure{
+		Proc:       "GetExceptionDetections",
+		Parameters: []interface{}{_offset, _limit, _orgID, _sortField, _sortOrder, _Title, _IP, _Hostname, _VulnID, _VulnTitle, _Approval, _DueDate, _AssignmentGroup, _OS, _OSRegex},
+		Callback: func(results interface{}, dberr error) {
+			err = dberr
+
+			if err == nil {
+
+				err = conn.getRows(results,
+					func(rows *sql.Rows) (err error) {
+						if err = rows.Err(); err == nil {
+
+							var myTitle *string
+							var myIP *string
+							var myHostname *string
+							var myVulnerabilityID *string
+							var myVulnerabilityTitle *string
+							var myApproval *string
+							var myDueDate *time.Time
+							var myAssignmentGroup *string
+							var myOS *string
+							var myOSRegex *string
+							var myIgnoreID string
+							var myIgnoreType int
+
+							if err = rows.Scan(
+
+								&myTitle,
+								&myIP,
+								&myHostname,
+								&myVulnerabilityID,
+								&myVulnerabilityTitle,
+								&myApproval,
+								&myDueDate,
+								&myAssignmentGroup,
+								&myOS,
+								&myOSRegex,
+								&myIgnoreID,
+								&myIgnoreType,
+							); err == nil {
+
+								newExceptedDetection := &dal.ExceptedDetection{
+									Titlevar:              myTitle,
+									IPvar:                 myIP,
+									Hostnamevar:           myHostname,
+									VulnerabilityIDvar:    myVulnerabilityID,
+									VulnerabilityTitlevar: myVulnerabilityTitle,
+									Approvalvar:           myApproval,
+									DueDatevar:            myDueDate,
+									AssignmentGroupvar:    myAssignmentGroup,
+									OSvar:                 myOS,
+									OSRegexvar:            myOSRegex,
+									IgnoreIDvar:           myIgnoreID,
+									IgnoreTypevar:         myIgnoreType,
+								}
+
+								retExceptedDetection = append(retExceptedDetection, newExceptedDetection)
+							}
+						}
+
+						return err
+					})
+			}
+		},
+	})
+
+	return retExceptedDetection, err
 }
 
 // GetExceptionTypes executes the stored procedure GetExceptionTypes against the database and returns the read results
@@ -7467,6 +7541,35 @@ func (conn *dbconn) UpdateAssetIDOsTypeIDOfDevice(_ID string, _AssetID string, _
 	conn.Exec(&connection.Procedure{
 		Proc:       "UpdateAssetIDOsTypeIDOfDevice",
 		Parameters: []interface{}{_ID, _AssetID, _ScannerSourceID, _GroupID, _OS, _HostName, _OsTypeID, _OrgID},
+		Callback: func(results interface{}, dberr error) {
+			err = dberr
+
+			if result, ok := results.(sql.Result); ok {
+				var idOut int64
+
+				// Get the id of the last inserted record
+				if idOut, err = result.LastInsertId(); err == nil {
+					id = int(idOut)
+				}
+
+				// Get the number of affected rows for the execution
+				if idOut, err = result.RowsAffected(); ok {
+					affectedRows = int(idOut)
+				}
+			}
+
+		},
+	})
+
+	return id, affectedRows, err
+}
+
+// UpdateDetectionIgnore executes the stored procedure UpdateDetectionIgnore against the database
+func (conn *dbconn) UpdateDetectionIgnore(_DeviceID string, _VulnID string, _ExceptionID string) (id int, affectedRows int, err error) {
+
+	conn.Exec(&connection.Procedure{
+		Proc:       "UpdateDetectionIgnore",
+		Parameters: []interface{}{_DeviceID, _VulnID, _ExceptionID},
 		Callback: func(results interface{}, dberr error) {
 			err = dberr
 

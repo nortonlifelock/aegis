@@ -16,9 +16,9 @@
   DBUpdatedDate   DATETIME        NULL
  */
 
-DROP PROCEDURE IF EXISTS ```GetAllExceptions`;
+DROP PROCEDURE IF EXISTS `GetAllExceptions`;
 
-CREATE PROCEDURE ```GetAllExceptions`( _offset INT, _limit INT,_sourceID VARCHAR(36), _orgID VARCHAR(36), _typeID INT,_vulnID NVARCHAR(255), _devID VARCHAR(36), _dueDate DATETIME, _port NVARCHAR(15), _approval  NVARCHAR(120),
+CREATE PROCEDURE `GetAllExceptions`( _offset INT, _limit INT,_sourceID VARCHAR(36), _orgID VARCHAR(36), _typeID INT,_vulnID NVARCHAR(255), _devID VARCHAR(36), _dueDate DATETIME, _port NVARCHAR(15), _approval  NVARCHAR(120),
                                              _active BIT, _dBCreatedDate DATETIME,_dBUpdatedDate DATETIME,_updatedBy NVARCHAR(255), _createdBy NVARCHAR(255),_sortField NVARCHAR(255),
                                              _sortOrder NVARCHAR(255))
     #BEGIN#

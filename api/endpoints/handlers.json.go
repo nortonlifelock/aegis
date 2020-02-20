@@ -111,23 +111,20 @@ type (
 
 	// Exception is the struct that maps to the exceptions in the database
 	Exception struct {
-		SourceID        string `json:"source_id"`
-		OrganizationID  string `json:"org_id"`
-		TypeID          int    `json:"type_id"`
-		VulnerabilityID string `json:"vuln_id"`
-		DeviceID        string `json:"device_id"`
-		DueDate         string `json:"due_date,omitempty"`
-		Approval        string `json:"approval,omitempty"`
-		Active          bool   `json:"active"`
-		Port            string `json:"port,omitempty"`
-		DBCreatedDate   string `json:"created_date,omitempty"`
-		DBUpdatedDate   string `json:"updated_date,omitempty"`
-		CreatedBy       string `json:"created_by,omitempty"`
-		UpdatedBy       string `json:"updated_by,omitempty"`
-		Offset          int    `json:"offset,omitempty"`
-		Limit           int    `json:"limit,omitempty"`
-		SortedField     string `json:"sorted_field,omitempty"`
-		SortOrder       string `json:"sort_order,omitempty"`
+		Title              string `json:"title"`
+		IP                 string `json:"ip"`
+		Hostname           string `json:"hostname"`
+		Expires            string `json:"expires"`
+		Approval           string `json:"approval"`
+		AssignmentGroup    string `json:"assignmentgroup"`
+		OS                 string `json:"os"`
+		VulnerabilityID    string `json:"vulnid"`
+		VulnerabilityTitle string `json:"vulntitle"`
+
+		Offset      int    `json:"offset"`
+		Limit       int    `json:"limit"`
+		SortedField string `json:"sorted_field"`
+		SortOrder   string `json:"sort_order"`
 	}
 
 	// SourceConfig maps to the source config db tables

@@ -113,64 +113,8 @@ func (job *ScanCloseJob) processScanDetections(engine integrations.TicketingEngi
 		var deadHostIPToProof <-chan domain.KeyValue
 		if detections, deadHostIPToProof, err = vscanner.ScanResults(job.ctx, payload); err == nil {
 
-			// first gather all detections from the scan results
-			wg := &sync.WaitGroup{}
-			var devDetectionMap = make(map[string]map[string]domain.Detection)
-			func() {
-				lock := &sync.Mutex{}
-
-				for {
-					select {
-					case <-job.ctx.Done():
-						return
-					case detection, ok := <-detections:
-						if ok {
-							wg.Add(1)
-							go func(detection domain.Detection) {
-								defer handleRoutinePanic(job.lstream)
-								defer wg.Done()
-
-								if dev, err := detection.Device(); err == nil {
-
-									if len(sord(dev.SourceID())) > 0 {
-										lock.Lock()
-										if devDetectionMap[sord(dev.SourceID())] == nil {
-											devDetectionMap[sord(dev.SourceID())] = make(map[string]domain.Detection)
-										}
-
-										devDetectionMap[sord(dev.SourceID())][detection.VulnerabilityID()] = detection
-										lock.Unlock()
-									} else {
-										job.lstream.Send(log.Errorf(err, "empty device ID found for detection"))
-									}
-								} else {
-									job.lstream.Send(log.Errorf(err, "error while loading detection %v", detection.VulnerabilityID()))
-								}
-							}(detection)
-						} else {
-							return
-						}
-					}
-				}
-			}()
-			wg.Wait()
-
-			var deadHostIPToProofMap = make(map[string]string)
-			func() {
-				for {
-					select {
-					case <-job.ctx.Done():
-						return
-					case deadHost, ok := <-deadHostIPToProof:
-						if ok {
-							deadHostIPToProofMap[deadHost.Key()] = deadHost.Value()
-						} else {
-							return
-						}
-					}
-				}
-			}()
-
+			var wg sync.WaitGroup
+			deviceIDToVulnIDToDetection, deadHostIPToProofMap := job.mapDetectionsAndDeadHosts(detections, deadHostIPToProof)
 			for _, ticket := range tickets {
 				wg.Add(1)
 				go func(ticket domain.Ticket) {
@@ -183,7 +127,7 @@ func (job *ScanCloseJob) processScanDetections(engine integrations.TicketingEngi
 							&lastCheckedTicket{ticket},
 							scan,
 							deadHostIPToProofMap,
-							devDetectionMap,
+							deviceIDToVulnIDToDetection,
 						)
 					}
 				}(ticket)
@@ -198,14 +142,76 @@ func (job *ScanCloseJob) processScanDetections(engine integrations.TicketingEngi
 	}
 }
 
+func (job *ScanCloseJob) mapDetectionsAndDeadHosts(detections <-chan domain.Detection, deadHostIPToProof <-chan domain.KeyValue) (deviceIDToVulnIDToDetection map[string]map[string]domain.Detection, deadHostIPToProofMap map[string]string) {
+	// first gather all detections from the scan results
+	wg := &sync.WaitGroup{}
+	deviceIDToVulnIDToDetection = make(map[string]map[string]domain.Detection)
+	func() {
+		lock := &sync.Mutex{}
+
+		for {
+			select {
+			case <-job.ctx.Done():
+				return
+			case detection, ok := <-detections:
+				if ok {
+					wg.Add(1)
+					go func(detection domain.Detection) {
+						defer handleRoutinePanic(job.lstream)
+						defer wg.Done()
+
+						if dev, err := detection.Device(); err == nil {
+
+							if len(sord(dev.SourceID())) > 0 {
+								lock.Lock()
+								if deviceIDToVulnIDToDetection[sord(dev.SourceID())] == nil {
+									deviceIDToVulnIDToDetection[sord(dev.SourceID())] = make(map[string]domain.Detection)
+								}
+
+								deviceIDToVulnIDToDetection[sord(dev.SourceID())][detection.VulnerabilityID()] = detection
+								lock.Unlock()
+							} else {
+								job.lstream.Send(log.Errorf(err, "empty device ID found for detection"))
+							}
+						} else {
+							job.lstream.Send(log.Errorf(err, "error while loading detection %v", detection.VulnerabilityID()))
+						}
+					}(detection)
+				} else {
+					return
+				}
+			}
+		}
+	}()
+
+	wg.Wait()
+
+	deadHostIPToProofMap = make(map[string]string)
+	func() {
+		for {
+			select {
+			case <-job.ctx.Done():
+				return
+			case deadHost, ok := <-deadHostIPToProof:
+				if ok {
+					deadHostIPToProofMap[deadHost.Key()] = deadHost.Value()
+				} else {
+					return
+				}
+			}
+		}
+	}()
+	return deviceIDToVulnIDToDetection, deadHostIPToProofMap
+}
+
 // transitions the status of the JIRA ticket if necessary
-func (job *ScanCloseJob) modifyJiraTicketAccordingToVulnerabilityStatus(engine integrations.TicketingEngine, ticket domain.Ticket, scan domain.ScanSummary, deadHostIPToProofMap map[string]string, devDetectionMap map[string]map[string]domain.Detection) {
-	var detectionsFoundForDevice = devDetectionMap[ticket.DeviceID()] != nil
+func (job *ScanCloseJob) modifyJiraTicketAccordingToVulnerabilityStatus(engine integrations.TicketingEngine, ticket domain.Ticket, scan domain.ScanSummary, deadHostIPToProofMap map[string]string, deviceIDToVulnIDToDetection map[string]map[string]domain.Detection) {
+	var detectionsFoundForDevice = deviceIDToVulnIDToDetection[ticket.DeviceID()] != nil
 	var deviceReportedAsDead = len(deadHostIPToProofMap[sord(ticket.IPAddress())]) > 0 && len(sord(ticket.IPAddress())) > 0
 
 	var detection domain.Detection
 	if detectionsFoundForDevice {
-		detection = devDetectionMap[ticket.DeviceID()][ticket.VulnerabilityID()]
+		detection = deviceIDToVulnIDToDetection[ticket.DeviceID()][ticket.VulnerabilityID()]
 	}
 
 	var err error

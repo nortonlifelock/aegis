@@ -179,6 +179,8 @@ func grabEndpointFromRequest(request *apiRequest, endpoint string, originalBody 
 		ep = request.Tag
 	} else if request.JobConfigs != nil {
 		ep = request.JobConfigs
+	} else if request.Exceptions != nil {
+		ep = request.Exceptions
 	} else if request.BulkUpdateJob != nil {
 		// do nothing, we'll just use the body of the apiRequest
 	} else if request.BulkUpdateFile != nil {

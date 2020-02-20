@@ -146,6 +146,28 @@ func (job *ExceptionJob) processExceptionOrFalsePositive(ticket domain.Ticket) {
 			job.lstream.Send(log.Errorf(err, "Error while updating ticket %s: %s", ticket.Title(), err.Error()))
 		}
 	}
+
+	var ignore domain.Ignore
+	if ignore, err = job.db.HasIgnore(
+		job.outsource.SourceID(),
+		vulnID,
+		deviceID,
+		job.config.OrganizationID(),
+		sord(ticket.ServicePorts()),
+		tord1970(nil),
+	); err == nil {
+		if ignore != nil {
+			_, _, err = job.db.UpdateDetectionIgnore(deviceID, vulnID, ignore.ID())
+			if err != nil {
+				job.lstream.Send(log.Errorf(err, "error while updating ignore for [%s/%s]", deviceID, vulnID))
+			}
+		} else {
+			job.lstream.Send(log.Errorf(err, "failed to load ignore entry for [%s/%s]", deviceID, vulnID))
+		}
+	} else {
+		job.lstream.Send(log.Errorf(err, "error while loading ignore entry for [%s/%s]", deviceID, vulnID))
+	}
+
 }
 
 // This method updates the expiration date of the CERFs in the database that are past the date of the last job start

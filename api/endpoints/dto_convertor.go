@@ -452,7 +452,7 @@ func toJobConfigDtoSlice(orgID string, jobConfigs []domain.JobConfig, isMappedEn
 	return jobConfigDtos
 }
 
-func toExceptionDtoSlice(exceptions []domain.Ignore) (ExceptionDTOs []*Exception) {
+func toExceptionDtoSlice(exceptions []domain.ExceptedDetection) (ExceptionDTOs []*Exception) {
 	if exceptions != nil {
 		for _, except := range exceptions {
 			if except != nil {
@@ -463,37 +463,23 @@ func toExceptionDtoSlice(exceptions []domain.Ignore) (ExceptionDTOs []*Exception
 	return ExceptionDTOs
 }
 
-func toExceptionDto(except domain.Ignore) (exceptionDto *Exception) {
-	var updatedDate = ""
-	var dueDate = ""
-	if except.DBUpdatedDate() != nil {
-		updatedDate = except.DBUpdatedDate().Format(time.RFC3339)
-		if updatedDate == zeroTime {
-			updatedDate = ""
-		}
-	}
-	if except.DueDate() != nil {
-		dueDate = except.DueDate().Format(time.RFC3339)
-		if dueDate == zeroTime {
-			dueDate = ""
-		}
-	}
-	if except != nil {
-		exceptionDto = &Exception{
-			SourceID:        except.SourceID(),
-			OrganizationID:  except.OrganizationID(),
-			TypeID:          except.TypeID(),
-			VulnerabilityID: except.VulnerabilityID(),
-			DeviceID:        except.DeviceID(),
-			DueDate:         dueDate,
-			Approval:        except.Approval(),
-			Active:          except.Active(),
-			Port:            except.Port(),
-			DBUpdatedDate:   updatedDate,
-			DBCreatedDate:   except.DBCreatedDate().Format(time.RFC3339),
-			CreatedBy:       sord(except.CreatedBy()),
-			UpdatedBy:       sord(except.UpdatedBy()),
-		}
+func toExceptionDto(except domain.ExceptedDetection) (exceptionDto *Exception) {
+	exceptionDto = &Exception{
+		Title:              sord(except.Title()),
+		IP:                 sord(except.IP()),
+		Hostname:           sord(except.Hostname()),
+		Expires:            except.DueDate().Format(time.RFC822),
+		Approval:           sord(except.Approval()),
+		AssignmentGroup:    sord(except.AssignmentGroup()),
+		OS:                 sord(except.OS()),
+		VulnerabilityID:    sord(except.VulnerabilityID()),
+		VulnerabilityTitle: sord(except.VulnerabilityTitle()),
+
+		// Fields unused while reading exceptions
+		Offset:      0,
+		Limit:       0,
+		SortedField: "",
+		SortOrder:   "",
 	}
 	return exceptionDto
 }

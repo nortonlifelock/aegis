@@ -97,11 +97,11 @@ var routes = []route{
 	{getSourceInByJobIDEndpoint, http.MethodPost, "/SrcInsByJobName", getSourceInsByJobID},
 	{getSourceOutByJobIDEndpoint, http.MethodPost, "/SrcOutsByJobNameAndSrcIn", getSourceOutsByJobIDAndSrcIn},
 
-	{getAllExceptionsEndpoint, http.MethodPost, "/AllExceptions", getAllExceptions},
-	{getAllExceptionTypeEndpoints, http.MethodGet, "/ExceptTypes", getAllExceptTypes},
-	{createExceptionEndpoints, http.MethodPost, "/Exception", createException},
-	{updateExceptionEndpoints, http.MethodPut, "/Exception", updateException},
-	{deleteExceptionEndpoints, http.MethodPost, "/DeleteException", deleteException},
+	{getAllExceptionsEndpoint, http.MethodPost, "/Exceptions", getAllExceptions},
+	//{getAllExceptionTypeEndpoints, http.MethodGet, "/ExceptTypes", getAllExceptTypes},
+	//{createExceptionEndpoints, http.MethodPost, "/Exception", createException},
+	//{updateExceptionEndpoints, http.MethodPut, "/Exception", updateException},
+	//{deleteExceptionEndpoints, http.MethodPost, "/DeleteException", deleteException},
 }
 
 // NewRouter registers all the endpoints with their associated handler functions. It returns a mux router which can then be used to start

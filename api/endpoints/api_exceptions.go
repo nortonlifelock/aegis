@@ -2,11 +2,9 @@ package endpoints
 
 import (
 	"fmt"
-	"net/http"
-	"time"
-
 	"github.com/nortonlifelock/domain"
 	"github.com/pkg/errors"
+	"net/http"
 )
 
 func createException(w http.ResponseWriter, r *http.Request) {
@@ -63,13 +61,14 @@ func (except *Exception) update(user domain.User, permission domain.Permission, 
 
 func (except *Exception) verify() (verify bool) {
 	verify = false
-	if len(except.DeviceID) > 0 {
-		if len(except.VulnerabilityID) > 0 { // TODO what about sweeping exceptions?
-			if except.TypeID > 0 {
-				verify = true
-			}
-		}
-	}
+	//if len(except.DeviceID) > 0 {
+	//	if len(except.VulnerabilityID) > 0 { // TODO what about sweeping exceptions?
+	//		if except.TypeID > 0 {
+	//			verify = true
+	//		}
+	//	}
+	//}
+	verify = true
 
 	return verify
 }
@@ -83,20 +82,20 @@ func (except *Exception) createOrUpdate(user domain.User, permission domain.Perm
 
 	status = http.StatusBadRequest
 	if except != nil && permission != nil {
-		var dueDate time.Time
-		dueDate, err = formatStringToDate(except.DueDate)
-		if err == nil {
-			_, _, err = Ms.CreateException(except.SourceID, permission.OrgID(), except.TypeID, except.VulnerabilityID,
-				except.DeviceID, dueDate, except.Approval, true, except.Port, sord(user.Username()))
-			if err == nil {
-				status = http.StatusOK
-				generalResp.Response = fmt.Sprintf("Exception created for vulnId: %v and deviceId: %v", except.VulnerabilityID, except.DeviceID)
-			} else {
-				err = errors.New("error while creating exception")
-			}
-		} else {
-			err = errors.Errorf("error while parsing the dates [%s]", err.Error())
-		}
+		//var dueDate time.Time
+		//dueDate, err = formatStringToDate(except.DueDate)
+		//if err == nil {
+		//	_, _, err = Ms.CreateException(except.SourceID, permission.OrgID(), except.TypeID, except.VulnerabilityID,
+		//		except.DeviceID, dueDate, except.Approval, true, except.Port, sord(user.Username()))
+		//	if err == nil {
+		//		status = http.StatusOK
+		//		generalResp.Response = fmt.Sprintf("Exception created for vulnId: %v and deviceId: %v", except.VulnerabilityID, except.DeviceID)
+		//	} else {
+		//		err = errors.New("error while creating exception")
+		//	}
+		//} else {
+		//	err = errors.Errorf("error while parsing the dates [%s]", err.Error())
+		//}
 	} else {
 		err = errors.New("nil parameters while creating exception")
 	}
@@ -109,13 +108,13 @@ func (except *Exception) delete(user domain.User, permission domain.Permission) 
 
 	status = http.StatusBadRequest
 	if except != nil && permission != nil {
-		_, _, err = Ms.DisableIgnore(except.SourceID, except.DeviceID, permission.OrgID(), except.VulnerabilityID, except.Port, sord(user.Username()))
-		if err == nil {
-			status = http.StatusOK
-			generalResp.Response = fmt.Sprintf("Exception deleting for vulnId: %v and deviceId: %v", except.VulnerabilityID, except.DeviceID)
-		} else {
-			err = errors.New("error while deleting exception")
-		}
+		//_, _, err = Ms.DisableIgnore(except.SourceID, except.DeviceID, permission.OrgID(), except.VulnerabilityID, except.Port, sord(user.Username()))
+		//if err == nil {
+		//	status = http.StatusOK
+		//	generalResp.Response = fmt.Sprintf("Exception deleting for vulnId: %v and deviceId: %v", except.VulnerabilityID, except.DeviceID)
+		//} else {
+		//	err = errors.New("error while deleting exception")
+		//}
 
 	} else {
 		err = errors.New("nil parameters while deleting exception")
@@ -138,33 +137,59 @@ func getAllExceptions(w http.ResponseWriter, r *http.Request) {
 func readAllExceptions(permission domain.Permission, exception *Exception) (exceptionDTOs []*Exception, status int, totalRecords int, err error) {
 	status = http.StatusBadRequest
 	if exception != nil && permission != nil && len(permission.OrgID()) > 0 {
-		var updatedDate time.Time
-		var createdDate time.Time
-		var dueDate time.Time
-		var exceptions []domain.Ignore
-		var queryData domain.QueryData
-		createdDate, err = formatStringToDate(exception.DBCreatedDate)
-		dueDate, err = formatStringToDate(exception.DueDate)
-		updatedDate, err = formatStringToDate(exception.DBUpdatedDate)
-		if err == nil {
-			queryData, err = Ms.GetExceptionsLength(exception.SourceID, permission.OrgID(), exception.TypeID, exception.VulnerabilityID, exception.DeviceID, dueDate, exception.Port, exception.Approval, exception.Active, createdDate, updatedDate, exception.UpdatedBy, exception.CreatedBy)
-			if err == nil {
-				totalRecords = queryData.Length()
-				exceptions, err = Ms.GetAllExceptions(exception.Offset, exception.Limit, exception.SourceID, permission.OrgID(), exception.TypeID, exception.VulnerabilityID, exception.DeviceID, dueDate, exception.Port, exception.Approval,
-					exception.Active, createdDate, updatedDate, exception.UpdatedBy, exception.CreatedBy, exception.SortedField, exception.SortOrder)
-				if err == nil {
-					status = http.StatusOK
-					exceptionDTOs = toExceptionDtoSlice(exceptions)
 
-				} else {
-					err = errors.Errorf("error while obtaining exceptions from database [%s]", err.Error())
-				}
-			} else {
-				err = errors.Errorf("error while obtaining exceptions records length from database [%s]", err.Error())
-			}
+		var exceptions []domain.ExceptedDetection
+		if exceptions, err = Ms.GetExceptionDetections(
+			exception.Offset,
+			exception.Limit,
+			permission.OrgID(),
+			exception.SortedField,
+			exception.SortOrder,
+			exception.Title,
+			exception.IP,
+			exception.Hostname,
+			exception.VulnerabilityID,
+			exception.VulnerabilityTitle,
+			exception.Approval,
+			exception.Expires,
+			exception.AssignmentGroup,
+			exception.OS,
+			"", // TODO
+		); err == nil {
+			totalRecords = len(exceptions)
+			exceptionDTOs = toExceptionDtoSlice(exceptions)
+			status = http.StatusOK
 		} else {
-			err = errors.Errorf("error while parsing the dates [%s]", err.Error())
+			err = fmt.Errorf("error while loading excepted detections - %s", err.Error())
 		}
+
+		//var updatedDate time.Time
+		//var createdDate time.Time
+		//var dueDate time.Time
+		//var exceptions []domain.Ignore
+		//var queryData domain.QueryData
+		//createdDate, err = formatStringToDate(exception.DBCreatedDate)
+		//dueDate, err = formatStringToDate(exception.DueDate)
+		//updatedDate, err = formatStringToDate(exception.DBUpdatedDate)
+		//if err == nil {
+		//	queryData, err = Ms.GetExceptionsLength(exception.SourceID, permission.OrgID(), exception.TypeID, exception.VulnerabilityID, exception.DeviceID, dueDate, exception.Port, exception.Approval, exception.Active, createdDate, updatedDate, exception.UpdatedBy, exception.CreatedBy)
+		//	if err == nil {
+		//		totalRecords = queryData.Length()
+		//		exceptions, err = Ms.GetAllExceptions(exception.Offset, exception.Limit, exception.SourceID, permission.OrgID(), exception.TypeID, exception.VulnerabilityID, exception.DeviceID, dueDate, exception.Port, exception.Approval,
+		//			exception.Active, createdDate, updatedDate, exception.UpdatedBy, exception.CreatedBy, exception.SortedField, exception.SortOrder)
+		//		if err == nil {
+		//			status = http.StatusOK
+		//			exceptionDTOs = toExceptionDtoSlice(exceptions)
+		//
+		//		} else {
+		//			err = errors.Errorf("error while obtaining exceptions from database [%s]", err.Error())
+		//		}
+		//	} else {
+		//		err = errors.Errorf("error while obtaining exceptions records length from database [%s]", err.Error())
+		//	}
+		//} else {
+		//	err = errors.Errorf("error while parsing the dates [%s]", err.Error())
+		//}
 	}
 	return exceptionDTOs, status, totalRecords, err
 }
