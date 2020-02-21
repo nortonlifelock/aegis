@@ -16,7 +16,11 @@ func tord(in *time.Time) (out time.Time) {
 
 func tord1970(in *time.Time) (out time.Time) {
 	if in != nil {
-		out = *in
+		if in.After(time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC)) {
+			out = *in
+		} else {
+			out = time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC)
+		}
 	} else {
 		out = time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC)
 	}
