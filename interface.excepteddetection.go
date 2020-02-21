@@ -12,5 +12,7 @@ type ExceptedDetection interface {
 	DueDate() *time.Time
 	AssignmentGroup() *string
 	OS() *string
+	OSRegex() *string
 	IgnoreID() string
+	IgnoreType() int
 }
