@@ -85,7 +85,7 @@ type GeneratedDatabaseConnection interface {
 	GetExceptionDetections(_offset int, _limit int, _orgID string, _sortField string, _sortOrder string, _Title string, _IP string, _Hostname string, _VulnID string, _Approval string, _DueDate string, _AssignmentGroup string, _OS string, _OSRegex string, _TypeID int) ([]ExceptedDetection, error)
 	GetExceptionTypes() ([]ExceptionType, error)
 	GetExceptionsDueNext30Days() ([]CERF, error)
-	GetExceptionsLength(inSourceID string, inOrgID string, inTypeID int, inVulnID string, inDevID string, inDueDate time.Time, inPort string, inApproval string, inActive bool, inDBCreatedDate time.Time, inDBUpdatedDate time.Time, inUpdatedBy string, inCreatedBy string) (QueryData, error)
+	GetExceptionsLength(_offset int, _limit int, _orgID string, _sortField string, _sortOrder string, _Title string, _IP string, _Hostname string, _VulnID string, _Approval string, _DueDate string, _AssignmentGroup string, _OS string, _OSRegex string, _TypeID int) (QueryData, error)
 	GetJobByID(_ID int) (JobRegistration, error)
 	GetJobConfig(_ID string) (JobConfig, error)
 	GetJobConfigAudit(inJobConfigID string, inOrgID string) ([]JobConfigAudit, error)
