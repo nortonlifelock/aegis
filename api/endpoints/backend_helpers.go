@@ -82,6 +82,7 @@ const (
 	getJIRAURLSEndpoint         = "getJiraUrls"
 	getStatusMapsEndpoint       = "getStatusMaps"
 	getFieldMapsEndpoint        = "getFieldMaps"
+	attachCERFToTicketEndpoint  = "attachCERFToTicket"
 
 	getAzureTagsEndpoint  = "GetAzureTags"
 	getAWSTagsEndpoint    = "GetAWSTags"

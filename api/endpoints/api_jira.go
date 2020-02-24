@@ -98,6 +98,55 @@ type backendFieldsAndCustomFields struct {
 	CustomFields  []string `json:"custom_fields"`
 }
 
+type exceptionTicket struct {
+	domain.Ticket
+	cerf   string
+	status string
+}
+
+func (t *exceptionTicket) CERF() string {
+	return t.cerf
+}
+
+func (t *exceptionTicket) Status() *string {
+	return &t.status
+}
+
+func attachExceptionToTicket(w http.ResponseWriter, r *http.Request) {
+	executeTransaction(w, r, attachCERFToTicketEndpoint, admin|manager, func(trans *transaction) {
+		params := mux.Vars(r)
+		var ticket = params[ticketParam]
+		var cerf = params[idParam]
+		if len(ticket) > 0 && len(cerf) > 0 {
+			var engine integrations.TicketingEngine
+			engine, trans.err = getTicketingConnection(integrations.JIRA, trans.permission.OrgID())
+			if trans.err == nil {
+				var jiraTicket domain.Ticket
+				if jiraTicket, trans.err = engine.GetTicket(ticket); trans.err == nil {
+					_, _, trans.err = engine.UpdateTicket(&exceptionTicket{
+						Ticket: jiraTicket,
+						cerf:   cerf,
+						status: engine.GetStatusMap(jira.StatusClosedException),
+					}, fmt.Sprintf("%s added to ticket at request of %s", cerf, sord(trans.user.Username())))
+
+					if trans.err == nil {
+						trans.status = http.StatusOK
+						trans.obj = "Ticket updated! Please allow a couple minutes for the changes to reflect in the Aegis UI"
+					} else {
+						(&trans.wrapper).addError(trans.err, backendError)
+					}
+				} else {
+					(&trans.wrapper).addError(trans.err, backendError)
+				}
+			} else {
+				(&trans.wrapper).addError(trans.err, backendError)
+			}
+		} else {
+			(&trans.wrapper).addError(fmt.Errorf("empty CERF or ticket field"), requestFormatError)
+		}
+	})
+}
+
 func getFieldMaps(w http.ResponseWriter, r *http.Request) {
 	executeTransaction(w, r, getFieldMapsEndpoint, admin|manager, func(trans *transaction) {
 

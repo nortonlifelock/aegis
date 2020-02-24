@@ -2962,13 +2962,13 @@ func (conn *dbconn) GetExceptionByVulnIDOrg(_DeviceID string, _VulnID string, _O
 }
 
 // GetExceptionDetections executes the stored procedure GetExceptionDetections against the database and returns the read results
-func (conn *dbconn) GetExceptionDetections(_offset int, _limit int, _orgID string, _sortField string, _sortOrder string, _Title string, _IP string, _Hostname string, _VulnID string, _VulnTitle string, _Approval string, _DueDate string, _AssignmentGroup string, _OS string, _OSRegex string) ([]domain.ExceptedDetection, error) {
+func (conn *dbconn) GetExceptionDetections(_offset int, _limit int, _orgID string, _sortField string, _sortOrder string, _Title string, _IP string, _Hostname string, _VulnID string, _Approval string, _DueDate string, _AssignmentGroup string, _OS string, _OSRegex string, _TypeID int) ([]domain.ExceptedDetection, error) {
 	var err error
 	var retExceptedDetection = make([]domain.ExceptedDetection, 0)
 
 	conn.Read(&connection.Procedure{
 		Proc:       "GetExceptionDetections",
-		Parameters: []interface{}{_offset, _limit, _orgID, _sortField, _sortOrder, _Title, _IP, _Hostname, _VulnID, _VulnTitle, _Approval, _DueDate, _AssignmentGroup, _OS, _OSRegex},
+		Parameters: []interface{}{_offset, _limit, _orgID, _sortField, _sortOrder, _Title, _IP, _Hostname, _VulnID, _Approval, _DueDate, _AssignmentGroup, _OS, _OSRegex, _TypeID},
 		Callback: func(results interface{}, dberr error) {
 			err = dberr
 
@@ -3124,13 +3124,13 @@ func (conn *dbconn) GetExceptionsDueNext30Days() ([]domain.CERF, error) {
 }
 
 // GetExceptionsLength executes the stored procedure GetExceptionsLength against the database and returns the read results
-func (conn *dbconn) GetExceptionsLength(inSourceID string, inOrgID string, inTypeID int, inVulnID string, inDevID string, inDueDate time.Time, inPort string, inApproval string, inActive bool, inDBCreatedDate time.Time, inDBUpdatedDate time.Time, inUpdatedBy string, inCreatedBy string) (domain.QueryData, error) {
+func (conn *dbconn) GetExceptionsLength(_offset int, _limit int, _orgID string, _sortField string, _sortOrder string, _Title string, _IP string, _Hostname string, _VulnID string, _Approval string, _DueDate string, _AssignmentGroup string, _OS string, _OSRegex string, _TypeID int) (domain.QueryData, error) {
 	var err error
 	var retQueryData domain.QueryData
 
 	conn.Read(&connection.Procedure{
 		Proc:       "GetExceptionsLength",
-		Parameters: []interface{}{inSourceID, inOrgID, inTypeID, inVulnID, inDevID, inDueDate, inPort, inApproval, inActive, inDBCreatedDate, inDBUpdatedDate, inUpdatedBy, inCreatedBy},
+		Parameters: []interface{}{_offset, _limit, _orgID, _sortField, _sortOrder, _Title, _IP, _Hostname, _VulnID, _Approval, _DueDate, _AssignmentGroup, _OS, _OSRegex, _TypeID},
 		Callback: func(results interface{}, dberr error) {
 			err = dberr
 

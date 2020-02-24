@@ -118,8 +118,13 @@ type (
 		Approval           string `json:"approval"`
 		AssignmentGroup    string `json:"assignmentgroup"`
 		OS                 string `json:"os"`
+		OSRegex            string `json:"osregex"`
 		VulnerabilityID    string `json:"vulnid"`
 		VulnerabilityTitle string `json:"vulntitle"`
+
+		IgnoreTypeID int    `json:"ignoretypeid"`
+		IgnoreType   string `json:"ignoretype"`
+		IgnoreID     string `json:"ignoreid"`
 
 		Offset      int    `json:"offset"`
 		Limit       int    `json:"limit"`

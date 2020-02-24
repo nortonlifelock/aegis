@@ -464,16 +464,26 @@ func toExceptionDtoSlice(exceptions []domain.ExceptedDetection) (ExceptionDTOs [
 }
 
 func toExceptionDto(except domain.ExceptedDetection) (exceptionDto *Exception) {
+	var ignoreIDToType = map[int]string{
+		0: "Exception",
+		1: "False Positive",
+		2: "Decommissioned",
+	}
+
 	exceptionDto = &Exception{
 		Title:              sord(except.Title()),
 		IP:                 sord(except.IP()),
 		Hostname:           sord(except.Hostname()),
-		Expires:            except.DueDate().Format(time.RFC822),
+		Expires:            except.DueDate().Format("2006-01-02 15:04:05"),
 		Approval:           sord(except.Approval()),
 		AssignmentGroup:    sord(except.AssignmentGroup()),
 		OS:                 sord(except.OS()),
+		OSRegex:            sord(except.OSRegex()),
 		VulnerabilityID:    sord(except.VulnerabilityID()),
 		VulnerabilityTitle: sord(except.VulnerabilityTitle()),
+
+		IgnoreType: ignoreIDToType[except.IgnoreType()],
+		IgnoreID:   except.IgnoreID(),
 
 		// Fields unused while reading exceptions
 		Offset:      0,

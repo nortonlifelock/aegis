@@ -121,6 +121,12 @@ github.com/nortonlifelock/domain v1.0.1-0.20200220170532-baa9c750faf0 h1:Dc5AWrO
 github.com/nortonlifelock/domain v1.0.1-0.20200220170532-baa9c750faf0/go.mod h1:znFyCnzgKqtnNcBVQ8XHKyPxMsMR7QDkyAApQ58Avuo=
 github.com/nortonlifelock/domain v1.0.1-0.20200220170721-ffc8155e5bc4 h1:+oO0FsYPD8qKLMRBrGse49Id7PnY84Iyh8nq//QlYr0=
 github.com/nortonlifelock/domain v1.0.1-0.20200220170721-ffc8155e5bc4/go.mod h1:znFyCnzgKqtnNcBVQ8XHKyPxMsMR7QDkyAApQ58Avuo=
+github.com/nortonlifelock/domain v1.0.1-0.20200221185223-bf0508491b40 h1:Bb04eTSDy4EL21DsGrQELS71ng3zOldxHAMml+tbLKk=
+github.com/nortonlifelock/domain v1.0.1-0.20200221185223-bf0508491b40/go.mod h1:znFyCnzgKqtnNcBVQ8XHKyPxMsMR7QDkyAApQ58Avuo=
+github.com/nortonlifelock/domain v1.0.1-0.20200221202907-d29b2c2964d8 h1:E6XN61M0BR86RfHzWVLaPyHsOpEjNFHKgQsCCZUXsUI=
+github.com/nortonlifelock/domain v1.0.1-0.20200221202907-d29b2c2964d8/go.mod h1:znFyCnzgKqtnNcBVQ8XHKyPxMsMR7QDkyAApQ58Avuo=
+github.com/nortonlifelock/domain v1.0.1-0.20200221212904-962940b21bbd h1:W/f2xE3DLdLMr80/fk737ByAWIw64Dz/QV5leIsUYY4=
+github.com/nortonlifelock/domain v1.0.1-0.20200221212904-962940b21bbd/go.mod h1:znFyCnzgKqtnNcBVQ8XHKyPxMsMR7QDkyAApQ58Avuo=
 github.com/nortonlifelock/dome9 v1.0.0 h1:YtnBerL5djePwj/ufSunuLfgeL6owDlwxFNLYrkYw0Y=
 github.com/nortonlifelock/dome9 v1.0.0/go.mod h1:0c1bsMWR0hkuOBv2aKdhRPkJiyVCj6VQhB22/reZuCo=
 github.com/nortonlifelock/files v1.0.0 h1:AKhTO0ozZsznao9tgrDbNkjaILPFadyBqWIKqSK4ylg=

@@ -7,52 +7,6 @@ import (
 	"net/http"
 )
 
-func createException(w http.ResponseWriter, r *http.Request) {
-	executeTransaction(w, r, createExceptionEndpoints, admin|manager, func(trans *transaction) {
-		if trans.endpoint.verify() {
-			if except, isAExcept := trans.endpoint.(*Exception); isAExcept {
-				trans.obj, trans.status, trans.err = except.createOrUpdate(trans.user, trans.permission)
-				(&trans.wrapper).addError(trans.err, processError)
-			} else {
-				trans.err = errors.Errorf("tried to pass a non-exception as a exception")
-				(&trans.wrapper).addError(trans.err, requestFormatError)
-			}
-		} else {
-			trans.err = errors.Errorf("invalid length of format of request fields")
-			(&trans.wrapper).addError(trans.err, requestFormatError)
-		}
-	})
-}
-
-func updateException(w http.ResponseWriter, r *http.Request) {
-	executeTransaction(w, r, updateExceptionEndpoint, admin|manager, func(trans *transaction) {
-		if trans.endpoint.verify() {
-			if except, isAExcept := trans.endpoint.(*Exception); isAExcept {
-				trans.obj, trans.status, trans.err = except.createOrUpdate(trans.user, trans.permission)
-				(&trans.wrapper).addError(trans.err, processError)
-			} else {
-				trans.err = errors.Errorf("tried to pass a non-exception as a exception")
-				(&trans.wrapper).addError(trans.err, requestFormatError)
-			}
-		} else {
-			trans.err = errors.Errorf("invalid length of format of request fields")
-			(&trans.wrapper).addError(trans.err, requestFormatError)
-		}
-	})
-}
-
-func deleteException(w http.ResponseWriter, r *http.Request) {
-	executeTransaction(w, r, deleteExceptionEndpoint, admin|manager, func(trans *transaction) {
-		if except, isAExcept := trans.endpoint.(*Exception); isAExcept {
-			trans.obj, trans.status, trans.err = except.delete(trans.user, trans.permission)
-			(&trans.wrapper).addError(trans.err, processError)
-		} else {
-			trans.err = errors.Errorf("tried to pass a non-exception as a exception")
-			(&trans.wrapper).addError(trans.err, requestFormatError)
-		}
-	})
-}
-
 func (except *Exception) update(user domain.User, permission domain.Permission, originalBody string) (generalResp *GeneralResp, status int, err error) {
 	generalResp = &GeneralResp{}
 	status = http.StatusBadRequest
@@ -149,47 +103,40 @@ func readAllExceptions(permission domain.Permission, exception *Exception) (exce
 			exception.IP,
 			exception.Hostname,
 			exception.VulnerabilityID,
-			exception.VulnerabilityTitle,
 			exception.Approval,
 			exception.Expires,
 			exception.AssignmentGroup,
 			exception.OS,
-			"", // TODO
+			exception.OSRegex,
+			exception.IgnoreTypeID,
 		); err == nil {
-			totalRecords = len(exceptions)
+
+			var queryData domain.QueryData
+			queryData, _ = Ms.GetExceptionsLength(exception.Offset,
+				exception.Limit,
+				permission.OrgID(),
+				exception.SortedField,
+				exception.SortOrder,
+				exception.Title,
+				exception.IP,
+				exception.Hostname,
+				exception.VulnerabilityID,
+				exception.Approval,
+				exception.Expires,
+				exception.AssignmentGroup,
+				exception.OS,
+				exception.OSRegex,
+				exception.IgnoreTypeID)
+
+			if queryData != nil {
+				totalRecords = queryData.Length()
+			}
+
 			exceptionDTOs = toExceptionDtoSlice(exceptions)
 			status = http.StatusOK
 		} else {
 			err = fmt.Errorf("error while loading excepted detections - %s", err.Error())
 		}
-
-		//var updatedDate time.Time
-		//var createdDate time.Time
-		//var dueDate time.Time
-		//var exceptions []domain.Ignore
-		//var queryData domain.QueryData
-		//createdDate, err = formatStringToDate(exception.DBCreatedDate)
-		//dueDate, err = formatStringToDate(exception.DueDate)
-		//updatedDate, err = formatStringToDate(exception.DBUpdatedDate)
-		//if err == nil {
-		//	queryData, err = Ms.GetExceptionsLength(exception.SourceID, permission.OrgID(), exception.TypeID, exception.VulnerabilityID, exception.DeviceID, dueDate, exception.Port, exception.Approval, exception.Active, createdDate, updatedDate, exception.UpdatedBy, exception.CreatedBy)
-		//	if err == nil {
-		//		totalRecords = queryData.Length()
-		//		exceptions, err = Ms.GetAllExceptions(exception.Offset, exception.Limit, exception.SourceID, permission.OrgID(), exception.TypeID, exception.VulnerabilityID, exception.DeviceID, dueDate, exception.Port, exception.Approval,
-		//			exception.Active, createdDate, updatedDate, exception.UpdatedBy, exception.CreatedBy, exception.SortedField, exception.SortOrder)
-		//		if err == nil {
-		//			status = http.StatusOK
-		//			exceptionDTOs = toExceptionDtoSlice(exceptions)
-		//
-		//		} else {
-		//			err = errors.Errorf("error while obtaining exceptions from database [%s]", err.Error())
-		//		}
-		//	} else {
-		//		err = errors.Errorf("error while obtaining exceptions records length from database [%s]", err.Error())
-		//	}
-		//} else {
-		//	err = errors.Errorf("error while parsing the dates [%s]", err.Error())
-		//}
 	}
 	return exceptionDTOs, status, totalRecords, err
 }
