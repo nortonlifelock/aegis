@@ -4,6 +4,7 @@ exceptions/
 scaffold.json
 ui/builds/dist/
 vendor/
+connected.go
 
 # GO IGNORE
 # Binaries for programs and plugins
