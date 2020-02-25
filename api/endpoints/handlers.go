@@ -144,6 +144,7 @@ var (
 type listenerConfig interface {
 	TransportProtocol() string
 	UILocation() string
+	EncryptionType() string
 	EncryptionKey() string
 	KMSProfile() string
 	KMSRegion() string
