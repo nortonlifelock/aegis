@@ -19,6 +19,7 @@ type logger interface {
 
 // ConfigJira is an interface that defines the fields that JIRA requires from the app config
 type ConfigJira interface {
+	EncryptionType() string
 	EncryptionKey() string
 	KMSRegion() string
 	KMSProfile() string
