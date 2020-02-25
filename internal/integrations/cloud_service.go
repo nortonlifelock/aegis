@@ -2,10 +2,10 @@ package integrations
 
 import (
 	"fmt"
-	"github.com/nortonlifelock/domain"
 	"github.com/nortonlifelock/aws"
 	"github.com/nortonlifelock/azure"
 	"github.com/nortonlifelock/crypto"
+	"github.com/nortonlifelock/domain"
 )
 
 const (
@@ -24,6 +24,7 @@ type CloudServiceConnection interface {
 }
 
 type config interface {
+	EncryptionType() string
 	EncryptionKey() string
 	KMSRegion() string
 	KMSProfile() string
