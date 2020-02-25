@@ -10,11 +10,12 @@ type AppConfig struct {
 	DatabasePassword string `json:"db_password"`
 	DatabaseSchema   string `json:"db_schema"`
 
-	EKey       string `json:"key_id"`
-	TopicKey   string `json:"sns_id"`
-	RegionKMS  string `json:"kms_region"`
-	RegionSNS  string `json:"sns_region"`
-	ProfileKMS string `json:"kms_profile"`
+	EncryptionMethod string `json:"encryption_type"`
+	EKey             string `json:"key_id"`
+	TopicKey         string `json:"sns_id"`
+	RegionKMS        string `json:"kms_region"`
+	RegionSNS        string `json:"sns_region"`
+	ProfileKMS       string `json:"kms_profile"`
 
 	// Logging
 	LogFilePath   string `json:"logpath"`
@@ -144,6 +145,10 @@ func (cfg AppConfig) UILocation() string {
 // SNSTopicID returns the topic ID for an SNS
 func (cfg AppConfig) SNSTopicID() string {
 	return cfg.TopicKey
+}
+
+func (cfg AppConfig) EncryptionType() string {
+	return cfg.EncryptionMethod
 }
 
 func (cfg AppConfig) KMSRegion() string {

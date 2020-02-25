@@ -3,8 +3,8 @@ package config
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/nortonlifelock/files"
 	"github.com/nortonlifelock/crypto"
+	"github.com/nortonlifelock/files"
 	"os"
 )
 
@@ -23,7 +23,7 @@ func LoadConfigByPath(configPath string) (AppConfig, error) {
 
 					// the database information is encrypted using KMS
 					var client crypto.Client
-					client, err = crypto.NewEncryptionClientWithDirectKey(crypto.KMS, config.EncryptionKey(), config.KMSRegion())
+					client, err = crypto.NewEncryptionClientWithDirectKey(config.EncryptionType(), config.EncryptionKey(), config.KMSRegion())
 					if err == nil {
 						var decrypted string
 						decrypted, err = client.Decrypt(config.DBPassword())

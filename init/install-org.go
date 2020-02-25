@@ -47,11 +47,11 @@ func InstallOrg(path string) {
 
 	organization := createOrganization(reader, appConfig, db)
 
-	aesClient, err := crypto.NewEncryptionClient(crypto.AES256, db, appConfig.EncryptionKey(), organization.ID(), appConfig.KMSProfile(), appConfig.KMSRegion())
+	cryptoClient, err := crypto.NewEncryptionClient(appConfig.EncryptionType(), db, appConfig.EncryptionKey(), organization.ID(), appConfig.KMSProfile(), appConfig.KMSRegion())
 	check(err)
 
 	fmt.Println("Now let's get your sources setup! We'll start with the essentials")
-	scannerSC, ticketSC, assetGroups := createSources(reader, aesClient, db, organization.ID())
+	scannerSC, ticketSC, assetGroups := createSources(reader, cryptoClient, appConfig.EncryptionType(), db, organization.ID())
 
 	fmt.Println("Creating job configs...")
 	createJobConfigs(db, organization.ID(), scannerSC.ID(), ticketSC.ID(), assetGroups)
@@ -131,7 +131,7 @@ func createJobConfigs(db domain.DatabaseConnection, orgID, scannerSCID, ticketSC
 	check(err)
 }
 
-func createSources(reader *bufio.Reader, aesClient crypto.Client, db domain.DatabaseConnection, orgID string) (scannerSC, ticketSC domain.SourceConfig, assetGroups []int) {
+func createSources(reader *bufio.Reader, cryptoClient crypto.Client, encryptionType string, db domain.DatabaseConnection, orgID string) (scannerSC, ticketSC domain.SourceConfig, assetGroups []int) {
 	sources, err := db.GetSources()
 	check(err)
 
@@ -140,8 +140,8 @@ func createSources(reader *bufio.Reader, aesClient crypto.Client, db domain.Data
 		sourceNameToID[source.Source()] = source.ID()
 	}
 
-	scannerSC, assetGroups = createScannerSourceConfig(reader, aesClient, db, orgID, sourceNameToID)
-	ticketSC = createTicketSourceConfig(reader, aesClient, db, orgID, sourceNameToID)
+	scannerSC, assetGroups = createScannerSourceConfig(reader, cryptoClient, encryptionType, db, orgID, sourceNameToID)
+	ticketSC = createTicketSourceConfig(reader, cryptoClient, encryptionType, db, orgID, sourceNameToID)
 
 	_, _, err = db.UpdateSourceConfigConcurrencyByID(scannerSC.ID(), 10, 0, 10)
 	check(err)
@@ -152,7 +152,7 @@ func createSources(reader *bufio.Reader, aesClient crypto.Client, db domain.Data
 	return scannerSC, ticketSC, assetGroups
 }
 
-func createTicketSourceConfig(reader *bufio.Reader, aesClient crypto.Client, db domain.DatabaseConnection, orgID string, sourceNameToID map[string]string) (ticketSourceConfig domain.SourceConfig) {
+func createTicketSourceConfig(reader *bufio.Reader, cryptoClient crypto.Client, encryptionType string, db domain.DatabaseConnection, orgID string, sourceNameToID map[string]string) (ticketSourceConfig domain.SourceConfig) {
 	for {
 		fmt.Println("Setting up your JIRA source configurations...")
 
@@ -169,12 +169,18 @@ func createTicketSourceConfig(reader *bufio.Reader, aesClient crypto.Client, db 
 		fmt.Println("What's the username of the service account that will be authenticating for the API?")
 		user := getInput(reader)
 
-		fmt.Println("What's the password of the service account that will be authenticating for the API?")
-		passByte, err := terminal.ReadPassword(0)
-		check(err)
+		var pass string
+		if encryptionType == crypto.VAULT {
+			fmt.Println("Enter the path to where your password is stored in Vault, followed by a semicolon, followed by the key attached to the password [e.g. secret/data/jira;password]")
+			pass = getInput(reader)
+		} else {
+			fmt.Println("What's the password of the service account that will be authenticating for the API?")
+			passByte, err := terminal.ReadPassword(0)
+			check(err)
 
-		pass, err := aesClient.Encrypt(string(passByte))
-		check(err)
+			pass, err = cryptoClient.Encrypt(string(passByte))
+			check(err)
+		}
 
 		payload := jira.PayloadJira{
 			Project:        "",
@@ -268,7 +274,7 @@ func createTicketSourceConfig(reader *bufio.Reader, aesClient crypto.Client, db 
 	return ticketSourceConfig
 }
 
-func createScannerSourceConfig(reader *bufio.Reader, aesClient crypto.Client, db domain.DatabaseConnection, orgID string, sourceNameToID map[string]string) (scannerSourceConfig domain.SourceConfig, assetGroups []int) {
+func createScannerSourceConfig(reader *bufio.Reader, aesClient crypto.Client, encryptionType string, db domain.DatabaseConnection, orgID string, sourceNameToID map[string]string) (scannerSourceConfig domain.SourceConfig, assetGroups []int) {
 	for {
 		fmt.Println("What vulnerability scanner do you plan on using, Nexpose or Qualys")
 
@@ -300,12 +306,19 @@ func createScannerSourceConfig(reader *bufio.Reader, aesClient crypto.Client, db
 				fmt.Println("What's the username of the service account that will be authenticating for the API?")
 				user := getInput(reader)
 
-				fmt.Println("What's the password of the service account that will be authenticating for the API?")
-				passByte, err := terminal.ReadPassword(0)
-				check(err)
+				var pass string
+				var err error
+				if encryptionType == crypto.VAULT {
+					fmt.Println("Enter the path to where your password is stored in Vault, followed by a semicolon, followed by the key attached to the password [e.g. secret/data/nexpose;password]")
+					pass = getInput(reader)
+				} else {
+					fmt.Println("What's the password of the service account that will be authenticating for the API?")
+					passByte, err := terminal.ReadPassword(0)
+					check(err)
 
-				pass, err := aesClient.Encrypt(string(passByte))
-				check(err)
+					pass, err = aesClient.Encrypt(string(passByte))
+					check(err)
+				}
 
 				var body []byte
 				if nex {
@@ -399,29 +412,32 @@ func createOrganization(reader *bufio.Reader, appConfig config.AppConfig, db dom
 	code := getInput(reader)
 	code = strings.ToUpper(code)
 
-	fmt.Println("Encrypting Organization encryption key using KMS...")
-	// The AWS SDK has the environment variables take precedence over the credentials in the shared file. CreateKMSClientWithProfile forces the loading of credentials from
-	// the shared file, so if we have environment variables present we have to make sure that method isn't called
-	var environmentVarsPresent bool
-	if len(os.Getenv("AWS_ACCESS_KEY_ID")) > 0 && len(os.Getenv("AWS_SECRET_ACCESS_KEY")) > 0 {
-		environmentVarsPresent = true
-	}
+	var encryptedOrganizationKey string
+	if appConfig.EncryptionMethod == crypto.KMS {
+		fmt.Println("Encrypting Organization encryption key using KMS...")
+		// The AWS SDK has the environment variables take precedence over the credentials in the shared file. CreateKMSClientWithProfile forces the loading of credentials from
+		// the shared file, so if we have environment variables present we have to make sure that method isn't called
+		var environmentVarsPresent bool
+		if len(os.Getenv("AWS_ACCESS_KEY_ID")) > 0 && len(os.Getenv("AWS_SECRET_ACCESS_KEY")) > 0 {
+			environmentVarsPresent = true
+		}
 
-	var kmsClient crypto.Client
-	var err error
-	if environmentVarsPresent {
-		kmsClient, err = crypto.CreateKMSClient(appConfig.EncryptionKey(), appConfig.KMSRegion())
-	} else {
-		kmsClient, err = crypto.CreateKMSClientWithProfile(appConfig.EncryptionKey(), appConfig.KMSProfile(), appConfig.KMSRegion())
+		var kmsClient crypto.Client
+		var err error
+		if environmentVarsPresent {
+			kmsClient, err = crypto.CreateKMSClient(appConfig.EncryptionKey(), appConfig.KMSRegion())
+		} else {
+			kmsClient, err = crypto.CreateKMSClientWithProfile(appConfig.EncryptionKey(), appConfig.KMSProfile(), appConfig.KMSRegion())
+		}
+		check(err)
+		encryptedOrganizationKey, err = kmsClient.Encrypt(generateSecureEncryptionKey())
+		check(err)
+		fmt.Println("Done")
 	}
-	check(err)
-	encryptedOrganizationKey, err := kmsClient.Encrypt(generateSecureEncryptionKey())
-	check(err)
-	fmt.Println("Done")
 
 	const defaultPayload = `{"lowest_ticketed_cvss":4,"cvss_version":2,"severities":[{"name":"Medium","duration":90,"cvss_min":4},{"name":"High","duration":60,"cvss_min":7},{"name":"Critical","duration":30,"cvss_min":9}],"ad_servers":[""],"ad_ldap_tls_port":636,"ad_base_dn":"","ad_skip_verify":false,"ad_member_of_attribute":"memberOf","ad_search_string":"(accountName=%s)"}`
 
-	_, _, err = db.CreateOrganizationWithPayloadEkey(code, name, 0, defaultPayload, encryptedOrganizationKey, "initializer")
+	_, _, err := db.CreateOrganizationWithPayloadEkey(code, name, 0, defaultPayload, encryptedOrganizationKey, "initializer")
 	check(err)
 
 	fmt.Printf("Organization [%s] created!\nYou can manage how the organization handles CVSS severity during ticketing, or the Active Directory configurations in the Payload column of the Organization table!\n", code)
