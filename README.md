@@ -42,9 +42,9 @@ Installing Aegis:
 - (optional) JIRA supports Oauth, if you have Oauth credentials, they can be set in the JIRA source config in the database after installation
 
 ### Database
-
+- Must be MySQL
 - Create a schema in your database for Aegis to utilize
-
+---
 ## Installation (Mac/Linux)
 
 ```sh
@@ -164,3 +164,23 @@ path_to_aegis
 ```
 aegis -config app.json -cpath "path to configuration file"
 ```
+
+---
+# Major processes
+## Rescan Process
+### Jobs involved:
+1. RescanQueueJob
+
+   Starts automatically and runs continuously. This job monitors JIRA and kicks off a RescanJob for tickets in particular statuses. There are four types of RSQ:
+   1. Normal - looks tickets in a Resolved-Remediated status. These are for standard vulnerability rescans. Tickets are moved to Closed-Remediated once remediation has been confirmed by a scanner, or reopened if the scanner still detects the vulnerability.
+   2. Decommission - looks for tickets in a Resolved-Decommission status. These are for confirming a device has been moved offline. These tickets are moved to Closed-Decommissioned once a scanner has confirmed they are a dead host, or reopened if the host is still alive.
+   3. Passive
+   4. Exception - looks for tickets in Closed-Exception status with an exception that expires within 30 days and verifies that the ticket has the vulnerability fixed before the exception expires. If the vulnerability is fixed the ticket is moved to Closed-Remediated. If the vulnerability is not fixed, the ticket is left in Closed-Exception.
+2. RescanJob
+
+    Created by the RescanQueueJob. This job is responsible for creating the scan in Qualys/Nexpose for the devices/vulnerabilities reported in the tickets. 
+3. ScanSyncJob
+4. ScanCloseJob
+
+## Ticketing Process
+### Jobs involved:
