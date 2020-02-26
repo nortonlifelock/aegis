@@ -31,4 +31,4 @@ CREATE PROCEDURE `GetLogsByParams` (_MethodOfDiscovery NVARCHAR(50), _jobType IN
     AND (_jobHistoryID = 0 OR L.JobHistoryID = _jobHistoryID)
     AND (L.CreateDate > _fromDate)
     AND (L.CreateDate < _toDate)
-  ORDER BY L.ID DESC LIMIT 100; -- TODO should we limit at all? I could make this an input
+  ORDER BY L.ID DESC LIMIT 2000; -- TODO should we limit at all? lazy loading might be better
