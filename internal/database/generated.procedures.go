@@ -3164,6 +3164,62 @@ func (conn *dbconn) GetExceptionsLength(_offset int, _limit int, _orgID string, 
 	return retQueryData, err
 }
 
+// GetGlobalExceptions executes the stored procedure GetGlobalExceptions against the database and returns the read results
+func (conn *dbconn) GetGlobalExceptions(_OrgID string) ([]domain.Ignore, error) {
+	var err error
+	var retIgnore = make([]domain.Ignore, 0)
+
+	conn.Read(&connection.Procedure{
+		Proc:       "GetGlobalExceptions",
+		Parameters: []interface{}{_OrgID},
+		Callback: func(results interface{}, dberr error) {
+			err = dberr
+
+			if err == nil {
+
+				err = conn.getRows(results,
+					func(rows *sql.Rows) (err error) {
+						if err = rows.Err(); err == nil {
+
+							var myID string
+							var myOrganizationID string
+							var myVulnerabilityID string
+							var myDeviceID string
+							var myOSRegex *string
+							var myDueDate *time.Time
+
+							if err = rows.Scan(
+
+								&myID,
+								&myOrganizationID,
+								&myVulnerabilityID,
+								&myDeviceID,
+								&myOSRegex,
+								&myDueDate,
+							); err == nil {
+
+								newIgnore := &dal.Ignore{
+									IDvar:              myID,
+									OrganizationIDvar:  myOrganizationID,
+									VulnerabilityIDvar: myVulnerabilityID,
+									DeviceIDvar:        myDeviceID,
+									OSRegexvar:         myOSRegex,
+									DueDatevar:         myDueDate,
+								}
+
+								retIgnore = append(retIgnore, newIgnore)
+							}
+						}
+
+						return err
+					})
+			}
+		},
+	})
+
+	return retIgnore, err
+}
+
 // GetJobByID executes the stored procedure GetJobByID against the database and returns the read results
 func (conn *dbconn) GetJobByID(_ID int) (domain.JobRegistration, error) {
 	var err error

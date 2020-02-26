@@ -6,6 +6,8 @@ import (
 	"time"
 )
 
+var detectionStatusCache sync.Map
+
 // Detection holds information regarding the instance of a vulnerability on a particular device
 type Detection struct {
 	Conn domain.DatabaseConnection
@@ -36,10 +38,19 @@ func (detection *Detection) VulnerabilityID() string {
 func (detection *Detection) Status() string {
 	// default to vulnerable in case the detection loading fails
 	var status = domain.Vulnerable
-	detectionStatus, err := detection.Conn.GetDetectionStatusByID(detection.Info.DetectionStatusID())
-	if err == nil {
-		status = detectionStatus.Name()
+
+	var detectionID = detection.Info.DetectionStatusID()
+
+	if val, exists := detectionStatusCache.Load(detectionID); exists {
+		status, _ = val.(string)
+	} else {
+		detectionStatus, err := detection.Conn.GetDetectionStatusByID(detection.Info.DetectionStatusID())
+		if err == nil {
+			status = detectionStatus.Name()
+			detectionStatusCache.Store(detectionID, status)
+		}
 	}
+
 	return status
 }
 

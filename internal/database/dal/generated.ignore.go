@@ -25,6 +25,7 @@ type Ignore struct {
 	DeviceIDvar        string
 	DueDatevar         *time.Time
 	IDvar              string
+	OSRegexvar         *string
 	OrganizationIDvar  string
 	Portvar            string
 	SourceIDvar        string
@@ -48,6 +49,7 @@ func (myIgnore Ignore) MarshalJSON() ([]byte, error) {
 		"DeviceID":        myIgnore.DeviceIDvar,
 		"DueDate":         myIgnore.DueDatevar,
 		"ID":              myIgnore.IDvar,
+		"OSRegex":         myIgnore.OSRegexvar,
 		"OrganizationID":  myIgnore.OrganizationIDvar,
 		"Port":            myIgnore.Portvar,
 		"SourceID":        myIgnore.SourceIDvar,
@@ -95,6 +97,11 @@ func (myIgnore *Ignore) DueDate() (param *time.Time) {
 // ID returns the ID parameter from the Ignore struct
 func (myIgnore *Ignore) ID() (param string) {
 	return myIgnore.IDvar
+}
+
+// OSRegex returns the OSRegex parameter from the Ignore struct
+func (myIgnore *Ignore) OSRegex() (param *string) {
+	return myIgnore.OSRegexvar
 }
 
 // OrganizationID returns the OrganizationID parameter from the Ignore struct
@@ -145,6 +152,11 @@ func (myIgnore *Ignore) SetDeviceID(val string) {
 // SetID sets the ID parameter from the Ignore struct
 func (myIgnore *Ignore) SetID(val string) {
 	myIgnore.IDvar = val
+}
+
+// SetOSRegex sets the OSRegex parameter from the Ignore struct
+func (myIgnore *Ignore) SetOSRegex(val string) {
+	myIgnore.OSRegexvar = &val
 }
 
 // SetOrganizationID sets the OrganizationID parameter from the Ignore struct

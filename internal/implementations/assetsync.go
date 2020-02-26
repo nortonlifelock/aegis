@@ -7,6 +7,7 @@ import (
 	"github.com/nortonlifelock/aegis/internal/integrations"
 	"github.com/nortonlifelock/domain"
 	"github.com/nortonlifelock/log"
+	"regexp"
 	"strconv"
 	"strings"
 	"sync"
@@ -22,6 +23,9 @@ type AssetSyncJob struct {
 
 	// the vuln cache maps the vulnerability ID to the vulnerability information in the database
 	vulnCache sync.Map
+
+	// a cache for exceptions that apply to an OS/vulnID combo (as opposed to device/vulnid combo)
+	globalExceptions []compiledException
 
 	id          string
 	payloadJSON string
@@ -73,20 +77,24 @@ func (job *AssetSyncJob) Process(ctx context.Context, id string, appconfig domai
 				if job.detectionStatuses, err = job.db.GetDetectionStatuses(); err == nil {
 					job.lstream.Send(log.Debug("Scanner connection created, beginning processing..."))
 
-					for _, groupID := range job.Payload.GroupIDs {
-						if err = job.createAssetGroupInDB(groupID, job.insources.SourceID(), job.insources.ID()); err == nil {
-							select {
-							case <-job.ctx.Done():
-								return
-							default:
-							}
+					if job.globalExceptions, err = job.getGlobalIgnores(); err == nil {
+						for _, groupID := range job.Payload.GroupIDs {
+							if err = job.createAssetGroupInDB(groupID, job.insources.SourceID(), job.insources.ID()); err == nil {
+								select {
+								case <-job.ctx.Done():
+									return
+								default:
+								}
 
-							job.lstream.Send(log.Infof("started processing %v", groupID))
-							job.processGroup(vscanner, groupID)
-							job.lstream.Send(log.Infof("finished processing %v", groupID))
-						} else {
-							job.lstream.Send(log.Error("error while creating asset group", err))
+								job.lstream.Send(log.Infof("started processing %v", groupID))
+								job.processGroup(vscanner, groupID)
+								job.lstream.Send(log.Infof("finished processing %v", groupID))
+							} else {
+								job.lstream.Send(log.Error("error while creating asset group", err))
+							}
 						}
+					} else {
+						job.lstream.Send(log.Errorf(err, "error while loading global exceptions"))
 					}
 				} else {
 					job.lstream.Send(log.Error("error while preloading detection statuses", err))
@@ -168,6 +176,10 @@ func (job *AssetSyncJob) processGroup(vscanner integrations.Vscanner, groupID in
 						if asset, err := detections[0].Device(); err == nil {
 
 							decomIgnoreID, err := job.getDecommIgnoreEntryForAsset(deviceID, job.insources.ID(), detections)
+							if err != nil {
+								job.lstream.Send(log.Errorf(err, "error while loading decomm ignore entry"))
+							}
+
 							err = job.addDeviceInformationToDB(asset, groupID)
 							if err == nil {
 								job.processAsset(deviceID, asset, detections, groupID, decomIgnoreID)
@@ -391,7 +403,7 @@ func (job *AssetSyncJob) processAssetDetections(deviceInDb domain.Device, assetI
 	return err
 }
 
-func (job *AssetSyncJob) getExceptionID(assetID string, vulnInfo domain.VulnerabilityInfo, decomIgnoreID string) (exceptionID string) {
+func (job *AssetSyncJob) getExceptionID(assetID string, deviceInDb domain.Device, vulnInfo domain.VulnerabilityInfo, decomIgnoreID string) (exceptionID string) {
 	if len(decomIgnoreID) == 0 {
 		if exception, err := job.db.GetExceptionByVulnIDOrg(assetID, vulnInfo.SourceVulnID(), job.config.OrganizationID()); err == nil {
 			if exception != nil {
@@ -402,6 +414,17 @@ func (job *AssetSyncJob) getExceptionID(assetID string, vulnInfo domain.Vulnerab
 		}
 	} else {
 		exceptionID = decomIgnoreID
+	}
+
+	if len(exceptionID) == 0 {
+		for _, globalException := range job.globalExceptions {
+			if globalException.exception.VulnerabilityID() == vulnInfo.SourceVulnID() {
+				if globalException.regex.Match([]byte(deviceInDb.OS())) {
+					exceptionID = globalException.exception.ID()
+					break
+				}
+			}
+		}
 	}
 
 	return exceptionID
@@ -418,7 +441,7 @@ func (job *AssetSyncJob) createOrUpdateDetection(deviceInDb domain.Device, vulnI
 		if detectionStatus = job.getDetectionStatus(detectionFromScanner.Status()); detectionStatus != nil {
 
 			if detectionInDB == nil {
-				job.createDetection(detectionFromScanner, job.getExceptionID(assetID, vulnInfo, decomIgnoreID), deviceInDb, vulnInfo, assetID, detectionStatus.ID())
+				job.createDetection(detectionFromScanner, job.getExceptionID(assetID, deviceInDb, vulnInfo, decomIgnoreID), deviceInDb, vulnInfo, assetID, detectionStatus.ID())
 			} else {
 
 				var canSkipUpdate bool
@@ -432,7 +455,7 @@ func (job *AssetSyncJob) createOrUpdateDetection(deviceInDb domain.Device, vulnI
 					_, _, err = job.db.UpdateDetectionTimesSeen(
 						sord(deviceInDb.SourceID()),
 						vulnInfo.ID(),
-						job.getExceptionID(assetID, vulnInfo, decomIgnoreID),
+						job.getExceptionID(assetID, deviceInDb, vulnInfo, decomIgnoreID),
 						detectionFromScanner.TimesSeen(),
 						detectionStatus.ID(),
 					)
@@ -535,4 +558,41 @@ func (job *AssetSyncJob) createAssetGroupInDB(groupID int, scannerSourceID strin
 	}
 
 	return err
+}
+
+type compiledException struct {
+	exception domain.Ignore
+	regex     *regexp.Regexp
+}
+
+func (job *AssetSyncJob) getGlobalIgnores() (globals []compiledException, err error) {
+	globals = make([]compiledException, 0)
+
+	var globalExceptions []domain.Ignore
+	if globalExceptions, err = job.db.GetGlobalExceptions(job.config.OrganizationID()); err == nil {
+		for _, globalException := range globalExceptions {
+
+			if len(sord(globalException.OSRegex())) > 0 {
+
+				var regex *regexp.Regexp
+				if regex, err = regexp.Compile(sord(globalException.OSRegex())); err == nil {
+					globals = append(globals, compiledException{
+						exception: globalException,
+						regex:     regex,
+					})
+				} else {
+					err = fmt.Errorf("error while compiling regex for ignore entry [%s]", globalException.ID())
+					break
+				}
+			} else {
+				err = fmt.Errorf("ignore entry [%s] appeared to be a global exception but did not have an OS regex", globalException.ID())
+				break
+			}
+
+		}
+	} else {
+		err = fmt.Errorf("error while loading global exceptions - %s", err.Error())
+	}
+
+	return globals, err
 }
