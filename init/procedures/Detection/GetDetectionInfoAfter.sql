@@ -37,4 +37,4 @@ SELECT
     D.Updated
 FROM Detection D
     JOIN DetectionStatus DS on D.DetectionStatusId = DS.Id
-WHERE D.OrganizationID = _OrgID AND D.IgnoreID IS NULL AND (D.Updated > _After OR D.Created > _After) AND DS.Status != 'fixed' ORDER BY Created;
+WHERE D.OrganizationID = _OrgID AND D.IgnoreID IS NULL AND (D.Updated > _After OR D.Created > _After) AND DS.Status != 'fixed' ORDER BY D.Created;
