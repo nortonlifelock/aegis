@@ -12,6 +12,7 @@ import (
 	"os"
 	"strings"
 	"sync"
+	"syscall"
 	"time"
 )
 
@@ -57,7 +58,7 @@ func main() {
 				var password []byte
 				fmt.Println("Enter JIRA Password: ")
 
-				if password, err = terminal.ReadPassword(0); err == nil {
+				if password, err = terminal.ReadPassword(syscall.Stdin); err == nil {
 
 					var tickets *jira.ConnectorJira
 					if tickets, err = jira.ConnectJira(*apiPath, *user, string(password), exportLogger{}); err == nil {
