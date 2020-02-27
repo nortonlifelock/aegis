@@ -20,4 +20,4 @@ SELECT
     OSRegex,
     DueDate
 FROM `Ignore` I
-WHERE I.OrganizationID = _OrgID AND I.OSRegex IS NOT NULL AND I.DeviceID IS NULL AND I.Active = b'1'=;
+WHERE I.OrganizationID = _OrgID AND I.OSRegex IS NOT NULL AND I.DeviceID IS NULL AND I.Active = b'1';

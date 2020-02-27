@@ -373,9 +373,17 @@ func (job *AssetSyncJob) enterAssetInformationInDB(asset domain.Device, osTypeID
 // This method creates a detection entry in the database for the device/vulnerability combo
 // If the detection entry already exists, it increments the amount of times it has been seen by this job by one
 // This method is also responsible for gathering detections for the vulnerability
-func (job *AssetSyncJob) processAssetDetections(deviceInDb domain.Device, assetID string, vuln domain.Detection, decomIgnoreID string) (err error) {
+func (job *AssetSyncJob) processAssetDetections(deviceInDb domain.Device, assetID string, detectionFromScanner domain.Detection, decomIgnoreID string) (err error) {
 	// the result ID may be concatenated to the end of the vulnerability ID. we chop it off the result from the vulnerability ID with the following line
-	vulnID := strings.Split(vuln.VulnerabilityID(), domain.VulnPathConcatenator)[0]
+	var vulnID string
+	var resultID string
+	var vulnResult = strings.Split(detectionFromScanner.VulnerabilityID(), domain.VulnPathConcatenator)
+	vulnID = vulnResult[0]
+	if len(vulnResult) > 1 {
+		resultID = vulnResult[1]
+	}
+
+	_ = resultID
 
 	var vulnInfo domain.VulnerabilityInfo
 	if vulnInfoInterface, ok := job.vulnCache.Load(vulnID); ok {
@@ -391,7 +399,7 @@ func (job *AssetSyncJob) processAssetDetections(deviceInDb domain.Device, assetI
 
 	if err == nil {
 		if vulnInfo != nil {
-			job.createOrUpdateDetection(deviceInDb, vulnInfo, vuln, assetID, decomIgnoreID)
+			job.createOrUpdateDetection(deviceInDb, vulnInfo, detectionFromScanner, assetID, decomIgnoreID)
 		} else {
 			job.lstream.Send(log.Error("could not find vulnerability in database", fmt.Errorf("[%s] does not have an entry in the database", vulnID)))
 		}
@@ -435,7 +443,7 @@ func (job *AssetSyncJob) createOrUpdateDetection(deviceInDb domain.Device, vulnI
 	var err error
 
 	var detectionInDB domain.Detection
-	detectionInDB, err = job.db.GetDetection(sord(deviceInDb.SourceID()), vulnInfo.ID())
+	detectionInDB, err = job.db.GetDetection(sord(deviceInDb.SourceID()), vulnInfo.ID(), detectionFromScanner.Port(), detectionFromScanner.Protocol())
 	if err == nil {
 		var detectionStatus domain.DetectionStatus
 		if detectionStatus = job.getDetectionStatus(detectionFromScanner.Status()); detectionStatus != nil {
@@ -455,6 +463,8 @@ func (job *AssetSyncJob) createOrUpdateDetection(deviceInDb domain.Device, vulnI
 					_, _, err = job.db.UpdateDetectionTimesSeen(
 						sord(deviceInDb.SourceID()),
 						vulnInfo.ID(),
+						detectionFromScanner.Port(),
+						detectionFromScanner.Protocol(),
 						job.getExceptionID(assetID, deviceInDb, vulnInfo, decomIgnoreID),
 						detectionFromScanner.TimesSeen(),
 						detectionStatus.ID(),

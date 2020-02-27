@@ -18,7 +18,7 @@
 
 DROP PROCEDURE IF EXISTS `GetDetectionInfo`;
 
-CREATE PROCEDURE `GetDetectionInfo` (_DeviceID VARCHAR(36), _VulnerabilityID VARCHAR(36))
+CREATE PROCEDURE `GetDetectionInfo` (_DeviceID VARCHAR(36), _VulnerabilityID VARCHAR(36), _Port INT, _Protocol VARCHAR(36))
     #BEGIN#
 SELECT
     D.ID,
@@ -36,4 +36,4 @@ SELECT
     D.TimesSeen,
     D.Updated
 FROM Detection D
-WHERE D.DeviceID = _DeviceID AND D.VulnerabilityID = _VulnerabilityID;
+WHERE D.DeviceID = _DeviceID AND D.VulnerabilityID = _VulnerabilityID AND D.Port = _Port AND D.Protocol = _Protocol;
