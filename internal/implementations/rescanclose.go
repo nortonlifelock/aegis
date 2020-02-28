@@ -237,7 +237,7 @@ func (job *ScanCloseJob) modifyJiraTicketAccordingToVulnerabilityStatus(engine i
 		}
 	} else {
 		job.lstream.Send(log.Errorf(err, "scan [%s] did not seem to cover the device %v - scanner did not report any data for device", job.Payload.ScanID, ticket.DeviceID()))
-		err = engine.Transition(ticket, engine.GetStatusMap(jira.StatusScanError), fmt.Sprintf("scan [%s] did not seem to cover the device %v - scanner did not report any data for device", job.Payload.ScanID, ticket.DeviceID()), sord(ticket.AssignedTo()))
+		err = engine.Transition(ticket, engine.GetStatusMap(jira.StatusScanError), fmt.Sprintf("scan [%s] did not cover the device %v. Please make sure this asset is still in-scope and associated with an asset group. If this asset is out of scope, please move this ticket to NOTAVRR status or alert the vulnerability management team.", job.Payload.ScanID, ticket.DeviceID()), sord(ticket.AssignedTo()))
 		if err != nil {
 			job.lstream.Send(log.Errorf(err, "error while adding comment to ticket [%s]", ticket.Title()))
 		}
@@ -248,7 +248,7 @@ func (job *ScanCloseJob) modifyJiraTicketAccordingToVulnerabilityStatus(engine i
 func (job *ScanCloseJob) processTicketForPassiveOrExceptionRescan(deadHostIPToProofMap map[string]string, ticket domain.Ticket, detection domain.Detection, err error, engine integrations.TicketingEngine, status string, inactiveKernel bool, scan domain.ScanSummary) {
 	if (len(deadHostIPToProofMap[*ticket.IPAddress()]) > 0 && len(*ticket.IPAddress()) > 0) || (detection != nil && detection.Status() == domain.DeadHost) {
 		job.lstream.Send(log.Infof("the device for %s seems to be dead, but this is not a decommission scan", ticket.Title()))
-		err = engine.Transition(ticket, engine.GetStatusMap(jira.StatusResolvedDecom), fmt.Sprintf("Device is offline. Moving it to a resolved decommission status so a scanner can confirm\nPROOF:\n%s", deadHostIPToProofMap[sord(ticket.IPAddress())]), sord(ticket.AssignedTo()))
+		err = engine.Transition(ticket, engine.GetStatusMap(jira.StatusResolvedDecom), fmt.Sprintf("The device could not be detected though a vulnerability rescan. It has been moved to a resolved decommission status and will be rescanned with another option profile to confirm\nPROOF:\n%s", deadHostIPToProofMap[sord(ticket.IPAddress())]), sord(ticket.AssignedTo()))
 		if err != nil {
 			job.lstream.Send(log.Errorf(err, "error while adding comment to ticket %s", ticket.Title()))
 		}
@@ -299,7 +299,7 @@ func (job *ScanCloseJob) processTicketForDecommRescan(deadHostIPToProofMap map[s
 func (job *ScanCloseJob) processTicketForNormalRescan(deadHostIPToProofMap map[string]string, ticket domain.Ticket, detection domain.Detection, err error, engine integrations.TicketingEngine, status string, inactiveKernel bool, scan domain.ScanSummary) {
 	if (len(deadHostIPToProofMap[*ticket.IPAddress()]) > 0 && len(*ticket.IPAddress()) > 0) || (detection != nil && detection.Status() == domain.DeadHost) {
 		job.lstream.Send(log.Infof("the device for %s seems to be dead, but this is not a decommission scan", ticket.Title()))
-		err = engine.Transition(ticket, engine.GetStatusMap(jira.StatusResolvedDecom), fmt.Sprintf("Device is offline. Moving it to a resolved decommission status so a scanner can confirm\nPROOF:\n%s", deadHostIPToProofMap[sord(ticket.IPAddress())]), sord(ticket.AssignedTo()))
+		err = engine.Transition(ticket, engine.GetStatusMap(jira.StatusResolvedDecom), fmt.Sprintf("The device could not be detected though a vulnerability rescan. It has been moved to a resolved decommission status and will be rescanned with another option profile to confirm\nPROOF:\n%s", deadHostIPToProofMap[sord(ticket.IPAddress())]), sord(ticket.AssignedTo()))
 		if err != nil {
 			job.lstream.Send(log.Errorf(err, "error while adding comment to ticket %s", ticket.Title()))
 		}
@@ -371,7 +371,7 @@ func (job *ScanCloseJob) openTicket(tix domain.Ticket, vuln domain.Detection, sc
 	// Still Exists
 	var comment string
 	if job.Payload.Type == domain.RescanDecommission {
-		comment = fmt.Sprintf("Host is alive according to scan [%s]", sord(scan.SourceKey()))
+		comment = fmt.Sprintf("Ticket reopened as scan [%s] has determined that the host on this IP is responsive. Please notify the Vulnerability Management team if the running asset is different from the one identified in this ticket as IP reuse may have occurred", sord(scan.SourceKey()))
 	} else {
 
 		if len(comment) == 0 {
