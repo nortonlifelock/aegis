@@ -136,16 +136,18 @@ func validateFlags(sprocPath string, domainGenPath string, dalGenPath string, sc
 	if files.ValidDir(sprocPath) {
 		if !needGeneratePaths || files.ValidDir(domainGenPath) {
 			if !needGeneratePaths || files.ValidDir(dalGenPath) {
+				if !needGeneratePaths || len(templatePath) > 0 {
+					if files.ValidDir(schemaMigrationPath) {
+						if len(configFile) > 0 && len(configPath) > 0 {
 
-				if files.ValidDir(schemaMigrationPath) {
-
-					if len(configFile) > 0 && len(configPath) > 0 && len(templatePath) > 0 {
-
+						} else {
+							err = fmt.Errorf("need to provide the -config, -cpath, and -tpath")
+						}
 					} else {
-						err = fmt.Errorf("need to provide the -config, -cpath, and -tpath")
+						err = fmt.Errorf("cannot have an empty schema migration path")
 					}
 				} else {
-					err = fmt.Errorf("cannot have an empty schema migration path")
+					err = fmt.Errorf("cannot have an empty -tpath when generating go files")
 				}
 			} else {
 				err = fmt.Errorf("cannot have an empty dal generation path")

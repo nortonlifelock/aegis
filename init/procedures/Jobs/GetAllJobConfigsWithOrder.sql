@@ -51,7 +51,7 @@ BEGIN
     WHERE JC.OrganizationId = _OrgId
       AND (JC.JobId = _jobid OR _jobid = '' OR _jobid is NULL)
       AND (JC.Id = _id OR _id = '' OR _id is NULL)
-      AND (JC.Id = _configId OR _configId= 0 OR _configId is NULL)
+      AND (JC.Id = _configId OR _configId= '' OR _configId is NULL)
       AND (JC.DataInSourceConfigId = _dataInSourceConfigId OR _dataInSourceConfigId = '' OR _dataInSourceConfigId is NULL)
       AND (JC.DataOutSourceConfigId = _dataOutSourceConfigId OR _dataOutSourceConfigId ='' OR _dataOutSourceConfigId is NULL)
       AND (JC.PriorityOverride = _priorityOverride OR _priorityOverride ='' OR _priorityOverride is NULL)

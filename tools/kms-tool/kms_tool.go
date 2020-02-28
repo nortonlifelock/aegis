@@ -11,8 +11,8 @@ func main() {
 	inputMessage := flag.String("m", "", "The value to encrypt/decrypt")
 	key := flag.String("k", "", "The key to use for encryption")
 	decrypt := flag.Bool("d", false, "Decrypt the message")
-	profile := flag.String("p", "", "The KMS profile to use in ~/.aws")
-	region := flag.String("r", "default", "The region your KMS key exists in")
+	profile := flag.String("p", "default", "The KMS profile to use in ~/.aws")
+	region := flag.String("r", "", "The region your KMS key exists in")
 
 	client := flag.String("client", "kms", "[kms|aes] delineates the encryption scheme")
 
