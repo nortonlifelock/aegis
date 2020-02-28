@@ -1,6 +1,7 @@
 dev.json
 exceptions/
 *app.json
+*.xml
 scaffold.json
 ui/builds/dist/
 vendor/

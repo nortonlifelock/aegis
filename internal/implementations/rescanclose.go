@@ -279,7 +279,13 @@ func (job *ScanCloseJob) processTicketForDecommRescan(deadHostIPToProofMap map[s
 
 		job.lstream.Send(log.Infof("Device %v confirmed offline, closing Ticket [%s]", ticket.DeviceID(), ticket.Title()))
 
-		closeReason := fmt.Sprintf("Device found to be dead by Scanner\n%v", detection.Proof())
+		var closeReason string
+		if detection != nil {
+			closeReason = fmt.Sprintf("Device found to be dead by Scanner\n%v", detection.Proof())
+		} else {
+			closeReason = fmt.Sprintf("Device found to be dead by Scanner\n%v", deadHostIPToProofMap[*ticket.IPAddress()])
+		}
+
 		if err = job.closeTicket(engine, ticket, scan, engine.GetStatusMap(jira.StatusClosedDecommissioned), closeReason); err != nil {
 			job.lstream.Send(log.Errorf(err, "Error while closing Ticket [%s]", ticket.Title()))
 		}
