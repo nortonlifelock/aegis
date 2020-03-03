@@ -15,8 +15,8 @@ type DatabaseConnection interface {
 	GetDevicesBySourceID(_SourceID string, _OrgID string) ([]Device, error)
 	GetDevicesByCloudSourceID(_CloudSourceID string, _OrgID string) ([]Device, error)
 
-	GetDetection(_SourceDeviceID string, _VulnerabilityID string) (Detection, error)
-	GetDetectionBySourceVulnID(_SourceDeviceID string, _SourceVulnerabilityID string) (Detection, error)
+	GetDetection(_SourceDeviceID string, _VulnerabilityID string, _Port int, _Protocol string) (Detection, error)
+	GetDetectionBySourceVulnID(_SourceDeviceID string, _SourceVulnerabilityID string, _Port int, _Protocol string) (Detection, error)
 	GetDetectionsForDevice(_DeviceID string) ([]Detection, error)
 	GetDetectionsAfter(after time.Time, orgID string) (detections []Detection, err error)
 
