@@ -138,9 +138,9 @@ func (conn *dbconn) GetDevicesByCloudSourceID(_CloudSourceID string, _OrgID stri
 	return devices, err
 }
 
-func (conn *dbconn) GetDetection(_DeviceID string, _VulnerabilityID string) (domain.Detection, error) {
+func (conn *dbconn) GetDetection(_DeviceID string, _VulnerabilityID string, _Port int, _Protocol string) (domain.Detection, error) {
 	var detection domain.Detection
-	info, err := conn.GetDetectionInfo(_DeviceID, _VulnerabilityID)
+	info, err := conn.GetDetectionInfo(_DeviceID, _VulnerabilityID, _Port, _Protocol)
 	if err == nil {
 		if info != nil {
 			detection = &dal.Detection{
@@ -153,9 +153,9 @@ func (conn *dbconn) GetDetection(_DeviceID string, _VulnerabilityID string) (dom
 	return detection, err
 }
 
-func (conn *dbconn) GetDetectionBySourceVulnID(_SourceDeviceID string, _SourceVulnerabilityID string) (domain.Detection, error) {
+func (conn *dbconn) GetDetectionBySourceVulnID(_SourceDeviceID string, _SourceVulnerabilityID string, _Port int, _Protocol string) (domain.Detection, error) {
 	var detection domain.Detection
-	info, err := conn.GetDetectionInfoBySourceVulnID(_SourceDeviceID, _SourceVulnerabilityID)
+	info, err := conn.GetDetectionInfoBySourceVulnID(_SourceDeviceID, _SourceVulnerabilityID, _Port, _Protocol)
 	if err == nil {
 		if info != nil {
 			detection = &dal.Detection{

@@ -3,6 +3,8 @@ package implementations
 import (
 	"context"
 	"fmt"
+	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -161,10 +163,31 @@ func (job *ExceptionJob) processExceptionOrFalsePositive(ticket domain.Ticket) {
 			tord1970(nil),
 		); err == nil {
 			if ignore != nil {
-				_, _, err = job.db.UpdateDetectionIgnore(deviceID, vulnID, ignore.ID())
-				if err != nil {
-					job.lstream.Send(log.Errorf(err, "error while updating ignore for [%s/%s]", deviceID, vulnID))
+				var portString string
+				var protocol string
+				var portInt int
+
+				if len(sord(ticket.ServicePorts())) > 0 {
+					var portProtocol = strings.Split(sord(ticket.ServicePorts()), " ")
+					if len(portProtocol) == 2 {
+						portString = portProtocol[0]
+						protocol = portProtocol[1]
+						if portInt, err = strconv.Atoi(portString); err != nil {
+							job.lstream.Send(log.Errorf(err, "failed to parse port [%s] as integer", portString))
+						}
+					} else {
+						err = fmt.Errorf("port formatting error")
+						job.lstream.Send(log.Errorf(err, "[%s] could not be broken into two", sord(ticket.ServicePorts())))
+					}
 				}
+
+				if err == nil {
+					_, _, err = job.db.UpdateDetectionIgnore(deviceID, vulnID, portInt, protocol, ignore.ID())
+					if err != nil {
+						job.lstream.Send(log.Errorf(err, "error while updating ignore for [%s/%s]", deviceID, vulnID))
+					}
+				}
+
 			} else {
 				job.lstream.Send(log.Errorf(err, "failed to load ignore entry for [%s/%s]", deviceID, vulnID))
 			}

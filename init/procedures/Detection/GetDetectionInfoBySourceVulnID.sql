@@ -18,7 +18,7 @@
 
 DROP PROCEDURE IF EXISTS `GetDetectionInfoBySourceVulnID`;
 
-CREATE PROCEDURE `GetDetectionInfoBySourceVulnID` (_SourceDeviceID VARCHAR(36), _SourceVulnerabilityID VARCHAR(36))
+CREATE PROCEDURE `GetDetectionInfoBySourceVulnID` (_SourceDeviceID VARCHAR(36), _SourceVulnerabilityID VARCHAR(36), _Port INT, _Protocol VARCHAR(36))
     #BEGIN#
 SELECT
     D.ID,
@@ -37,4 +37,4 @@ SELECT
     D.Updated
 FROM Detection D
          JOIN VulnerabilityInfo VI on D.VulnerabilityID = VI.ID
-WHERE D.DeviceID = _SourceDeviceID AND VI.SourceVulnId = _SourceVulnerabilityID;
+WHERE D.DeviceID = _SourceDeviceID AND VI.SourceVulnId = _SourceVulnerabilityID AND D.Port = _Port AND D.Protocol = _Protocol;

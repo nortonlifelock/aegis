@@ -1869,13 +1869,13 @@ func (conn *dbconn) GetCategoryByName(_Name string) ([]domain.Category, error) {
 }
 
 // GetDetectionInfo executes the stored procedure GetDetectionInfo against the database and returns the read results
-func (conn *dbconn) GetDetectionInfo(_DeviceID string, _VulnerabilityID string) (domain.DetectionInfo, error) {
+func (conn *dbconn) GetDetectionInfo(_DeviceID string, _VulnerabilityID string, _Port int, _Protocol string) (domain.DetectionInfo, error) {
 	var err error
 	var retDetectionInfo domain.DetectionInfo
 
 	conn.Read(&connection.Procedure{
 		Proc:       "GetDetectionInfo",
-		Parameters: []interface{}{_DeviceID, _VulnerabilityID},
+		Parameters: []interface{}{_DeviceID, _VulnerabilityID, _Port, _Protocol},
 		Callback: func(results interface{}, dberr error) {
 			err = dberr
 
@@ -2029,13 +2029,13 @@ func (conn *dbconn) GetDetectionInfoAfter(_After time.Time, _OrgID string) ([]do
 }
 
 // GetDetectionInfoBySourceVulnID executes the stored procedure GetDetectionInfoBySourceVulnID against the database and returns the read results
-func (conn *dbconn) GetDetectionInfoBySourceVulnID(_SourceDeviceID string, _SourceVulnerabilityID string) (domain.DetectionInfo, error) {
+func (conn *dbconn) GetDetectionInfoBySourceVulnID(_SourceDeviceID string, _SourceVulnerabilityID string, _Port int, _Protocol string) (domain.DetectionInfo, error) {
 	var err error
 	var retDetectionInfo domain.DetectionInfo
 
 	conn.Read(&connection.Procedure{
 		Proc:       "GetDetectionInfoBySourceVulnID",
-		Parameters: []interface{}{_SourceDeviceID, _SourceVulnerabilityID},
+		Parameters: []interface{}{_SourceDeviceID, _SourceVulnerabilityID, _Port, _Protocol},
 		Callback: func(results interface{}, dberr error) {
 			err = dberr
 
@@ -7621,11 +7621,11 @@ func (conn *dbconn) UpdateAssetIDOsTypeIDOfDevice(_ID string, _AssetID string, _
 }
 
 // UpdateDetectionIgnore executes the stored procedure UpdateDetectionIgnore against the database
-func (conn *dbconn) UpdateDetectionIgnore(_DeviceID string, _VulnID string, _ExceptionID string) (id int, affectedRows int, err error) {
+func (conn *dbconn) UpdateDetectionIgnore(_DeviceID string, _VulnID string, _Port int, _Protocol string, _ExceptionID string) (id int, affectedRows int, err error) {
 
 	conn.Exec(&connection.Procedure{
 		Proc:       "UpdateDetectionIgnore",
-		Parameters: []interface{}{_DeviceID, _VulnID, _ExceptionID},
+		Parameters: []interface{}{_DeviceID, _VulnID, _Port, _Protocol, _ExceptionID},
 		Callback: func(results interface{}, dberr error) {
 			err = dberr
 
@@ -7650,11 +7650,11 @@ func (conn *dbconn) UpdateDetectionIgnore(_DeviceID string, _VulnID string, _Exc
 }
 
 // UpdateDetectionTimesSeen executes the stored procedure UpdateDetectionTimesSeen against the database
-func (conn *dbconn) UpdateDetectionTimesSeen(_DeviceID string, _VulnID string, _ExceptionID string, _TimesSeen int, _StatusID int) (id int, affectedRows int, err error) {
+func (conn *dbconn) UpdateDetectionTimesSeen(_DeviceID string, _VulnID string, _Port int, _Protocol string, _ExceptionID string, _TimesSeen int, _StatusID int) (id int, affectedRows int, err error) {
 
 	conn.Exec(&connection.Procedure{
 		Proc:       "UpdateDetectionTimesSeen",
-		Parameters: []interface{}{_DeviceID, _VulnID, _ExceptionID, _TimesSeen, _StatusID},
+		Parameters: []interface{}{_DeviceID, _VulnID, _Port, _Protocol, _ExceptionID, _TimesSeen, _StatusID},
 		Callback: func(results interface{}, dberr error) {
 			err = dberr
 

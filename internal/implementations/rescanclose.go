@@ -168,7 +168,7 @@ func (job *ScanCloseJob) mapDetectionsAndDeadHosts(detections <-chan domain.Dete
 									deviceIDToVulnIDToDetection[sord(dev.SourceID())] = make(map[string]domain.Detection)
 								}
 
-								deviceIDToVulnIDToDetection[sord(dev.SourceID())][detection.VulnerabilityID()] = detection
+								deviceIDToVulnIDToDetection[sord(dev.SourceID())][combineVulnerabilityIDAndServicePortDetection(detection)] = detection
 								lock.Unlock()
 							} else {
 								job.lstream.Send(log.Errorf(err, "empty device ID found for detection"))
@@ -211,7 +211,7 @@ func (job *ScanCloseJob) modifyJiraTicketAccordingToVulnerabilityStatus(engine i
 
 	var detection domain.Detection
 	if detectionsFoundForDevice {
-		detection = deviceIDToVulnIDToDetection[ticket.DeviceID()][ticket.VulnerabilityID()]
+		detection = deviceIDToVulnIDToDetection[ticket.DeviceID()][combineVulnerabilityIDAndServicePortTicket(ticket)]
 	}
 
 	var err error
@@ -308,6 +308,12 @@ func (job *ScanCloseJob) processTicketForNormalRescan(deadHostIPToProofMap map[s
 		err = engine.Transition(ticket, engine.GetStatusMap(jira.StatusResolvedDecom), fmt.Sprintf("The device could not be detected though a vulnerability rescan. It has been moved to a resolved decommission status and will be rescanned with another option profile to confirm\nPROOF:\n%s", deadHostIPToProofMap[sord(ticket.IPAddress())]), sord(ticket.AssignedTo()))
 		if err != nil {
 			job.lstream.Send(log.Errorf(err, "error while adding comment to ticket %s", ticket.Title()))
+		}
+	} else if detection.Updated().Before(scan.CreatedDate()) && !detection.Updated().IsZero() && !scan.CreatedDate().IsZero() {
+		job.lstream.Send(log.Infof("the scan didn't check %s for vulnerability %s [%s before %s]", ticket.Title(), ticket.VulnerabilityID(), detection.Updated().Format(time.RFC822), scan.CreatedDate().Format(time.RFC822)))
+		err = engine.Transition(ticket, engine.GetStatusMap(jira.StatusScanError), fmt.Sprintf("The scan did not check the device for the vulnerability likely due to authentication issues"), sord(ticket.AssignedTo()))
+		if err != nil {
+			job.lstream.Send(log.Errorf(err, "error while transitioning ticket %s", ticket.Title()))
 		}
 	} else if detection == nil || status == domain.Fixed {
 		// Non-decommission scan, the detection appears to be fixed, so close the ticket
@@ -487,4 +493,16 @@ func scanClosePayloadToScanPayload(scanClosePayload string) (scanPayload []byte,
 	}
 
 	return scanPayload, err
+}
+
+func combineVulnerabilityIDAndServicePortTicket(tic domain.Ticket) (result string) {
+	return fmt.Sprintf("%s;%s", tic.VulnerabilityID(), sord(tic.ServicePorts()))
+}
+
+func combineVulnerabilityIDAndServicePortDetection(det domain.Detection) (result string) {
+	var servicePort string
+	if det.Port() > 0 || len(det.Protocol()) > 0 {
+		servicePort = fmt.Sprintf("%d %s", det.Port(), det.Protocol())
+	}
+	return fmt.Sprintf("%s;%s", det.VulnerabilityID(), servicePort)
 }

@@ -6,6 +6,7 @@ import (
 	"github.com/nortonlifelock/aegis/internal/integrations"
 	"github.com/nortonlifelock/domain"
 	"github.com/nortonlifelock/log"
+	"strconv"
 	"strings"
 	"sync"
 )
@@ -86,27 +87,48 @@ func (job *TicketSyncJob) processTicket(tic domain.Ticket, orgID string) {
 	if err == nil {
 		if existingDBTicket == nil {
 
-			var detection domain.Detection
-			if detection, err = job.getDetection(tic.DeviceID(), tic.VulnerabilityID()); err == nil {
+			var portString string
+			var protocol string
+			var portInt int
 
-				_, _, err = job.db.CreateTicket(
-					tic.Title(),
-					sord(tic.Status()),
-					detection.ID(),
-					job.config.OrganizationID(),
-					tord1970(tic.DueDate()),
-					tord1970(tic.CreatedDate()),
-					tord1970(tic.UpdatedDate()),
-					tord1970(tic.ResolutionDate()),
-					tord1970(nil), // used to set the resolution date to nil in the DB if the ticket doesn't have one
-				)
-
-				if err != nil {
-					job.lstream.Send(log.Errorf(err, "error while creating database ticket for [%v]", tic.Title()))
+			if len(sord(tic.ServicePorts())) > 0 {
+				var portProtocol = strings.Split(sord(tic.ServicePorts()), " ")
+				if len(portProtocol) == 2 {
+					portString = portProtocol[0]
+					protocol = portProtocol[1]
+					if portInt, err = strconv.Atoi(portString); err != nil {
+						job.lstream.Send(log.Errorf(err, "failed to parse port [%s] as integer", portString))
+					}
+				} else {
+					err = fmt.Errorf("port formatting error")
+					job.lstream.Send(log.Errorf(err, "[%s] could not be broken into two", sord(tic.ServicePorts())))
 				}
-			} else {
-				job.lstream.Send(log.Errorf(err, "error while loading detection for [%v]", tic.Title()))
 			}
+
+			if err == nil {
+				var detection domain.Detection
+				if detection, err = job.getDetection(tic.DeviceID(), tic.VulnerabilityID(), portInt, protocol); err == nil {
+
+					_, _, err = job.db.CreateTicket(
+						tic.Title(),
+						sord(tic.Status()),
+						detection.ID(),
+						job.config.OrganizationID(),
+						tord1970(tic.DueDate()),
+						tord1970(tic.CreatedDate()),
+						tord1970(tic.UpdatedDate()),
+						tord1970(tic.ResolutionDate()),
+						tord1970(nil), // used to set the resolution date to nil in the DB if the ticket doesn't have one
+					)
+
+					if err != nil {
+						job.lstream.Send(log.Errorf(err, "error while creating database ticket for [%v]", tic.Title()))
+					}
+				} else {
+					job.lstream.Send(log.Errorf(err, "error while loading detection for [%v]", tic.Title()))
+				}
+			}
+
 		} else {
 			_, _, err = job.db.UpdateTicket(
 				tic.Title(),
@@ -129,9 +151,9 @@ func (job *TicketSyncJob) processTicket(tic domain.Ticket, orgID string) {
 	}
 }
 
-func (job *TicketSyncJob) getDetection(deviceID string, vulnID string) (detection domain.Detection, err error) {
+func (job *TicketSyncJob) getDetection(deviceID string, vulnID string, port int, protocol string) (detection domain.Detection, err error) {
 	if len(deviceID) > 0 && len(vulnID) > 0 {
-		if detection, err = job.db.GetDetectionBySourceVulnID(deviceID, vulnID); err == nil {
+		if detection, err = job.db.GetDetectionBySourceVulnID(deviceID, vulnID, port, protocol); err == nil {
 			if detection == nil {
 				err = fmt.Errorf("could not find detection for [%v|%v]", deviceID, vulnID)
 			}
