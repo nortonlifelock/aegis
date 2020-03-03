@@ -441,7 +441,7 @@ func (job *TicketingJob) checkForExistingTicket(in <-chan *vulnerabilityPayload)
 						var err error
 
 						var existingTicket domain.TicketSummary
-						if existingTicket, err = job.db.GetTicketByDeviceIDVulnID(sord(payload.device.SourceID()), payload.vuln.ID(), job.config.OrganizationID()); err == nil { // TODO is this vuln ID correct? I would be happiest if the device lookup didn't use the source id
+						if existingTicket, err = job.db.GetTicketByDeviceIDVulnID(sord(payload.device.SourceID()), payload.vuln.ID(), port, protocol, job.config.OrganizationID()); err == nil { // TODO is this vuln ID correct? I would be happiest if the device lookup didn't use the source id
 							if existingTicket == nil {
 
 								var existingTicketChan <-chan domain.Ticket

@@ -6217,13 +6217,13 @@ func (conn *dbconn) GetTagsForDevice(_DeviceID string) ([]domain.Tag, error) {
 }
 
 // GetTicketByDeviceIDVulnID executes the stored procedure GetTicketByDeviceIDVulnID against the database and returns the read results
-func (conn *dbconn) GetTicketByDeviceIDVulnID(inDeviceID string, inVulnID string, inOrgID string) (domain.TicketSummary, error) {
+func (conn *dbconn) GetTicketByDeviceIDVulnID(inDeviceID string, inVulnID string, inPort int, inProtocol string, inOrgID string) (domain.TicketSummary, error) {
 	var err error
 	var retTicketSummary domain.TicketSummary
 
 	conn.Read(&connection.Procedure{
 		Proc:       "GetTicketByDeviceIDVulnID",
-		Parameters: []interface{}{inDeviceID, inVulnID, inOrgID},
+		Parameters: []interface{}{inDeviceID, inVulnID, inPort, inProtocol, inOrgID},
 		Callback: func(results interface{}, dberr error) {
 			err = dberr
 
