@@ -442,14 +442,16 @@ func (job *AssetSyncJob) getExceptionID(assetID string, deviceInDb domain.Device
 func (job *AssetSyncJob) createOrUpdateDetection(deviceInDb domain.Device, vulnInfo domain.VulnerabilityInfo, detectionFromScanner domain.Detection, assetID string, decomIgnoreID string) {
 	var err error
 
-	var detectionInDB domain.Detection
-	detectionInDB, err = job.db.GetDetection(sord(deviceInDb.SourceID()), vulnInfo.ID(), detectionFromScanner.Port(), detectionFromScanner.Protocol())
+	var detectionInDB domain.DetectionInfo
+	detectionInDB, err = job.db.GetDetectionInfo(sord(deviceInDb.SourceID()), vulnInfo.ID(), detectionFromScanner.Port(), detectionFromScanner.Protocol())
 	if err == nil {
 		var detectionStatus domain.DetectionStatus
 		if detectionStatus = job.getDetectionStatus(detectionFromScanner.Status()); detectionStatus != nil {
 
+			var exceptionID = job.getExceptionID(assetID, deviceInDb, vulnInfo, decomIgnoreID)
+
 			if detectionInDB == nil {
-				job.createDetection(detectionFromScanner, job.getExceptionID(assetID, deviceInDb, vulnInfo, decomIgnoreID), deviceInDb, vulnInfo, assetID, detectionStatus.ID())
+				job.createDetection(detectionFromScanner, exceptionID, deviceInDb, vulnInfo, assetID, detectionStatus.ID())
 			} else {
 
 				var canSkipUpdate bool
@@ -459,13 +461,18 @@ func (job *AssetSyncJob) createOrUpdateDetection(deviceInDb domain.Device, vulnI
 					}
 				}
 
+				// even if the detection hasn't been updated in the scanner, if we've had a new exception added (or the exception was removed), we need to update the detection
+				if canSkipUpdate && ((len(sord(detectionInDB.IgnoreID())) == 0 && len(exceptionID) > 0) || (len(sord(detectionInDB.IgnoreID())) > 0 && len(exceptionID) == 0)) {
+					canSkipUpdate = false
+				}
+
 				if !canSkipUpdate {
 					_, _, err = job.db.UpdateDetectionTimesSeen(
 						sord(deviceInDb.SourceID()),
 						vulnInfo.ID(),
 						detectionFromScanner.Port(),
 						detectionFromScanner.Protocol(),
-						job.getExceptionID(assetID, deviceInDb, vulnInfo, decomIgnoreID),
+						exceptionID,
 						detectionFromScanner.TimesSeen(),
 						detectionStatus.ID(),
 					)
