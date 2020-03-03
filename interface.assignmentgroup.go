@@ -12,5 +12,4 @@ type AssignmentGroup interface {
 	IPAddress() (param string)
 	OrganizationID() (param string)
 	SourceID() (param int)
-	VulnTitleRegex() (param *string)
 }
