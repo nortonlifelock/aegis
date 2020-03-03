@@ -3082,6 +3082,59 @@ func (conn *dbconn) GetExceptionTypes() ([]domain.ExceptionType, error) {
 	return retExceptionType, err
 }
 
+// GetExceptionsByOrg executes the stored procedure GetExceptionsByOrg against the database and returns the read results
+func (conn *dbconn) GetExceptionsByOrg(_OrgID string) ([]domain.Ignore, error) {
+	var err error
+	var retIgnore = make([]domain.Ignore, 0)
+
+	conn.Read(&connection.Procedure{
+		Proc:       "GetExceptionsByOrg",
+		Parameters: []interface{}{_OrgID},
+		Callback: func(results interface{}, dberr error) {
+			err = dberr
+
+			if err == nil {
+
+				err = conn.getRows(results,
+					func(rows *sql.Rows) (err error) {
+						if err = rows.Err(); err == nil {
+
+							var myID string
+							var myOrganizationID string
+							var myVulnerabilityID string
+							var myDeviceID string
+							var myDueDate *time.Time
+
+							if err = rows.Scan(
+
+								&myID,
+								&myOrganizationID,
+								&myVulnerabilityID,
+								&myDeviceID,
+								&myDueDate,
+							); err == nil {
+
+								newIgnore := &dal.Ignore{
+									IDvar:              myID,
+									OrganizationIDvar:  myOrganizationID,
+									VulnerabilityIDvar: myVulnerabilityID,
+									DeviceIDvar:        myDeviceID,
+									DueDatevar:         myDueDate,
+								}
+
+								retIgnore = append(retIgnore, newIgnore)
+							}
+						}
+
+						return err
+					})
+			}
+		},
+	})
+
+	return retIgnore, err
+}
+
 // GetExceptionsDueNext30Days executes the stored procedure GetExceptionsDueNext30Days against the database and returns the read results
 func (conn *dbconn) GetExceptionsDueNext30Days() ([]domain.CERF, error) {
 	var err error

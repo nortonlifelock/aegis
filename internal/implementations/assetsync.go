@@ -27,6 +27,9 @@ type AssetSyncJob struct {
 	// a cache for exceptions that apply to an OS/vulnID combo (as opposed to device/vulnid combo)
 	globalExceptions []compiledException
 
+	// a cache for device/vuln specific exceptions
+	deviceIDToVulnIDToException map[string]map[string]domain.Ignore
+
 	id          string
 	payloadJSON string
 	ctx         context.Context
@@ -77,7 +80,7 @@ func (job *AssetSyncJob) Process(ctx context.Context, id string, appconfig domai
 				if job.detectionStatuses, err = job.db.GetDetectionStatuses(); err == nil {
 					job.lstream.Send(log.Debug("Scanner connection created, beginning processing..."))
 
-					if job.globalExceptions, err = job.getGlobalIgnores(); err == nil {
+					if job.globalExceptions, job.deviceIDToVulnIDToException, err = job.preloadIgnores(); err == nil {
 						for _, groupID := range job.Payload.GroupIDs {
 							if err = job.createAssetGroupInDB(groupID, job.insources.SourceID(), job.insources.ID()); err == nil {
 								select {
@@ -382,8 +385,7 @@ func (job *AssetSyncJob) processAssetDetections(deviceInDb domain.Device, assetI
 	if len(vulnResult) > 1 {
 		resultID = vulnResult[1]
 	}
-
-	_ = resultID
+	_ = resultID // TODO what to do with this?
 
 	var vulnInfo domain.VulnerabilityInfo
 	if vulnInfoInterface, ok := job.vulnCache.Load(vulnID); ok {
@@ -413,12 +415,10 @@ func (job *AssetSyncJob) processAssetDetections(deviceInDb domain.Device, assetI
 
 func (job *AssetSyncJob) getExceptionID(assetID string, deviceInDb domain.Device, vulnInfo domain.VulnerabilityInfo, decomIgnoreID string) (exceptionID string) {
 	if len(decomIgnoreID) == 0 {
-		if exception, err := job.db.GetExceptionByVulnIDOrg(assetID, vulnInfo.SourceVulnID(), job.config.OrganizationID()); err == nil {
-			if exception != nil {
-				exceptionID = exception.ID()
+		if job.deviceIDToVulnIDToException[assetID] != nil {
+			if job.deviceIDToVulnIDToException[assetID][vulnInfo.SourceVulnID()] != nil {
+				exceptionID = job.deviceIDToVulnIDToException[assetID][vulnInfo.SourceVulnID()].ID()
 			}
-		} else {
-			job.lstream.Send(log.Errorf(err, "Error while gathering exceptions for device [%v]", assetID))
 		}
 	} else {
 		exceptionID = decomIgnoreID
@@ -582,8 +582,9 @@ type compiledException struct {
 	regex     *regexp.Regexp
 }
 
-func (job *AssetSyncJob) getGlobalIgnores() (globals []compiledException, err error) {
+func (job *AssetSyncJob) preloadIgnores() (globals []compiledException, deviceIDToVulnIDToException map[string]map[string]domain.Ignore, err error) {
 	globals = make([]compiledException, 0)
+	deviceIDToVulnIDToException = make(map[string]map[string]domain.Ignore)
 
 	var globalExceptions []domain.Ignore
 	if globalExceptions, err = job.db.GetGlobalExceptions(job.config.OrganizationID()); err == nil {
@@ -611,5 +612,20 @@ func (job *AssetSyncJob) getGlobalIgnores() (globals []compiledException, err er
 		err = fmt.Errorf("error while loading global exceptions - %s", err.Error())
 	}
 
-	return globals, err
+	if err == nil {
+		var specificExceptions []domain.Ignore
+		if specificExceptions, err = job.db.GetExceptionsByOrg(job.config.OrganizationID()); err == nil {
+			for _, exception := range specificExceptions {
+				if len(exception.DeviceID()) > 0 && len(exception.VulnerabilityID()) > 0 {
+					if deviceIDToVulnIDToException[exception.DeviceID()] == nil {
+						deviceIDToVulnIDToException[exception.DeviceID()] = make(map[string]domain.Ignore)
+					}
+
+					deviceIDToVulnIDToException[exception.DeviceID()][exception.VulnerabilityID()] = exception
+				}
+			}
+		}
+	}
+
+	return globals, deviceIDToVulnIDToException, err
 }
