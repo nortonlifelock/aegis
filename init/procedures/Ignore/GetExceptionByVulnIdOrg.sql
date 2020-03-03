@@ -18,4 +18,4 @@ CREATE PROCEDURE `GetExceptionByVulnIDOrg` (_DeviceID VARCHAR(100), _VulnID NVAR
     DeviceID,
     DueDate
   FROM `Ignore` O
-    WHERE O.VulnerabilityID = _VulnID AND O.OrganizationID = _OrgID AND O.DeviceId = _DeviceID;
+    WHERE O.VulnerabilityID = _VulnID AND O.OrganizationID = _OrgID AND O.DeviceId = _DeviceID and Active = b'1';

@@ -413,11 +413,16 @@ func (job *AssetSyncJob) processAssetDetections(deviceInDb domain.Device, assetI
 	return err
 }
 
-func (job *AssetSyncJob) getExceptionID(assetID string, deviceInDb domain.Device, vulnInfo domain.VulnerabilityInfo, decomIgnoreID string) (exceptionID string) {
+func (job *AssetSyncJob) getExceptionID(assetID string, deviceInDb domain.Device, port string, vulnInfo domain.VulnerabilityInfo, decomIgnoreID string) (exceptionID string) {
 	if len(decomIgnoreID) == 0 {
 		if job.deviceIDToVulnIDToException[assetID] != nil {
-			if job.deviceIDToVulnIDToException[assetID][vulnInfo.SourceVulnID()] != nil {
-				exceptionID = job.deviceIDToVulnIDToException[assetID][vulnInfo.SourceVulnID()].ID()
+			if job.deviceIDToVulnIDToException[assetID][fmt.Sprintf("%s;%s", vulnInfo.SourceVulnID(), port)] != nil {
+
+				var possibleMatch = job.deviceIDToVulnIDToException[assetID][fmt.Sprintf("%s;%s", vulnInfo.SourceVulnID(), port)]
+
+				if possibleMatch.TypeID() != domain.Exception || possibleMatch.DueDate().After(time.Now()) { // only want to skip exceptions that have passed their due dates
+					exceptionID = job.deviceIDToVulnIDToException[assetID][fmt.Sprintf("%s;%s", vulnInfo.SourceVulnID(), port)].ID()
+				}
 			}
 		}
 	} else {
@@ -448,7 +453,11 @@ func (job *AssetSyncJob) createOrUpdateDetection(deviceInDb domain.Device, vulnI
 		var detectionStatus domain.DetectionStatus
 		if detectionStatus = job.getDetectionStatus(detectionFromScanner.Status()); detectionStatus != nil {
 
-			var exceptionID = job.getExceptionID(assetID, deviceInDb, vulnInfo, decomIgnoreID)
+			var port string
+			if detectionFromScanner.Port() > 0 || len(detectionFromScanner.Protocol()) > 0 {
+				port = fmt.Sprintf("%d %s", detectionFromScanner.Port(), detectionFromScanner.Protocol())
+			}
+			var exceptionID = job.getExceptionID(assetID, deviceInDb, port, vulnInfo, decomIgnoreID)
 
 			if detectionInDB == nil {
 				job.createDetection(detectionFromScanner, exceptionID, deviceInDb, vulnInfo, assetID, detectionStatus.ID())
@@ -621,7 +630,7 @@ func (job *AssetSyncJob) preloadIgnores() (globals []compiledException, deviceID
 						deviceIDToVulnIDToException[exception.DeviceID()] = make(map[string]domain.Ignore)
 					}
 
-					deviceIDToVulnIDToException[exception.DeviceID()][exception.VulnerabilityID()] = exception
+					deviceIDToVulnIDToException[exception.DeviceID()][fmt.Sprintf("%s;%s", exception.VulnerabilityID(), exception.Port())] = exception
 				}
 			}
 		}
