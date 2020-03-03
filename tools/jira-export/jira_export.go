@@ -10,6 +10,7 @@ import (
 	"github.com/nortonlifelock/log"
 	"golang.org/x/crypto/ssh/terminal"
 	"os"
+	"runtime"
 	"strings"
 	"sync"
 	"time"
@@ -57,10 +58,15 @@ func main() {
 				var password []byte
 				fmt.Println("Enter JIRA Password: ")
 
-				if password, err = terminal.ReadPassword(int(os.Stdin.Fd())); err != nil {
+				if strings.Contains(runtime.GOOS, "windows") {
 					reader := bufio.NewReader(os.Stdin)
 					text, _ := reader.ReadString('\n')
 					password = []byte(text)
+				} else {
+					if password, err = terminal.ReadPassword(int(os.Stdin.Fd())); err != nil {
+						fmt.Println("Error while reading password from terminal")
+						os.Exit(0)
+					}
 				}
 
 				var tickets *jira.ConnectorJira
