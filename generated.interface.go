@@ -61,6 +61,7 @@ type GeneratedDatabaseConnection interface {
 	GetAssetGroupsByCloudSource(inOrgID string, inCloudSourceID string) ([]AssetGroup, error)
 	GetAssignmentGroupByIP(_SourceID string, _OrganizationID string, _IP string) ([]AssignmentGroup, error)
 	GetAssignmentGroupByOrgIP(_OrganizationID string, _IP string) ([]AssignmentGroup, error)
+	GetAssignmentRulesByOrg(_OrganizationID string) ([]AssignmentRules, error)
 	GetAutoStartJobs() ([]JobConfig, error)
 	GetCISAssignments(_OrganizationID string) ([]CISAssignments, error)
 	GetCancelledJobs() ([]JobHistory, error)
