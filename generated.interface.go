@@ -139,6 +139,7 @@ type GeneratedDatabaseConnection interface {
 	GetTagsForDevice(_DeviceID string) ([]Tag, error)
 	GetTicketByDeviceIDVulnID(inDeviceID string, inVulnID string, inPort int, inProtocol string, inOrgID string) (TicketSummary, error)
 	GetTicketByTitle(_Title string, _OrgID string) (TicketSummary, error)
+	GetTicketCountByStatus(inStatus string, inOrgID string) (QueryData, error)
 	GetUnfinishedScanSummariesBySourceConfigOrgID(_ScannerSourceConfigID string, _OrgID string) ([]ScanSummary, error)
 	GetUnfinishedScanSummariesBySourceOrgID(_SourceID string, _OrgID string) ([]ScanSummary, error)
 	GetUnmatchedVulns(_SourceID int) ([]VulnerabilityInfo, error)
