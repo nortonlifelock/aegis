@@ -1605,6 +1605,68 @@ func (conn *dbconn) GetAssignmentGroupByOrgIP(_OrganizationID string, _IP string
 	return retAssignmentGroup, err
 }
 
+// GetAssignmentRulesByOrg executes the stored procedure GetAssignmentRulesByOrg against the database and returns the read results
+func (conn *dbconn) GetAssignmentRulesByOrg(_OrganizationID string) ([]domain.AssignmentRules, error) {
+	var err error
+	var retAssignmentRules = make([]domain.AssignmentRules, 0)
+
+	conn.Read(&connection.Procedure{
+		Proc:       "GetAssignmentRulesByOrg",
+		Parameters: []interface{}{_OrganizationID},
+		Callback: func(results interface{}, dberr error) {
+			err = dberr
+
+			if err == nil {
+
+				err = conn.getRows(results,
+					func(rows *sql.Rows) (err error) {
+						if err = rows.Err(); err == nil {
+
+							var myAssignmentGroup *string
+							var myAssignee *string
+							var myOrganizationID string
+							var myVulnTitleSubstring *string
+							var myVulnTitleRegex *string
+							var myTagKeyID *int
+							var myTagKeyValue *string
+							var myPriority int
+
+							if err = rows.Scan(
+
+								&myAssignmentGroup,
+								&myAssignee,
+								&myOrganizationID,
+								&myVulnTitleSubstring,
+								&myVulnTitleRegex,
+								&myTagKeyID,
+								&myTagKeyValue,
+								&myPriority,
+							); err == nil {
+
+								newAssignmentRules := &dal.AssignmentRules{
+									AssignmentGroupvar:    myAssignmentGroup,
+									Assigneevar:           myAssignee,
+									OrganizationIDvar:     myOrganizationID,
+									VulnTitleSubstringvar: myVulnTitleSubstring,
+									VulnTitleRegexvar:     myVulnTitleRegex,
+									TagKeyIDvar:           myTagKeyID,
+									TagKeyValuevar:        myTagKeyValue,
+									Priorityvar:           myPriority,
+								}
+
+								retAssignmentRules = append(retAssignmentRules, newAssignmentRules)
+							}
+						}
+
+						return err
+					})
+			}
+		},
+	})
+
+	return retAssignmentRules, err
+}
+
 // GetAutoStartJobs executes the stored procedure GetAutoStartJobs against the database and returns the read results
 func (conn *dbconn) GetAutoStartJobs() ([]domain.JobConfig, error) {
 	var err error

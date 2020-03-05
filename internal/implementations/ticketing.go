@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"regexp"
 	"sort"
 	"strconv"
 	"strings"
@@ -121,6 +122,7 @@ type TicketingJob struct {
 	outsource   domain.SourceConfig
 
 	cachedReportedBy string
+	assignmentRules  []assignmentRule
 }
 
 // vulnerabilityPayload is passed through the pipeline of the ticketing job
@@ -202,17 +204,18 @@ func (job *TicketingJob) Process(ctx context.Context, id string, appconfig domai
 					if org != nil {
 
 						// the organization Payload holds the SLA configuration
-						err = job.buildOrgPayload(org)
-						if err == nil {
+						if err = job.buildOrgPayload(org); err == nil {
+							if job.assignmentRules, err = job.loadAssignmentRules(); err == nil {
 
-							job.lstream.Send(log.Debug("Scanner connection initialized."))
-
-							// TODO do we want to cross reference against JIRA, or should we just check our db for the ticket entry?
-							var detections []domain.Detection
-							if detections, err = job.db.GetDetectionsAfter(tord1970(job.config.LastJobStart()), job.config.OrganizationID()); err == nil {
-								job.processVulnerabilities(vscanner, pushDetectionsToChannel(job.ctx, detections))
+								job.lstream.Send(log.Debug("Scanner connection initialized."))
+								var detections []domain.Detection
+								if detections, err = job.db.GetDetectionsAfter(tord1970(job.config.LastJobStart()), job.config.OrganizationID()); err == nil {
+									job.processVulnerabilities(vscanner, pushDetectionsToChannel(job.ctx, detections))
+								} else {
+									job.lstream.Send(log.Error("Error occurred while loading device vulnerability information", err))
+								}
 							} else {
-								job.lstream.Send(log.Error("Error occurred while loading device vulnerability information", err))
+								job.lstream.Send(log.Errorf(err, "error while loading assignment rules"))
 							}
 						} else {
 							job.lstream.Send(log.Error("error while processing the organization Payload", err))
@@ -573,9 +576,13 @@ func (job *TicketingJob) prepareTicketCreation(in <-chan *vulnerabilityPayload) 
 					var create bool
 					payload.ticket, create = job.payloadToTicket(payload)
 					if create {
+
+						var tagsForDevice []domain.Tag
 						// map cloud service fields to ticket if necessary
-						err = job.handleCloudTagMappings(payload.ticket)
-						if err != nil {
+						tagsForDevice, err = job.handleCloudTagMappings(payload.ticket)
+						if err == nil {
+							job.getAssignmentInformation(tagsForDevice, payload)
+						} else {
 							// we still want to create the ticket, but log the error
 							job.lstream.Send(log.Errorf(err, "error while managing job mappings for [%s]", payload.ticket.Title()))
 						}
@@ -732,17 +739,6 @@ func (job *TicketingJob) payloadToTicket(payload *vulnerabilityPayload) (newtix 
 	var ips string
 	macs, ips, hosts = job.gatherHostInfoFromDevice(payload)
 
-	// Handle the assignment using the data in config which is the scanner assignment for the IPs
-	// TODO: Update this to be specific to the out source as well so we can use different job engines
-	var assignmentGroup = ""
-	if ag, err := job.db.GetAssignmentGroupByIP(job.insource.SourceID(), job.config.OrganizationID(), ips); err == nil {
-		if ag != nil && len(ag) > 0 {
-			assignmentGroup = ag[0].GroupName()
-		}
-	} else {
-		job.lstream.Send(log.Errorf(err, "error while loading assignment group for device [%s]", ips))
-	}
-
 	// Determine Due Date and Priority
 	var duedate time.Time
 	var alertdate = time.Now()
@@ -812,11 +808,10 @@ func (job *TicketingJob) payloadToTicket(payload *vulnerabilityPayload) (newtix 
 			IPAddressvar:       &ips,
 			HostNamevar:        &hosts,
 
-			ReportedByvar:      &reportedBy,
-			TicketTypevar:      &ticketType,
-			OrganizationIDvar:  job.config.OrganizationID(),
-			AssignmentGroupvar: &assignmentGroup,
-			Priorityvar:        &priority,
+			ReportedByvar:     &reportedBy,
+			TicketTypevar:     &ticketType,
+			OrganizationIDvar: job.config.OrganizationID(),
+			Priorityvar:       &priority,
 
 			Configsvar:          configs,
 			ServicePortsvar:     &servicePorts,
@@ -900,7 +895,9 @@ func (job *TicketingJob) gatherHostInfoFromDevice(payload *vulnerabilityPayload)
 
 // the cloud sync job pulls tag information from cloud service providers. we can use that tag information to overwrite JIRA fields or append
 // the information to a JIRA field
-func (job *TicketingJob) handleCloudTagMappings(tic domain.Ticket) (err error) {
+func (job *TicketingJob) handleCloudTagMappings(tic domain.Ticket) (tagsForDevice []domain.Tag, err error) {
+	tagsForDevice = make([]domain.Tag, 0)
+
 	if len(sord(tic.IPAddress())) > 0 {
 		var ips = strings.Split(sord(tic.IPAddress()), ",")
 
@@ -916,9 +913,7 @@ func (job *TicketingJob) handleCloudTagMappings(tic domain.Ticket) (err error) {
 
 				if err == nil {
 					if len(tagMaps) > 0 {
-
 						// grab all the cloud tags for a device
-						var tagsForDevice []domain.Tag
 						tagsForDevice, err = job.db.GetTagsForDevice(device.ID())
 						if err == nil {
 							err = job.mapAllTagsForDevice(tic, tagsForDevice, tagMaps)
@@ -1117,6 +1112,133 @@ func (job *TicketingJob) getCachedReportedBy() (reportedBy string) {
 	}
 
 	return reportedBy
+}
+
+type assignedTicket struct {
+	domain.Ticket
+	assignee        string
+	assignmentGroup string
+}
+
+func (t *assignedTicket) AssignedTo() *string {
+	if len(t.assignee) > 0 {
+		return &t.assignee
+	} else {
+		return nil
+	}
+}
+
+func (t *assignedTicket) AssignmentGroup() (param *string) {
+	if len(t.assignmentGroup) > 0 {
+		return &t.assignmentGroup
+	} else {
+		return nil
+	}
+}
+
+func (job *TicketingJob) getAssignmentInformation(tagsForDevice []domain.Tag, payload *vulnerabilityPayload) {
+	var assignmentGroup, assignee string
+
+	for _, rule := range job.assignmentRules {
+		var match = true
+
+		if rule.VulnTitleSubstring() != nil {
+			match = strings.Contains(payload.vuln.Name(), sord(rule.VulnTitleSubstring()))
+		}
+
+		if match && rule.regex != nil {
+			match = rule.regex.MatchString(payload.vuln.Name())
+		}
+
+		if match && rule.tagKey != nil {
+			var found bool
+			for _, deviceTag := range tagsForDevice {
+				if deviceTag.TagKeyID() == iord(rule.TagKeyID()) {
+					found = true
+					match = strings.ToLower(deviceTag.Value()) == strings.ToLower(sord(rule.TagKeyValue()))
+					break
+				}
+			}
+
+			if !found {
+				match = false
+			}
+		}
+
+		if match {
+			assignmentGroup = sord(rule.AssignmentGroup())
+			assignee = sord(rule.Assignee())
+			break // the rules are pulled highest-priority first, so the first match found should be the match taken
+		}
+	}
+
+	if len(assignmentGroup) == 0 && len(sord(payload.ticket.IPAddress())) > 0 {
+		// Handle the assignment using the data in config which is the scanner assignment for the IPs
+		if ag, err := job.db.GetAssignmentGroupByIP(job.insource.SourceID(), job.config.OrganizationID(), sord(payload.ticket.IPAddress())); err == nil {
+			if ag != nil && len(ag) > 0 {
+				assignmentGroup = ag[0].GroupName()
+			}
+		} else {
+			job.lstream.Send(log.Errorf(err, "error while loading assignment group for device [%s]", ips))
+		}
+	}
+
+	payload.ticket = &assignedTicket{
+		Ticket:          payload.ticket,
+		assignee:        assignee,
+		assignmentGroup: assignmentGroup,
+	}
+}
+
+type assignmentRule struct {
+	domain.AssignmentRules
+	regex  *regexp.Regexp
+	tagKey domain.TagKey
+}
+
+func (job *TicketingJob) loadAssignmentRules() (assignmentRules []assignmentRule, err error) {
+	assignmentRules = make([]assignmentRule, 0)
+
+	var rules []domain.AssignmentRules
+	if rules, err = job.db.GetAssignmentRulesByOrg(job.config.OrganizationID()); err == nil {
+
+		for _, rule := range rules {
+			var currentRule = assignmentRule{
+				AssignmentRules: rule,
+			}
+
+			if rule.VulnTitleRegex() != nil {
+				var regex *regexp.Regexp
+				if regex, err = regexp.Compile(sord(rule.VulnTitleRegex())); err == nil {
+					currentRule.regex = regex
+				} else {
+					err = fmt.Errorf("error while compiling regex [%s] - %s", sord(rule.VulnTitleRegex()), err.Error())
+					break
+				}
+			}
+
+			if rule.TagKeyID() != nil {
+				var tagKey domain.TagKey
+				if tagKey, err = job.db.GetTagKeyByID(strconv.Itoa(iord(rule.TagKeyID()))); err == nil {
+					if tagKey != nil {
+						currentRule.tagKey = tagKey
+					} else {
+						err = fmt.Errorf("could not find a tag key for %d", iord(rule.TagKeyID()))
+					}
+				} else {
+					err = fmt.Errorf("error while loading tag key - %s", err.Error())
+					break
+				}
+			}
+
+			assignmentRules = append(assignmentRules)
+		}
+
+	} else {
+		err = fmt.Errorf("error while loading assignment rules - %s", err.Error())
+	}
+
+	return assignmentRules, err
 }
 
 func (job *TicketingJob) getCVSSScore(vuln domain.Vulnerability) (score float32) {
