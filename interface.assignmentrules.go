@@ -4,9 +4,8 @@ type AssignmentRules interface {
 	AssignmentGroup() *string
 	Assignee() *string
 	OrganizationID() string
-	VulnTitleSubstring() *string
 	VulnTitleRegex() *string
 	TagKeyID() *int
-	TagKeyValue() *string
+	TagKeyRegex() *string
 	Priority() int
 }
