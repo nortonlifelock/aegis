@@ -3,10 +3,9 @@
     AssignmentGroup    VARCHAR(100) NULL
     Assignee           VARCHAR(100) NULL
     OrganizationID     VARCHAR(36)  NOT NULL
-    VulnTitleSubstring VARCHAR(200) NULL
     VulnTitleRegex     VARCHAR(100) NULL
     TagKeyID           INT          NULL
-    TagKeyValue        VARCHAR(100) NULL
+    TagKeyRegex        VARCHAR(100) NULL
     Priority           INT          NOT NULL
 */
 
@@ -18,10 +17,9 @@ SELECT
     AssignmentGroup,
     Assignee,
     OrganizationID,
-    VulnTitleSubstring,
     VulnTitleRegex,
     TagKeyID,
-    TagKeyValue,
+    TagKeyRegex,
     Priority
 FROM AssignmentRules A
     WHERE A.OrganizationID = _OrganizationID order by A.Priority DESC;

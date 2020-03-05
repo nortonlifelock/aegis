@@ -937,7 +937,7 @@ func (job *TicketingJob) handleCloudTagMappings(tic domain.Ticket) (tagsForDevic
 		err = fmt.Errorf("ticket [%s] did not have an associated IP", tic.Title())
 	}
 
-	return err
+	return tagsForDevice, err
 }
 
 // this ticket takes all tags found for a particular device, and maps them to fields within the domain.Ticket if necessary
@@ -1142,12 +1142,8 @@ func (job *TicketingJob) getAssignmentInformation(tagsForDevice []domain.Tag, pa
 	for _, rule := range job.assignmentRules {
 		var match = true
 
-		if rule.VulnTitleSubstring() != nil {
-			match = strings.Contains(payload.vuln.Name(), sord(rule.VulnTitleSubstring()))
-		}
-
-		if match && rule.regex != nil {
-			match = rule.regex.MatchString(payload.vuln.Name())
+		if rule.vulnTitleRegex != nil {
+			match = rule.vulnTitleRegex.MatchString(payload.vuln.Name())
 		}
 
 		if match && rule.tagKey != nil {
@@ -1155,7 +1151,7 @@ func (job *TicketingJob) getAssignmentInformation(tagsForDevice []domain.Tag, pa
 			for _, deviceTag := range tagsForDevice {
 				if deviceTag.TagKeyID() == iord(rule.TagKeyID()) {
 					found = true
-					match = strings.ToLower(deviceTag.Value()) == strings.ToLower(sord(rule.TagKeyValue()))
+					match = rule.tagKeyRegex.MatchString(deviceTag.Value())
 					break
 				}
 			}
@@ -1179,7 +1175,7 @@ func (job *TicketingJob) getAssignmentInformation(tagsForDevice []domain.Tag, pa
 				assignmentGroup = ag[0].GroupName()
 			}
 		} else {
-			job.lstream.Send(log.Errorf(err, "error while loading assignment group for device [%s]", ips))
+			job.lstream.Send(log.Errorf(err, "error while loading assignment group for device [%s]", sord(payload.ticket.IPAddress())))
 		}
 	}
 
@@ -1192,8 +1188,9 @@ func (job *TicketingJob) getAssignmentInformation(tagsForDevice []domain.Tag, pa
 
 type assignmentRule struct {
 	domain.AssignmentRules
-	regex  *regexp.Regexp
-	tagKey domain.TagKey
+	vulnTitleRegex *regexp.Regexp
+	tagKeyRegex    *regexp.Regexp
+	tagKey         domain.TagKey
 }
 
 func (job *TicketingJob) loadAssignmentRules() (assignmentRules []assignmentRule, err error) {
@@ -1210,9 +1207,9 @@ func (job *TicketingJob) loadAssignmentRules() (assignmentRules []assignmentRule
 			if rule.VulnTitleRegex() != nil {
 				var regex *regexp.Regexp
 				if regex, err = regexp.Compile(sord(rule.VulnTitleRegex())); err == nil {
-					currentRule.regex = regex
+					currentRule.vulnTitleRegex = regex
 				} else {
-					err = fmt.Errorf("error while compiling regex [%s] - %s", sord(rule.VulnTitleRegex()), err.Error())
+					err = fmt.Errorf("error while compiling vuln title regex [%s] - %s", sord(rule.VulnTitleRegex()), err.Error())
 					break
 				}
 			}
@@ -1229,6 +1226,21 @@ func (job *TicketingJob) loadAssignmentRules() (assignmentRules []assignmentRule
 					err = fmt.Errorf("error while loading tag key - %s", err.Error())
 					break
 				}
+			}
+
+			if rule.TagKeyRegex() != nil {
+				var regex *regexp.Regexp
+				if regex, err = regexp.Compile(sord(rule.TagKeyRegex())); err == nil {
+					currentRule.tagKeyRegex = regex
+				} else {
+					err = fmt.Errorf("error while compiling tag key regex [%s] - %s", sord(rule.TagKeyRegex()), err.Error())
+					break
+				}
+			}
+
+			if (rule.TagKeyID() != nil) != (rule.TagKeyRegex() != nil) { // != is equivalent to an xor operation, meaning if only one is set
+				err = fmt.Errorf("entry exists where both TagKeyID and TagKeyRegex are not nil (xor)")
+				break
 			}
 
 			assignmentRules = append(assignmentRules)

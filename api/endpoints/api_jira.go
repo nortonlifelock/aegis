@@ -347,16 +347,7 @@ func getCountOfJiraTicketsInStatus(w http.ResponseWriter, r *http.Request) {
 
 				var returnVal *PieChartContents
 				if needsCacheUpdate {
-					var organization domain.Organization
-					var err error
-					organization, err = Ms.GetOrganizationByID(trans.permission.OrgID())
-
-					var orgCode string
-					if err == nil {
-						orgCode = organization.Code()
-					}
-
-					returnVal = getPieChartContents(connector, orgCode)
+					returnVal = getPieChartContents(connector, trans.permission.OrgID())
 					pieChartLock.Lock()
 					pieChartCache[trans.permission.OrgID()] = &pieChartInfo{
 						Contents: returnVal,
@@ -380,7 +371,7 @@ func getCountOfJiraTicketsInStatus(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func getPieChartContents(connector *jira.ConnectorJira, orgCode string) *PieChartContents {
+func getPieChartContents(connector *jira.ConnectorJira, orgID string) *PieChartContents {
 	var wg = &sync.WaitGroup{}
 	var labelLock = &sync.Mutex{}
 	var statusLabels = make([]string, 0)
@@ -392,7 +383,7 @@ func getPieChartContents(connector *jira.ConnectorJira, orgCode string) *PieChar
 		wg.Add(1)
 		go func(status string) {
 			defer wg.Done()
-			setCountStatusLabelForStatus(connector, status, labelLock, &statusLabels, &countLabels, orgCode)
+			setCountStatusLabelForStatus(connector, status, labelLock, &statusLabels, &countLabels, orgID)
 		}(status)
 
 	}
@@ -404,18 +395,29 @@ func getPieChartContents(connector *jira.ConnectorJira, orgCode string) *PieChar
 	return results
 }
 
-func setCountStatusLabelForStatus(connector *jira.ConnectorJira, status string, labelLock *sync.Mutex, statusLabels *[]string, countLabels *[]int, orgCode string) {
-	var count int
+func setCountStatusLabelForStatus(connector *jira.ConnectorJira, status string, labelLock *sync.Mutex, statusLabels *[]string, countLabels *[]int, orgID string) {
 	var err error
-	count, err = connector.GetCountOfTicketsInStatus(status, orgCode)
-	if err == nil {
+	var queryData domain.QueryData
+	if queryData, err = Ms.GetTicketCountByStatus(status, orgID); err == nil {
 		labelLock.Lock()
-		*statusLabels = append(*statusLabels, fmt.Sprintf("%s - (%d)", status, count))
-		*countLabels = append(*countLabels, count)
+		*statusLabels = append(*statusLabels, fmt.Sprintf("%s - (%d)", status, queryData.Length()))
+		*countLabels = append(*countLabels, queryData.Length())
 		labelLock.Unlock()
 	} else {
 		fmt.Println(err.Error())
 	}
+
+	// OLD: Jira method, keeping in-case we want to reuse
+	// signature: (connector *jira.ConnectorJira, status string, labelLock *sync.Mutex, statusLabels *[]string, countLabels *[]int, orgCode string)
+	//count, err = connector.GetCountOfTicketsInStatus(status, orgCode)
+	//if err == nil {
+	//	labelLock.Lock()
+	//	*statusLabels = append(*statusLabels, fmt.Sprintf("%s - (%d)", status, count))
+	//	*countLabels = append(*countLabels, count)
+	//	labelLock.Unlock()
+	//} else {
+	//	fmt.Println(err.Error())
+	//}
 }
 
 func calculateBurndownForPriority(sess *jira.ConnectorJira, priority string, SLA time.Duration, stats *BurndownStats, orgCode string) {

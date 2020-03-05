@@ -1625,10 +1625,9 @@ func (conn *dbconn) GetAssignmentRulesByOrg(_OrganizationID string) ([]domain.As
 							var myAssignmentGroup *string
 							var myAssignee *string
 							var myOrganizationID string
-							var myVulnTitleSubstring *string
 							var myVulnTitleRegex *string
 							var myTagKeyID *int
-							var myTagKeyValue *string
+							var myTagKeyRegex *string
 							var myPriority int
 
 							if err = rows.Scan(
@@ -1636,22 +1635,20 @@ func (conn *dbconn) GetAssignmentRulesByOrg(_OrganizationID string) ([]domain.As
 								&myAssignmentGroup,
 								&myAssignee,
 								&myOrganizationID,
-								&myVulnTitleSubstring,
 								&myVulnTitleRegex,
 								&myTagKeyID,
-								&myTagKeyValue,
+								&myTagKeyRegex,
 								&myPriority,
 							); err == nil {
 
 								newAssignmentRules := &dal.AssignmentRules{
-									AssignmentGroupvar:    myAssignmentGroup,
-									Assigneevar:           myAssignee,
-									OrganizationIDvar:     myOrganizationID,
-									VulnTitleSubstringvar: myVulnTitleSubstring,
-									VulnTitleRegexvar:     myVulnTitleRegex,
-									TagKeyIDvar:           myTagKeyID,
-									TagKeyValuevar:        myTagKeyValue,
-									Priorityvar:           myPriority,
+									AssignmentGroupvar: myAssignmentGroup,
+									Assigneevar:        myAssignee,
+									OrganizationIDvar:  myOrganizationID,
+									VulnTitleRegexvar:  myVulnTitleRegex,
+									TagKeyIDvar:        myTagKeyID,
+									TagKeyRegexvar:     myTagKeyRegex,
+									Priorityvar:        myPriority,
 								}
 
 								retAssignmentRules = append(retAssignmentRules, newAssignmentRules)
@@ -6397,6 +6394,47 @@ func (conn *dbconn) GetTicketByTitle(_Title string, _OrgID string) (domain.Ticke
 	})
 
 	return retTicketSummary, err
+}
+
+// GetTicketCountByStatus executes the stored procedure GetTicketCountByStatus against the database and returns the read results
+func (conn *dbconn) GetTicketCountByStatus(inStatus string, inOrgID string) (domain.QueryData, error) {
+	var err error
+	var retQueryData domain.QueryData
+
+	conn.Read(&connection.Procedure{
+		Proc:       "GetTicketCountByStatus",
+		Parameters: []interface{}{inStatus, inOrgID},
+		Callback: func(results interface{}, dberr error) {
+			err = dberr
+
+			if err == nil {
+
+				err = conn.getRows(results,
+					func(rows *sql.Rows) (err error) {
+						if err = rows.Err(); err == nil {
+
+							var myLength int
+
+							if err = rows.Scan(
+
+								&myLength,
+							); err == nil {
+
+								newQueryData := &dal.QueryData{
+									Lengthvar: myLength,
+								}
+
+								retQueryData = newQueryData
+							}
+						}
+
+						return err
+					})
+			}
+		},
+	})
+
+	return retQueryData, err
 }
 
 // GetUnfinishedScanSummariesBySourceConfigOrgID executes the stored procedure GetUnfinishedScanSummariesBySourceConfigOrgID against the database and returns the read results

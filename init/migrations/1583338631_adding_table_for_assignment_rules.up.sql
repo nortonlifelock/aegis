@@ -25,3 +25,6 @@ UPDATE Job SET SourceTypeIn = '3', SourceTypeOut = '3' WHERE ID = '9';
 UPDATE Job SET SourceTypeIn = '1', SourceTypeOut = '1' WHERE ID = '10';
 UPDATE Job SET SourceTypeIn = '4', SourceTypeOut = '2' WHERE ID = '11';
 UPDATE Job SET SourceTypeIn = '2', SourceTypeOut = '2' WHERE ID = '12';
+
+ALTER TABLE AssignmentRules DROP COLUMN VulnTitleSubstring;
+ALTER TABLE AssignmentRules CHANGE `TagKeyValue` `TagKeyRegex` VARCHAR(100) NULL;
