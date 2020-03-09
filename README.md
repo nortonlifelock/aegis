@@ -7,6 +7,10 @@
 
 **NOTE: We're still building the Readme files for Aegis.**
 
+Aegis is a security automation tool that is designed to coordinate between your vulnerability management solution and your vulnerability remediator while providing reliable and up to date information. No longer is the tedium of emailing spreadsheets and trusting that users are remediating vulnerabilities necessary as Aegis generates tickets that are tracked and confirmed remediated by the automation.
+
+Users can trigger rescans of a vulnerability by marking a ticket as fixed, or letting Aegis passively rescan tickets as they become due. Aegis can automatically create dynamic scan templates and target one or many IPs with one or many scan engines to ensure the patch or configuration change was successfully implemented. If it fails, the ticket is reopened, and the proof can be added as a comment to the user. Watch your tickets close-out automatically and let users track open vulnerabilities in real time. Aegis can handle exception and false positive tracking, and can notice when a device is taken offline. Aegis tracks all scans that cover a ticket during its remediation, which is great to have when auditors come!
+
 Installing Aegis:
 
 - Go 1.11 or higher installed

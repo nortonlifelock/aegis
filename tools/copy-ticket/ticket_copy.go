@@ -1,4 +1,4 @@
-package asdf
+package main
 
 import (
 	"context"
