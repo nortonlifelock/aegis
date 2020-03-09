@@ -123,6 +123,7 @@ type TicketingJob struct {
 
 	cachedReportedBy string
 	assignmentRules  []assignmentRule
+	tagMaps          []domain.TagMap
 }
 
 // vulnerabilityPayload is passed through the pipeline of the ticketing job
@@ -206,13 +207,16 @@ func (job *TicketingJob) Process(ctx context.Context, id string, appconfig domai
 						// the organization Payload holds the SLA configuration
 						if err = job.buildOrgPayload(org); err == nil {
 							if job.assignmentRules, err = job.loadAssignmentRules(); err == nil {
-
-								job.lstream.Send(log.Debug("Scanner connection initialized."))
-								var detections []domain.Detection
-								if detections, err = job.db.GetDetectionsAfter(tord1970(job.config.LastJobStart()), job.config.OrganizationID()); err == nil {
-									job.processVulnerabilities(vscanner, pushDetectionsToChannel(job.ctx, detections))
+								if job.tagMaps, err = job.db.GetTagMapsByOrg(job.config.OrganizationID()); err == nil {
+									job.lstream.Send(log.Debug("Scanner connection initialized."))
+									var detections []domain.Detection
+									if detections, err = job.db.GetDetectionsAfter(tord1970(job.config.LastJobStart()), job.config.OrganizationID()); err == nil {
+										job.processVulnerabilities(vscanner, pushDetectionsToChannel(job.ctx, detections))
+									} else {
+										job.lstream.Send(log.Error("Error occurred while loading device vulnerability information", err))
+									}
 								} else {
-									job.lstream.Send(log.Error("Error occurred while loading device vulnerability information", err))
+									job.lstream.Send(log.Error("error while loading tag maps", err))
 								}
 							} else {
 								job.lstream.Send(log.Errorf(err, "error while loading assignment rules"))
@@ -906,24 +910,12 @@ func (job *TicketingJob) handleCloudTagMappings(tic domain.Ticket) (tagsForDevic
 
 		if err == nil {
 			if device != nil { // device with ip found in database, check for it's tags
-
-				// tag maps are org specific
-				var tagMaps []domain.TagMap // tag maps say which cloud tag should be matched to which ticket field
-				tagMaps, err = job.db.GetTagMapsByOrg(job.config.OrganizationID())
-
+				// grab all the cloud tags for a device
+				tagsForDevice, err = job.db.GetTagsForDevice(device.ID())
 				if err == nil {
-					if len(tagMaps) > 0 {
-						// grab all the cloud tags for a device
-						tagsForDevice, err = job.db.GetTagsForDevice(device.ID())
-						if err == nil {
-							err = job.mapAllTagsForDevice(tic, tagsForDevice, tagMaps)
-						} else {
-							err = fmt.Errorf("error while grabbing tags for device [%s] - %s", device.ID(), err.Error())
-						}
-
+					if len(job.tagMaps) > 0 {
+						err = job.mapAllTagsForDevice(tic, tagsForDevice, job.tagMaps)
 					}
-				} else {
-					err = fmt.Errorf("error while grabbing tag maps - %s", err.Error())
 				}
 			} else {
 				// TODO no device found in db - email warning
@@ -1243,7 +1235,7 @@ func (job *TicketingJob) loadAssignmentRules() (assignmentRules []assignmentRule
 				break
 			}
 
-			assignmentRules = append(assignmentRules)
+			assignmentRules = append(assignmentRules, currentRule)
 		}
 
 	} else {
