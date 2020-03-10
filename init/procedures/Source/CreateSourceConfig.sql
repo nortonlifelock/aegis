@@ -19,7 +19,11 @@ CREATE PROCEDURE `CreateSourceConfig` (_Source TEXT, _SourceID VARCHAR(36), _Org
             "ConsumerKey",
             _ConsumerKey,
             "Token",
-            _Token
+            _Token,
+            "Host",
+            _Address,
+            "Port",
+            if(_Port = '', 0, CAST(_Port AS UNSIGNED))
           ),
           _Payload
   );
