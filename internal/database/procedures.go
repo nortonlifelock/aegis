@@ -38,21 +38,6 @@ func (conn *dbconn) GetDeviceByIP(_IP string, _OrgID string) (domain.Device, err
 	return device, err
 }
 
-//func (conn *dbconn) GetDeviceByIPMACAndRegion(_IP string, _MAC string, _Region string, _OrgID string) (domain.Device, error) {
-//	var device domain.Device
-//	info, err := conn.GetDeviceInfoByIPMACAndRegion(_IP, _MAC, _Region, _OrgID)
-//	if err == nil {
-//		if info != nil {
-//			device = &dal.Device{
-//				Conn: conn,
-//				Info: info,
-//			}
-//		}
-//	}
-//
-//	return device, err
-//}
-
 func (conn *dbconn) GetDeviceByInstanceID(_InstanceID string, _OrgID string) (domain.Device, error) {
 	var device domain.Device
 	info, err := conn.GetDeviceInfoByInstanceID(_InstanceID, _OrgID)

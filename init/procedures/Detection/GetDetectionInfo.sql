@@ -7,6 +7,8 @@
   VulnerabilityID     NVARCHAR(36)  NOT
   IgnoreID            VARCHAR(36)   NULL
   AlertDate           DATETIME      NOT
+  LastFound           DATETIME      NULL
+  LastUpdated         DATETIME      NULL
   Proof               NVARCHAR(255) NOT
   Port                INT           NOT
   Protocol            VARCHAR(20)   NOT

@@ -23,6 +23,8 @@ type DetectionInfo struct {
 	DeviceIDvar          string
 	IDvar                string
 	IgnoreIDvar          *string
+	LastFoundvar         *time.Time
+	LastUpdatedvar       *time.Time
 	OrganizationIDvar    string
 	Portvar              int
 	Proofvar             string
@@ -46,6 +48,8 @@ func (myDetectionInfo DetectionInfo) MarshalJSON() ([]byte, error) {
 		"DeviceID":          myDetectionInfo.DeviceIDvar,
 		"ID":                myDetectionInfo.IDvar,
 		"IgnoreID":          myDetectionInfo.IgnoreIDvar,
+		"LastFound":         myDetectionInfo.LastFoundvar,
+		"LastUpdated":       myDetectionInfo.LastUpdatedvar,
 		"OrganizationID":    myDetectionInfo.OrganizationIDvar,
 		"Port":              myDetectionInfo.Portvar,
 		"Proof":             myDetectionInfo.Proofvar,
@@ -85,6 +89,16 @@ func (myDetectionInfo *DetectionInfo) ID() (param string) {
 // IgnoreID returns the IgnoreID parameter from the DetectionInfo struct
 func (myDetectionInfo *DetectionInfo) IgnoreID() (param *string) {
 	return myDetectionInfo.IgnoreIDvar
+}
+
+// LastFound returns the LastFound parameter from the DetectionInfo struct
+func (myDetectionInfo *DetectionInfo) LastFound() (param *time.Time) {
+	return myDetectionInfo.LastFoundvar
+}
+
+// LastUpdated returns the LastUpdated parameter from the DetectionInfo struct
+func (myDetectionInfo *DetectionInfo) LastUpdated() (param *time.Time) {
+	return myDetectionInfo.LastUpdatedvar
 }
 
 // OrganizationID returns the OrganizationID parameter from the DetectionInfo struct

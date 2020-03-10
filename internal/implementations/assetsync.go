@@ -464,8 +464,8 @@ func (job *AssetSyncJob) createOrUpdateDetection(deviceInDb domain.Device, vulnI
 			} else {
 
 				var canSkipUpdate bool
-				if !detectionInDB.Updated().IsZero() && !detectionFromScanner.Updated().IsZero() {
-					if detectionInDB.Updated().After(detectionFromScanner.Updated()) {
+				if !detectionInDB.Updated().IsZero() && !detectionFromScanner.LastUpdated().IsZero() {
+					if detectionInDB.Updated().After(*detectionFromScanner.LastUpdated()) {
 						canSkipUpdate = true
 					}
 				}
@@ -476,7 +476,7 @@ func (job *AssetSyncJob) createOrUpdateDetection(deviceInDb domain.Device, vulnI
 				}
 
 				if !canSkipUpdate {
-					_, _, err = job.db.UpdateDetectionTimesSeen(
+					_, _, err = job.db.UpdateDetection(
 						sord(deviceInDb.SourceID()),
 						vulnInfo.ID(),
 						detectionFromScanner.Port(),
@@ -484,6 +484,9 @@ func (job *AssetSyncJob) createOrUpdateDetection(deviceInDb domain.Device, vulnI
 						exceptionID,
 						detectionFromScanner.TimesSeen(),
 						detectionStatus.ID(),
+						tord1970(detectionFromScanner.LastFound()),
+						tord1970(detectionFromScanner.LastUpdated()),
+						tord1970(nil),
 					)
 
 					if err == nil {
@@ -492,7 +495,7 @@ func (job *AssetSyncJob) createOrUpdateDetection(deviceInDb domain.Device, vulnI
 						job.lstream.Send(log.Errorf(err, "Error while updating detection for device/vuln [%v|%v]", assetID, vulnInfo.ID()))
 					}
 				} else {
-					job.lstream.Send(log.Infof("Skipping detection update for device/vuln [%v|%v] [%v after %v]", assetID, vulnInfo.ID(), detectionInDB.Updated(), detectionFromScanner.Updated()))
+					job.lstream.Send(log.Infof("Skipping detection update for device/vuln [%v|%v] [%v after %v]", assetID, vulnInfo.ID(), detectionInDB.Updated(), *detectionFromScanner.LastUpdated()))
 				}
 			}
 		} else {
@@ -517,12 +520,15 @@ func (job *AssetSyncJob) createDetection(vuln domain.Detection, exceptionID stri
 				vulnInfo.ID(),
 				exceptionID,
 				*detected,
+				tord1970(vuln.LastFound()),
+				tord1970(vuln.LastUpdated()),
 				vuln.Proof(),
 				vuln.Port(),
 				vuln.Protocol(),
 				iord(vuln.ActiveKernel()),
 				detectionStatusID,
 				vuln.TimesSeen(),
+				tord1970(nil),
 			)
 		} else {
 			err = fmt.Errorf("could not find the time of the detection")

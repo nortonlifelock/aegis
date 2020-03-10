@@ -94,6 +94,14 @@ func (detection *Detection) Updated() time.Time {
 	return detection.Info.Updated()
 }
 
+func (detection *Detection) LastFound() *time.Time {
+	return detection.Info.LastFound()
+}
+
+func (detection *Detection) LastUpdated() *time.Time {
+	return detection.Info.LastUpdated()
+}
+
 // Device returns on object implementing a corresponding Device interface that the detection exists on
 func (detection *Detection) Device() (device domain.Device, err error) {
 	if detection.cacheDev != nil {

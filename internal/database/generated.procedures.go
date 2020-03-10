@@ -160,11 +160,11 @@ func (conn *dbconn) CreateDBLog(_User string, _Command string, _Endpoint string)
 }
 
 // CreateDetection executes the stored procedure CreateDetection against the database
-func (conn *dbconn) CreateDetection(_OrgID string, _SourceID string, _DeviceID string, _VulnID string, _IgnoreID string, _AlertDate time.Time, _Proof string, _Port int, _Protocol string, _ActiveKernel int, _DetectionStatusID int, _TimesSeen int) (id int, affectedRows int, err error) {
+func (conn *dbconn) CreateDetection(_OrgID string, _SourceID string, _DeviceID string, _VulnID string, _IgnoreID string, _AlertDate time.Time, _LastFound time.Time, _LastUpdated time.Time, _Proof string, _Port int, _Protocol string, _ActiveKernel int, _DetectionStatusID int, _TimesSeen int, _DefaultTime time.Time) (id int, affectedRows int, err error) {
 
 	conn.Exec(&connection.Procedure{
 		Proc:       "CreateDetection",
-		Parameters: []interface{}{_OrgID, _SourceID, _DeviceID, _VulnID, _IgnoreID, _AlertDate, _Proof, _Port, _Protocol, _ActiveKernel, _DetectionStatusID, _TimesSeen},
+		Parameters: []interface{}{_OrgID, _SourceID, _DeviceID, _VulnID, _IgnoreID, _AlertDate, _LastFound, _LastUpdated, _Proof, _Port, _Protocol, _ActiveKernel, _DetectionStatusID, _TimesSeen, _DefaultTime},
 		Callback: func(results interface{}, dberr error) {
 			err = dberr
 
@@ -1951,6 +1951,8 @@ func (conn *dbconn) GetDetectionInfo(_DeviceID string, _VulnerabilityID string, 
 							var myVulnerabilityID string
 							var myIgnoreID *string
 							var myAlertDate time.Time
+							var myLastFound *time.Time
+							var myLastUpdated *time.Time
 							var myProof string
 							var myPort int
 							var myProtocol string
@@ -1968,6 +1970,8 @@ func (conn *dbconn) GetDetectionInfo(_DeviceID string, _VulnerabilityID string, 
 								&myVulnerabilityID,
 								&myIgnoreID,
 								&myAlertDate,
+								&myLastFound,
+								&myLastUpdated,
 								&myProof,
 								&myPort,
 								&myProtocol,
@@ -1985,6 +1989,8 @@ func (conn *dbconn) GetDetectionInfo(_DeviceID string, _VulnerabilityID string, 
 									VulnerabilityIDvar:   myVulnerabilityID,
 									IgnoreIDvar:          myIgnoreID,
 									AlertDatevar:         myAlertDate,
+									LastFoundvar:         myLastFound,
+									LastUpdatedvar:       myLastUpdated,
 									Proofvar:             myProof,
 									Portvar:              myPort,
 									Protocolvar:          myProtocol,
@@ -2031,6 +2037,8 @@ func (conn *dbconn) GetDetectionInfoAfter(_After time.Time, _OrgID string) ([]do
 							var myVulnerabilityID string
 							var myIgnoreID *string
 							var myAlertDate time.Time
+							var myLastFound *time.Time
+							var myLastUpdated *time.Time
 							var myProof string
 							var myPort int
 							var myProtocol string
@@ -2048,6 +2056,8 @@ func (conn *dbconn) GetDetectionInfoAfter(_After time.Time, _OrgID string) ([]do
 								&myVulnerabilityID,
 								&myIgnoreID,
 								&myAlertDate,
+								&myLastFound,
+								&myLastUpdated,
 								&myProof,
 								&myPort,
 								&myProtocol,
@@ -2065,6 +2075,8 @@ func (conn *dbconn) GetDetectionInfoAfter(_After time.Time, _OrgID string) ([]do
 									VulnerabilityIDvar:   myVulnerabilityID,
 									IgnoreIDvar:          myIgnoreID,
 									AlertDatevar:         myAlertDate,
+									LastFoundvar:         myLastFound,
+									LastUpdatedvar:       myLastUpdated,
 									Proofvar:             myProof,
 									Portvar:              myPort,
 									Protocolvar:          myProtocol,
@@ -2111,6 +2123,8 @@ func (conn *dbconn) GetDetectionInfoBySourceVulnID(_SourceDeviceID string, _Sour
 							var myVulnerabilityID string
 							var myIgnoreID *string
 							var myAlertDate time.Time
+							var myLastFound *time.Time
+							var myLastUpdated *time.Time
 							var myProof string
 							var myPort int
 							var myProtocol string
@@ -2128,6 +2142,8 @@ func (conn *dbconn) GetDetectionInfoBySourceVulnID(_SourceDeviceID string, _Sour
 								&myVulnerabilityID,
 								&myIgnoreID,
 								&myAlertDate,
+								&myLastFound,
+								&myLastUpdated,
 								&myProof,
 								&myPort,
 								&myProtocol,
@@ -2145,6 +2161,8 @@ func (conn *dbconn) GetDetectionInfoBySourceVulnID(_SourceDeviceID string, _Sour
 									VulnerabilityIDvar:   myVulnerabilityID,
 									IgnoreIDvar:          myIgnoreID,
 									AlertDatevar:         myAlertDate,
+									LastFoundvar:         myLastFound,
+									LastUpdatedvar:       myLastUpdated,
 									Proofvar:             myProof,
 									Portvar:              myPort,
 									Protocolvar:          myProtocol,
@@ -2332,6 +2350,8 @@ func (conn *dbconn) GetDetectionsInfoForDevice(_DeviceID string) ([]domain.Detec
 							var myVulnerabilityID string
 							var myIgnoreID *string
 							var myAlertDate time.Time
+							var myLastFound *time.Time
+							var myLastUpdated *time.Time
 							var myProof string
 							var myPort int
 							var myProtocol string
@@ -2349,6 +2369,8 @@ func (conn *dbconn) GetDetectionsInfoForDevice(_DeviceID string) ([]domain.Detec
 								&myVulnerabilityID,
 								&myIgnoreID,
 								&myAlertDate,
+								&myLastFound,
+								&myLastUpdated,
 								&myProof,
 								&myPort,
 								&myProtocol,
@@ -2366,6 +2388,8 @@ func (conn *dbconn) GetDetectionsInfoForDevice(_DeviceID string) ([]domain.Detec
 									VulnerabilityIDvar:   myVulnerabilityID,
 									IgnoreIDvar:          myIgnoreID,
 									AlertDatevar:         myAlertDate,
+									LastFoundvar:         myLastFound,
+									LastUpdatedvar:       myLastUpdated,
 									Proofvar:             myProof,
 									Portvar:              myPort,
 									Protocolvar:          myProtocol,
@@ -7838,12 +7862,12 @@ func (conn *dbconn) UpdateAssetIDOsTypeIDOfDevice(_ID string, _AssetID string, _
 	return id, affectedRows, err
 }
 
-// UpdateDetectionIgnore executes the stored procedure UpdateDetectionIgnore against the database
-func (conn *dbconn) UpdateDetectionIgnore(_DeviceID string, _VulnID string, _Port int, _Protocol string, _ExceptionID string) (id int, affectedRows int, err error) {
+// UpdateDetection executes the stored procedure UpdateDetection against the database
+func (conn *dbconn) UpdateDetection(_DeviceID string, _VulnID string, _Port int, _Protocol string, _ExceptionID string, _TimesSeen int, _StatusID int, _LastFound time.Time, _LastUpdated time.Time, _DefaultTime time.Time) (id int, affectedRows int, err error) {
 
 	conn.Exec(&connection.Procedure{
-		Proc:       "UpdateDetectionIgnore",
-		Parameters: []interface{}{_DeviceID, _VulnID, _Port, _Protocol, _ExceptionID},
+		Proc:       "UpdateDetection",
+		Parameters: []interface{}{_DeviceID, _VulnID, _Port, _Protocol, _ExceptionID, _TimesSeen, _StatusID, _LastFound, _LastUpdated, _DefaultTime},
 		Callback: func(results interface{}, dberr error) {
 			err = dberr
 
@@ -7867,12 +7891,12 @@ func (conn *dbconn) UpdateDetectionIgnore(_DeviceID string, _VulnID string, _Por
 	return id, affectedRows, err
 }
 
-// UpdateDetectionTimesSeen executes the stored procedure UpdateDetectionTimesSeen against the database
-func (conn *dbconn) UpdateDetectionTimesSeen(_DeviceID string, _VulnID string, _Port int, _Protocol string, _ExceptionID string, _TimesSeen int, _StatusID int) (id int, affectedRows int, err error) {
+// UpdateDetectionIgnore executes the stored procedure UpdateDetectionIgnore against the database
+func (conn *dbconn) UpdateDetectionIgnore(_DeviceID string, _VulnID string, _Port int, _Protocol string, _ExceptionID string) (id int, affectedRows int, err error) {
 
 	conn.Exec(&connection.Procedure{
-		Proc:       "UpdateDetectionTimesSeen",
-		Parameters: []interface{}{_DeviceID, _VulnID, _Port, _Protocol, _ExceptionID, _TimesSeen, _StatusID},
+		Proc:       "UpdateDetectionIgnore",
+		Parameters: []interface{}{_DeviceID, _VulnID, _Port, _Protocol, _ExceptionID},
 		Callback: func(results interface{}, dberr error) {
 			err = dberr
 

@@ -309,8 +309,8 @@ func (job *ScanCloseJob) processTicketForNormalRescan(deadHostIPToProofMap map[s
 		if err != nil {
 			job.lstream.Send(log.Errorf(err, "error while adding comment to ticket %s", ticket.Title()))
 		}
-	} else if detection != nil && detection.Updated().Before(scan.CreatedDate()) && !detection.Updated().IsZero() && !scan.CreatedDate().IsZero() {
-		job.lstream.Send(log.Infof("the scan didn't check %s for vulnerability %s [%s before %s]", ticket.Title(), ticket.VulnerabilityID(), detection.Updated().Format(time.RFC822), scan.CreatedDate().Format(time.RFC822)))
+	} else if detection != nil && detection.LastUpdated() != nil && detection.LastUpdated().Before(scan.CreatedDate()) && !detection.LastUpdated().IsZero() && !scan.CreatedDate().IsZero() {
+		job.lstream.Send(log.Infof("the scan didn't check %s for vulnerability %s [%s before %s]", ticket.Title(), ticket.VulnerabilityID(), detection.LastUpdated().Format(time.RFC822), scan.CreatedDate().Format(time.RFC822)))
 		err = engine.Transition(ticket, engine.GetStatusMap(jira.StatusScanError), fmt.Sprintf("The scan did not check the device for the vulnerability likely due to authentication issues"), sord(ticket.AssignedTo()))
 		if err != nil {
 			job.lstream.Send(log.Errorf(err, "error while transitioning ticket %s", ticket.Title()))
