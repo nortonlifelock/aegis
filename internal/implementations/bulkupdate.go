@@ -81,6 +81,7 @@ func (job *BulkUpdateJob) Process(ctx context.Context, id string, appconfig doma
 			job.createSocketChannel()
 			messages := job.sendMessageToAPI(job.ctx)
 			job.messages = messages
+			defer close(job.messages)
 
 			var jiraPayload *tool.JiraToolPayload
 			var filePath string
@@ -327,6 +328,7 @@ func (job *BulkUpdateJob) sendMessageToUser(messageToSend string, success bool) 
 	if byteErr == nil {
 		select {
 		case <-job.ctx.Done():
+			return
 		case job.messages <- byteVal:
 		}
 	}
@@ -340,7 +342,6 @@ func appearsToBeDescriptionLine(line string) bool {
 
 func (job *BulkUpdateJob) sendMessageToAPI(ctx context.Context) (messages chan []byte) {
 	messages = make(chan []byte)
-	alreadyClosed := false
 
 	go func() {
 		defer handleRoutinePanic(job.lstream)
@@ -348,11 +349,7 @@ func (job *BulkUpdateJob) sendMessageToAPI(ctx context.Context) (messages chan [
 		for {
 			select {
 			case <-ctx.Done():
-				if !alreadyClosed {
-					job.lstream.Send(log.Info("Closing API websocket"))
-					close(messages)
-					alreadyClosed = true
-				}
+				return
 			case message, ok := <-messages:
 				if ok {
 					if job.websocketConnection != nil {
@@ -385,6 +382,7 @@ func (job *BulkUpdateJob) uiProgressPrint(input string, lineCount int, commandSu
 	if err == nil {
 		select {
 		case <-job.ctx.Done():
+			return
 		case job.messages <- byteVal:
 		}
 	}
