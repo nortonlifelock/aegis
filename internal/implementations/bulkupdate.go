@@ -325,7 +325,10 @@ func (job *BulkUpdateJob) sendMessageToUser(messageToSend string, success bool) 
 
 	byteVal, byteErr := json.Marshal(message)
 	if byteErr == nil {
-		job.messages <- byteVal
+		select {
+		case <-job.ctx.Done():
+		case job.messages <- byteVal:
+		}
 	}
 
 }
@@ -380,7 +383,10 @@ func (job *BulkUpdateJob) uiProgressPrint(input string, lineCount int, commandSu
 
 	byteVal, err := json.Marshal(message)
 	if err == nil {
-		job.messages <- byteVal
+		select {
+		case <-job.ctx.Done():
+		case job.messages <- byteVal:
+		}
 	}
 
 	job.lstream.Send(log.Info(strings.Replace(input, "\n", "", -1)))
