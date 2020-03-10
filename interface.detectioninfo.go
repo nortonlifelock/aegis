@@ -10,6 +10,8 @@ type DetectionInfo interface {
 	DeviceID() string
 	VulnerabilityID() string
 	AlertDate() time.Time
+	LastFound() *time.Time
+	LastUpdated() *time.Time
 	Proof() string
 	DetectionStatusID() int
 	TimesSeen() int
