@@ -12,5 +12,6 @@ type TicketSummary interface {
 	ResolutionDate() (param *time.Time)
 	Status() (param string)
 	Title() (param string)
+	CreatedDate() (param *time.Time)
 	UpdatedDate() (param *time.Time)
 }

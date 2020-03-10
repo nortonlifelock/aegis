@@ -140,6 +140,7 @@ type GeneratedDatabaseConnection interface {
 	GetTicketByDeviceIDVulnID(inDeviceID string, inVulnID string, inPort int, inProtocol string, inOrgID string) (TicketSummary, error)
 	GetTicketByTitle(_Title string, _OrgID string) (TicketSummary, error)
 	GetTicketCountByStatus(inStatus string, inOrgID string) (QueryData, error)
+	GetTicketCreatedAfter(_UpperCVSS float32, _LowerCVSS float32, _CreatedAfter time.Time, _OrgID string) ([]TicketSummary, error)
 	GetUnfinishedScanSummariesBySourceConfigOrgID(_ScannerSourceConfigID string, _OrgID string) ([]ScanSummary, error)
 	GetUnfinishedScanSummariesBySourceOrgID(_SourceID string, _OrgID string) ([]ScanSummary, error)
 	GetUnmatchedVulns(_SourceID int) ([]VulnerabilityInfo, error)
