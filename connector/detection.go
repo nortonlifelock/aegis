@@ -74,9 +74,14 @@ func (d *detection) IgnoreID() (*string, error) {
 	return nil, fmt.Errorf("ignore id not retrievable from Nexpose")
 }
 
+// Updated - Nexpose doesn't return the date the last time the detection was found
+func (d *detection) LastFound() *time.Time {
+	return nil
+}
+
 // Updated - Nexpose doesn't return the date the last time the detection was updated
-func (d *detection) Updated() time.Time {
-	return time.Time{}
+func (d *detection) LastUpdate() *time.Time {
+	return nil
 }
 
 // ActiveKernel is not implemented in nexpose
