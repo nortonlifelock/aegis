@@ -1,5 +1,7 @@
 package domain
 
+import "time"
+
 // DeviceInfo defines the interface
 type DeviceInfo interface {
 	// ID is the ID of the device as reported by the backend database of Aegis
@@ -25,4 +27,7 @@ type DeviceInfo interface {
 	InstanceID() *string
 
 	State() *string
+
+	LastFound() *time.Time
+	LastUpdated() *time.Time
 }
