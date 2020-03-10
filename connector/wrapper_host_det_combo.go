@@ -89,7 +89,7 @@ func (combo *hostDetectionCombo) LastFound() *time.Time {
 	return &combo.detection.d.LastFound
 }
 
-func (combo *hostDetectionCombo) LastUpdate() *time.Time {
+func (combo *hostDetectionCombo) LastUpdated() *time.Time {
 	return &combo.detection.d.LastUpdate
 }
 
