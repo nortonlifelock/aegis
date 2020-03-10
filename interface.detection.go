@@ -16,7 +16,9 @@ type Detection interface {
 	Port() int
 	Protocol() string
 	IgnoreID() (*string, error)
-	Updated() time.Time
+	LastFound() *time.Time
+	LastUpdate() *time.Time
+	//Updated() time.Time
 	Device() (Device, error)
 	Vulnerability() (Vulnerability, error)
 }
