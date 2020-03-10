@@ -80,7 +80,7 @@ func (d *detection) LastFound() *time.Time {
 }
 
 // Updated - Nexpose doesn't return the date the last time the detection was updated
-func (d *detection) LastUpdate() *time.Time {
+func (d *detection) LastUpdated() *time.Time {
 	return nil
 }
 
