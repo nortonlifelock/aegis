@@ -58,21 +58,41 @@ func copyTicketsByJQL() {
 	prod := getProdJiraSession()
 	stage := getStageJiraSession()
 
-	tics, err := prod.GetByCustomJQL(ticketJQL)
-	check(err)
+	tics := prod.GetByCustomJQLChan(ticketJQL)
 
+
+	var count int
 	var wg sync.WaitGroup
-	for _, tic := range tics {
 
-		wg.Add(1)
-		go func(line domain.Ticket) {
-			defer wg.Done()
+	const numConcurrentThreads = 100
+	var permit = make(chan bool, numConcurrentThreads)
+	for i := 0; i < numConcurrentThreads; i++ {
+		permit <- true
+	}
 
-			_, newKey, err := stage.CreateTicket(&copyTicket{tic})
-			check(err)
+	for {
+		if tic, ok := <- tics; ok {
+			<-permit
+			wg.Add(1)
+			go func(line domain.Ticket) {
+				defer wg.Done()
+				defer func() {
+					permit <- true
+				}()
 
-			fmt.Printf("%s copied to %s\n", line, newKey)
-		}(tic)
+				_, newKey, err := stage.CreateTicket(&copyTicket{tic})
+				check(err)
+
+				fmt.Printf("%s copied to %s\n", line.Title(), newKey)
+			}(tic)
+
+			count++
+			if count == limitJQL {
+				break
+			}
+		} else {
+			break
+		}
 	}
 	wg.Wait()
 }
@@ -186,6 +206,7 @@ var (
 	prodJiraSourceID  string
 	filePath          string
 	ticketJQL         string
+	limitJQL          int
 )
 
 // TODO could also support JQLs
@@ -195,6 +216,7 @@ func init() {
 	stageID := flag.String("stage", "", "The source config ID of your stage instance")
 	filePathP := flag.String("file", "", "The path to your newline delimited file containing the titles of tickets you'd like to copy")
 	jql := flag.String("jql", "", "The JQL that will be used to copy tickets over")
+	limitP := flag.Int("limit", 1000, "The max amount of tickets that will be copied during a JQL copy")
 	flag.Parse()
 
 	if len(*prodID) == 0 || len(*stageID) == 0 {
@@ -210,7 +232,7 @@ func init() {
 		fmt.Println("Please provide a either path to your newline delimited file containing the titles of tickets you'd like to copy with -file or a JQL to grab tickets to copy with -jql")
 	}
 
-	stageJiraSourceID, prodJiraSourceID, filePath, ticketJQL = *stageID, *prodID, *filePathP, *jql
+	stageJiraSourceID, prodJiraSourceID, filePath, ticketJQL, limitJQL = *stageID, *prodID, *filePathP, *jql, *limitP
 
 	var err error
 	appConfig, err = config.LoadConfigByPath(*path)
