@@ -17,6 +17,7 @@ import (
 
 // TicketSummary defines the struct that implements the TicketSummary interface
 type TicketSummary struct {
+	CreatedDatevar    *time.Time
 	DetectionIDvar    string
 	DueDatevar        time.Time
 	OrganizationIDvar string
@@ -33,6 +34,7 @@ type TicketSummary struct {
 // MarshalJSON marshals the struct by converting it to a map
 func (myTicketSummary TicketSummary) MarshalJSON() ([]byte, error) {
 	return json.Marshal(map[string]interface{}{
+		"CreatedDate":    myTicketSummary.CreatedDatevar,
 		"DetectionID":    myTicketSummary.DetectionIDvar,
 		"DueDate":        myTicketSummary.DueDatevar,
 		"OrganizationID": myTicketSummary.OrganizationIDvar,
@@ -41,6 +43,11 @@ func (myTicketSummary TicketSummary) MarshalJSON() ([]byte, error) {
 		"Title":          myTicketSummary.Titlevar,
 		"UpdatedDate":    myTicketSummary.UpdatedDatevar,
 	})
+}
+
+// CreatedDate returns the CreatedDate parameter from the TicketSummary struct
+func (myTicketSummary *TicketSummary) CreatedDate() (param *time.Time) {
+	return myTicketSummary.CreatedDatevar
 }
 
 // DetectionID returns the DetectionID parameter from the TicketSummary struct

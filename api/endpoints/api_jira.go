@@ -420,15 +420,13 @@ func setCountStatusLabelForStatus(connector *jira.ConnectorJira, status string, 
 	//}
 }
 
-func calculateBurndownForPriority(sess *jira.ConnectorJira, priority string, SLA time.Duration, stats *BurndownStats, orgCode string) {
-	var date = time.Now().AddDate(0, 0, -90).Format("2006/01/02")
+func calculateBurndownForPriority(upperCVSS, lowerCVSS float32, SLA time.Duration, stats *BurndownStats, orgID string) {
+	var date = time.Now().AddDate(0, 0, -90)
 
-	var baseJQL = fmt.Sprintf("project = %s AND \"VRR Priority\" = \"%s\" AND created > \"%s\" AND Org ~ \"%s\" ORDER BY created asc", sess.GetProject(), priority, date, orgCode)
-	var ticketChan = sess.GetByCustomJQLChan(baseJQL)
+	tics, err := Ms.GetTicketCreatedAfter(upperCVSS, lowerCVSS, date, orgID)
 
-	for {
-		tic, ok := <-ticketChan
-		if ok {
+	if err == nil {
+		for _, tic := range tics {
 			if tic != nil {
 				if tic.CreatedDate() != nil {
 					var daysOpen time.Duration
@@ -446,22 +444,20 @@ func calculateBurndownForPriority(sess *jira.ConnectorJira, priority string, SLA
 						stats.Overdue++
 					}
 
-					if tic.Status() != nil {
+					if len(tic.Status()) > 0 {
 						makeCountForBurnDownChart(tic, daysOpenFloat, stats)
 					}
 
 				}
 			}
-		} else {
-			break
 		}
 	}
 
 	stats.Done = true
 }
 
-func makeCountForBurnDownChart(tic domain.Ticket, daysOpenFloat float64, stats *BurndownStats) {
-	if strings.Contains(strings.ToLower(*tic.Status()), "closed") {
+func makeCountForBurnDownChart(tic domain.TicketSummary, daysOpenFloat float64, stats *BurndownStats) {
+	if strings.Contains(strings.ToLower(tic.Status()), "closed") {
 		if daysOpenFloat < 30 {
 			stats.ZeroToThirty++
 		} else if daysOpenFloat < 60 {

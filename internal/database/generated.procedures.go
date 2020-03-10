@@ -6437,6 +6437,68 @@ func (conn *dbconn) GetTicketCountByStatus(inStatus string, inOrgID string) (dom
 	return retQueryData, err
 }
 
+// GetTicketCreatedAfter executes the stored procedure GetTicketCreatedAfter against the database and returns the read results
+func (conn *dbconn) GetTicketCreatedAfter(_UpperCVSS float32, _LowerCVSS float32, _CreatedAfter time.Time, _OrgID string) ([]domain.TicketSummary, error) {
+	var err error
+	var retTicketSummary = make([]domain.TicketSummary, 0)
+
+	conn.Read(&connection.Procedure{
+		Proc:       "GetTicketCreatedAfter",
+		Parameters: []interface{}{_UpperCVSS, _LowerCVSS, _CreatedAfter, _OrgID},
+		Callback: func(results interface{}, dberr error) {
+			err = dberr
+
+			if err == nil {
+
+				err = conn.getRows(results,
+					func(rows *sql.Rows) (err error) {
+						if err = rows.Err(); err == nil {
+
+							var myTitle string
+							var myStatus string
+							var myDetectionID string
+							var myOrganizationID string
+							var myCreatedDate *time.Time
+							var myUpdatedDate *time.Time
+							var myResolutionDate *time.Time
+							var myDueDate time.Time
+
+							if err = rows.Scan(
+
+								&myTitle,
+								&myStatus,
+								&myDetectionID,
+								&myOrganizationID,
+								&myCreatedDate,
+								&myUpdatedDate,
+								&myResolutionDate,
+								&myDueDate,
+							); err == nil {
+
+								newTicketSummary := &dal.TicketSummary{
+									Titlevar:          myTitle,
+									Statusvar:         myStatus,
+									DetectionIDvar:    myDetectionID,
+									OrganizationIDvar: myOrganizationID,
+									CreatedDatevar:    myCreatedDate,
+									UpdatedDatevar:    myUpdatedDate,
+									ResolutionDatevar: myResolutionDate,
+									DueDatevar:        myDueDate,
+								}
+
+								retTicketSummary = append(retTicketSummary, newTicketSummary)
+							}
+						}
+
+						return err
+					})
+			}
+		},
+	})
+
+	return retTicketSummary, err
+}
+
 // GetUnfinishedScanSummariesBySourceConfigOrgID executes the stored procedure GetUnfinishedScanSummariesBySourceConfigOrgID against the database and returns the read results
 func (conn *dbconn) GetUnfinishedScanSummariesBySourceConfigOrgID(_ScannerSourceConfigID string, _OrgID string) ([]domain.ScanSummary, error) {
 	var err error

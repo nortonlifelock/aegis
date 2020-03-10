@@ -7,7 +7,6 @@ import (
 
 	"github.com/nortonlifelock/aegis/internal/integrations"
 	"github.com/nortonlifelock/domain"
-	"github.com/nortonlifelock/jira"
 	"github.com/nortonlifelock/log"
 	"github.com/pkg/errors"
 )
@@ -39,7 +38,7 @@ func getTicketingConnection(source string, orgID string) (engine integrations.Ti
 				if err == nil {
 					// TODO what do we do if the connection closes? how do we check if the connection is still valid?
 					ticketingConnectionMap[source][orgID] = engine
-					gatherJiraData(engine, orgID)
+					gatherBurndownInfo(orgID)
 				}
 			} else {
 				err = errors.Errorf("could not find a source config for the source %s and organization %s in the database", source, orgID)
@@ -117,29 +116,17 @@ func logFunc(logType string, log string, logError error) (err error) {
 	return err
 }
 
-func gatherJiraData(engine integrations.TicketingEngine, orgID string) {
-	if connector, ok := engine.(*jira.ConnectorJira); ok {
-		gatherBurndownInfo(connector, orgID)
-	}
-}
+func gatherBurndownInfo(orgID string) {
+	burnDownPackage := &BurndownPackage{}
+	burnDownPackage.MediumStats = &BurndownStats{}
+	burnDownPackage.HighStats = &BurndownStats{}
+	burnDownPackage.CritStats = &BurndownStats{}
 
-func gatherBurndownInfo(connector *jira.ConnectorJira, orgID string) {
-	var organization domain.Organization
-	var err error
-	organization, err = Ms.GetOrganizationByID(orgID)
+	burnDownLock.Lock()
+	burnDownCache[orgID] = burnDownPackage
+	burnDownLock.Unlock()
 
-	if err == nil {
-		burnDownPackage := &BurndownPackage{}
-		burnDownPackage.MediumStats = &BurndownStats{}
-		burnDownPackage.HighStats = &BurndownStats{}
-		burnDownPackage.CritStats = &BurndownStats{}
-
-		burnDownLock.Lock()
-		burnDownCache[orgID] = burnDownPackage
-		burnDownLock.Unlock()
-
-		go calculateBurndownForPriority(connector, "Medium", 90, burnDownPackage.MediumStats, organization.Code())
-		go calculateBurndownForPriority(connector, "High", 60, burnDownPackage.HighStats, organization.Code())
-		go calculateBurndownForPriority(connector, "Critical", 30, burnDownPackage.CritStats, organization.Code())
-	}
+	go calculateBurndownForPriority(7, 4, 90, burnDownPackage.MediumStats, orgID)
+	go calculateBurndownForPriority(9, 7, 60, burnDownPackage.HighStats, orgID)
+	go calculateBurndownForPriority(10, 9, 30, burnDownPackage.CritStats, orgID)
 }
