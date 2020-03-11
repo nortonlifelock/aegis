@@ -22,6 +22,8 @@ github.com/nortonlifelock/domain v1.0.1-0.20200310202129-002bc6f1e019 h1:x1Mpbbs
 github.com/nortonlifelock/domain v1.0.1-0.20200310202129-002bc6f1e019/go.mod h1:znFyCnzgKqtnNcBVQ8XHKyPxMsMR7QDkyAApQ58Avuo=
 github.com/nortonlifelock/domain v1.0.1-0.20200310204059-cdd6046843e7 h1:PQLtrcaQMaO0av6dvJ/p3v0yDzCQW8w03bju18g8ocs=
 github.com/nortonlifelock/domain v1.0.1-0.20200310204059-cdd6046843e7/go.mod h1:znFyCnzgKqtnNcBVQ8XHKyPxMsMR7QDkyAApQ58Avuo=
+github.com/nortonlifelock/domain v1.0.1-0.20200311175912-361c413ebef4 h1:t5sGIl1lpNlpS6YhKCUaHT7gMRAP+axNv56SJ3byB3U=
+github.com/nortonlifelock/domain v1.0.1-0.20200311175912-361c413ebef4/go.mod h1:znFyCnzgKqtnNcBVQ8XHKyPxMsMR7QDkyAApQ58Avuo=
 github.com/nortonlifelock/files v1.0.0 h1:AKhTO0ozZsznao9tgrDbNkjaILPFadyBqWIKqSK4ylg=
 github.com/nortonlifelock/files v1.0.0/go.mod h1:ysI+Id+8FykfZXLfd2dflw17naIW8ePei/rgLmTBIfM=
 github.com/nortonlifelock/funnel v1.0.0/go.mod h1:TuMsXaIdv7u3n3j00+3cjLD9M7CLR9xTeFm4yNJfzyw=

@@ -113,3 +113,7 @@ func (a *asset) Region() *string {
 func (a *asset) InstanceID() *string {
 	return nil
 }
+
+func (a *asset) GroupID() *string {
+	return nil
+}
