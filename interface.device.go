@@ -18,6 +18,10 @@ type Device interface {
 
 	// Region is the area that the device is stored in (if the device is a cloud device)
 	Region() *string
+
 	// InstanceID identifies which instance a device is (the the device is a cloud device)
 	InstanceID() *string
+
+	// GroupID identifies which asset group the device lies in (an identifier that originates from the scanner)
+	GroupID() *string
 }
