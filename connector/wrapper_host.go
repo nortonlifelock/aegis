@@ -52,3 +52,7 @@ func (h *host) Vulnerabilities(ctx context.Context) (param <-chan domain.Detecti
 	err = fmt.Errorf("not implemented")
 	return out, err
 }
+
+func (h *host) GroupID() *string {
+	return nil
+}
