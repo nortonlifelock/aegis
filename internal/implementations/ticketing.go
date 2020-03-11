@@ -776,7 +776,6 @@ func (job *TicketingJob) payloadToTicket(payload *vulnerabilityPayload) (newtix 
 		template = scaffold.NewTemplateEmpty()
 		template.UpdateBase(descriptionTemplate)
 		template.Repl("%vulnurl", "").
-			Repl("%scandate", alertdate.Format(time.RFC1123Z)).
 			Repl("%description", payload.vuln.Description()).
 			Repl("%proof", payload.combo.Proof())
 
@@ -1065,10 +1064,6 @@ func (job *TicketingJob) gatherOSDropdown(input string) (output string) {
 
 const (
 	descriptionTemplate = `
-	*Scan Data:*
-
-	Scan Date: %scandate
-
 	*Description:*
 	%description
 

@@ -11,6 +11,7 @@ type AppConfig struct {
 	DatabaseSchema   string `json:"db_schema"`
 
 	EKey       string `json:"key_id"`
+	EType      string `json:"encryption_type"`
 	TopicKey   string `json:"sns_id"`
 	RegionKMS  string `json:"kms_region"`
 	RegionSNS  string `json:"sns_region"`
@@ -144,6 +145,10 @@ func (cfg AppConfig) UILocation() string {
 // SNSTopicID returns the topic ID for an SNS
 func (cfg AppConfig) SNSTopicID() string {
 	return cfg.TopicKey
+}
+
+func (cfg AppConfig) EncryptionType() string {
+	return cfg.EType
 }
 
 func (cfg AppConfig) KMSRegion() string {

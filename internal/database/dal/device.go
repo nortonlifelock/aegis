@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/nortonlifelock/domain"
+	"strconv"
 )
 
 // Device implements the domain.Device interface and utilizes the DeviceInfo object (which is tied to the database table Device)
@@ -50,6 +51,15 @@ func (device *Device) Region() *string {
 // InstanceID returns the ID of the device as according to the cloud environment that the device exists in
 func (device *Device) InstanceID() *string {
 	return device.Info.InstanceID()
+}
+
+func (device *Device) GroupID() *string {
+	var groupID string
+	if device.Info.GroupID() != nil {
+		groupID = strconv.Itoa(*device.Info.GroupID())
+	}
+
+	return &groupID
 }
 
 // Vulnerabilities returns a channel that contains all the detections that were found on the device
