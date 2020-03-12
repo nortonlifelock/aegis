@@ -172,6 +172,7 @@ func (a *Session) page(execute func(fields map[string]string) (totalPages int)) 
 
 		// Increment the page
 		currentPage++
+		wg.Wait() // TODO this makes paging nonconcurrent
 	}
 
 	wg.Wait()
