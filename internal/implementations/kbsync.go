@@ -142,11 +142,11 @@ func (job *VulnSyncJob) processOldVulnerability(ctx context.Context, vulnInDB do
 	if (vulnInDB.Updated() == nil && currentVuln.Updated().After(tord(vulnInDB.Created()))) || (vulnInDB.Updated() != nil && currentVuln.Updated().After(tord(vulnInDB.Updated()))) {
 
 		// The vulnerability is already in the database, we can create it's references right away
-		if err = job.createVulnerabilityReferences(ctx, currentVuln, vulnInDB); err == nil {
-			job.lstream.Send(log.Infof("Created vulnerability reference for VulnID: %v", currentVuln.SourceID()))
-		} else {
-			job.lstream.Send(log.Errorf(err, "Error while creating vulnerability reference for VulnID: [%v]", currentVuln.SourceID()))
-		}
+		//if err = job.createVulnerabilityReferences(ctx, currentVuln, vulnInDB); err == nil {
+		//	job.lstream.Send(log.Infof("Created vulnerability reference for VulnID: %v", currentVuln.SourceID()))
+		//} else {
+		//	job.lstream.Send(log.Errorf(err, "Error while creating vulnerability reference for VulnID: [%v]", currentVuln.SourceID()))
+		//}
 
 		// Update the information in the database
 		if err = job.updateVulnerability(vulnInDB, currentVuln, solution); err == nil {
