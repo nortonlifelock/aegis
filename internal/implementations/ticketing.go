@@ -794,8 +794,8 @@ func (job *TicketingJob) payloadToTicket(payload *vulnerabilityPayload) (newtix 
 		var created = time.Now()
 
 		newtix = &dal.Ticket{
-			DeviceIDvar: sord(payload.device.SourceID()),
-			//GroupIDvar:           strconv.Itoa(ticketing.Payload.DeviceGroup), // TODO
+			DeviceIDvar:          sord(payload.device.SourceID()),
+			GroupIDvar:           sord(payload.device.GroupID()),
 			VulnerabilityIDvar:   payload.vuln.SourceID(),
 			MethodOfDiscoveryvar: &methodOfDiscovery,
 

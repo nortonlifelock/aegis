@@ -30,6 +30,8 @@ SELECT
     D.VulnerabilityID,
     D.IgnoreID,
     D.AlertDate,
+    D.LastFound,
+    D.LastUpdated,
     D.Proof,
     D.Port,
     D.Protocol,
