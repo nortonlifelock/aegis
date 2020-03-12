@@ -14,6 +14,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 )
 
 type resource interface {
@@ -172,7 +173,7 @@ func (a *Session) page(execute func(fields map[string]string) (totalPages int)) 
 
 		// Increment the page
 		currentPage++
-		wg.Wait() // TODO this makes paging nonconcurrent
+		time.Sleep(time.Second * 3)
 	}
 
 	wg.Wait()
