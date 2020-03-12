@@ -464,7 +464,7 @@ func (job *AssetSyncJob) createOrUpdateDetection(deviceInDb domain.Device, vulnI
 			} else {
 
 				var canSkipUpdate bool
-				if !detectionInDB.Updated().IsZero() && !detectionFromScanner.LastUpdated().IsZero() {
+				if detectionFromScanner.LastUpdated() != nil && !detectionInDB.Updated().IsZero() && !detectionFromScanner.LastUpdated().IsZero() {
 					if detectionInDB.Updated().After(*detectionFromScanner.LastUpdated()) {
 						canSkipUpdate = true
 					}
