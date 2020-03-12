@@ -21,7 +21,7 @@ require (
 	github.com/nortonlifelock/jira-tool v1.0.0
 	github.com/nortonlifelock/job v1.0.1-0.20200127165455-ca80a64d226c
 	github.com/nortonlifelock/log v1.0.1-0.20200129171320-c4a4dd839ed8
-	github.com/nortonlifelock/nexpose v1.0.1-0.20200311175946-5d37130f3c25
+	github.com/nortonlifelock/nexpose v1.0.1-0.20200312195744-be94b2b08316
 	github.com/nortonlifelock/qualys v1.0.1-0.20200311180008-1e11fe5dfedc
 	github.com/nortonlifelock/scaffold v1.0.1-0.20200128220520-41da8a42d6d5
 	github.com/pkg/errors v0.9.1
