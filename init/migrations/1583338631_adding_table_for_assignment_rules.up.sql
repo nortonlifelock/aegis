@@ -1,3 +1,5 @@
+DROP TABLE IF EXISTS AssignmentRules;
+
 CREATE TABLE AssignmentRules(
     AssignmentGroup    VARCHAR(100) NULL,
     Assignee           VARCHAR(100) NULL,
