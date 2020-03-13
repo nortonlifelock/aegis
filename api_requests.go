@@ -208,7 +208,6 @@ func (session *Session) httpCall(method string, path string, fields map[string]s
 					var data []byte
 					if data, err = ioutil.ReadAll(response.Body); err == nil {
 						//fmt.Println(string(data))
-						ioutil.WriteFile("hostlist.xml", data, 0444)
 						if retResponse, ok := obj.(*simpleReturn); ok {
 
 							if err = xml.Unmarshal(data, &retResponse); err == nil {
