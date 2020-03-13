@@ -8,6 +8,32 @@ import (
 	"sync"
 )
 
+func (session *Session) GetTagDetections(tags []string, kernelFilterFlag int) (out <-chan QHost, err error) {
+	// Check for valid list of groups
+	if tags != nil && len(tags) > 0 {
+		// Handle the API request fields for Qualys
+
+		// use_tags=1&tag_set_by=id&tag_include_selector=all&tag_set_include=LLdev,Cloud Agent
+		var fields = make(map[string]string)
+		fields["action"] = "list"
+		fields["truncation_limit"] = "0"   // Pull groups of 2500 assets at a time until all assets are loaded
+		fields["show_reopened_info"] = "1" // Show the additional information related to vulnerabilities that have been Reopened in Qualys
+		fields["arf_kernel_filter"] = strconv.Itoa(kernelFilterFlag)
+		fields["use_tags"] = "1"
+		fields["tag_set_by"] = "id"
+		fields["tag_include_selector"] = "all"
+		fields["tag_set_include"] = strings.Join(tags, ",")
+
+		session.lstream.Send(log.Infof("Loading detections for hosts tagged by [%s] from Qualys", fields["tag_set_include"]))
+
+		out, _, err = session.getHostDetectionPostData(session.Config.Address()+qsAssetVMHost, fields)
+	} else {
+		err = fmt.Errorf("empty group list passed to GetHostDetections")
+	}
+
+	return out, err
+}
+
 // GetHostDetections Loads the vulnerability detections for each host that is part of the groups passed
 // into the "groups" variable and returns them on the OUT channel back to the processor
 // kernelFilterFlag sets the arf_kernel_filter flag in the host detection API calls. Can hold values [0,4]

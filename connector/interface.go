@@ -344,3 +344,47 @@ func (session *QsSession) Scans(ctx context.Context, payloads <-chan []byte) (sc
 
 	return out
 }
+
+func (session *QsSession) DetectionsByTag(ctx context.Context, tags []string) (detections <-chan domain.Detection, err error) {
+	var out = make(chan domain.Detection)
+
+	go func(out chan<- domain.Detection) {
+		defer handleRoutinePanic(session.lstream)
+		defer close(out)
+
+		session.lstream.Send(log.Info("Loading Host Detections from Qualys"))
+		var hosts <-chan qualys.QHost
+		if hosts, err = session.apiSession.GetTagDetections(tags, session.payload.KernelFilter); err == nil {
+
+			var processedDevVulns = make(map[string]bool)
+			var devVulnMutex = &sync.Mutex{}
+
+			wg := &sync.WaitGroup{}
+			func() {
+				for {
+					select {
+					case <-ctx.Done():
+						return
+					case h, ok := <-hosts:
+						if ok {
+							wg.Add(1)
+							go func(h qualys.QHost) {
+								defer handleRoutinePanic(session.lstream)
+								defer wg.Done()
+								session.pushCombosForHost(ctx, h, devVulnMutex, processedDevVulns, out)
+							}(h)
+						} else {
+							return
+						}
+					}
+				}
+			}()
+			wg.Wait()
+
+		} else {
+			session.lstream.Send(log.Error("Error while loading host detections from Qualys", err))
+		}
+	}(out)
+
+	return out, err
+}
