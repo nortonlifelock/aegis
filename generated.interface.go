@@ -75,7 +75,7 @@ type GeneratedDatabaseConnection interface {
 	GetDetectionsInfoForDevice(_DeviceID string) ([]DetectionInfo, error)
 	GetDeviceInfoByAssetOrgID(inAssetID string, inOrgID string) (DeviceInfo, error)
 	GetDeviceInfoByCloudSourceIDAndIP(_IP string, _CloudSourceID string, _OrgID string) (DeviceInfo, error)
-	GetDeviceInfoByGroupIP(inIP string, inGroupID int, inOrgID string) (DeviceInfo, error)
+	GetDeviceInfoByGroupIP(inIP string, inGroupID string, inOrgID string) (DeviceInfo, error)
 	GetDeviceInfoByIP(_IP string, _OrgID string) (DeviceInfo, error)
 	GetDeviceInfoByIPMACAndRegion(_IP string, _MAC string, _Region string, _OrgID string) (DeviceInfo, error)
 	GetDeviceInfoByInstanceID(_InstanceID string, _OrgID string) (DeviceInfo, error)

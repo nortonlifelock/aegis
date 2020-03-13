@@ -19,7 +19,7 @@ type DeviceInfo interface {
 	// Region is the area that the device is stored in (if the device is a cloud device)
 	Region() *string
 
-	GroupID() *int
+	GroupID() *string
 
 	// InstanceID identifies which instance a device is (the the device is a cloud device)
 	InstanceID() *string
