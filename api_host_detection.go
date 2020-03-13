@@ -13,7 +13,6 @@ func (session *Session) GetTagDetections(tags []string, kernelFilterFlag int) (o
 	if tags != nil && len(tags) > 0 {
 		// Handle the API request fields for Qualys
 
-		// use_tags=1&tag_set_by=id&tag_include_selector=all&tag_set_include=LLdev,Cloud Agent
 		var fields = make(map[string]string)
 		fields["action"] = "list"
 		fields["truncation_limit"] = "0"   // Pull groups of 2500 assets at a time until all assets are loaded

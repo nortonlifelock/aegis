@@ -64,45 +64,96 @@ func (session *QsSession) KnowledgeBase(ctx context.Context, since *time.Time) <
 
 // Detections returns a channel which contains combinations of devices/vulnerabilities within a group where the vulnerability was found on the device
 // and the device exists in the asset group
-func (session *QsSession) Detections(ctx context.Context, groupsIDs []string) (detections <-chan domain.Detection, err error) {
+func (session *QsSession) Detections(ctx context.Context, ids []string) (detections <-chan domain.Detection, err error) {
 	var out = make(chan domain.Detection)
 
 	go func(out chan<- domain.Detection) {
 		defer handleRoutinePanic(session.lstream)
 		defer close(out)
 
-		session.lstream.Send(log.Info("Loading Host Detections from Qualys"))
-		var hosts <-chan qualys.QHost
-		if hosts, err = session.apiSession.GetHostDetections(groupsIDs, session.payload.KernelFilter); err == nil {
+		var tags = make([]string, 0)
+		var groupIDs = make([]string, 0)
+		const tagPrefix = "tag-"
+		for _, id := range ids {
+			if strings.Index(id, tagPrefix) >= 0 {
+				tags = append(tags, id[strings.Index(id, tagPrefix)+len(tagPrefix):])
+			} else {
+				groupIDs = append(groupIDs, id)
+			}
+		}
 
-			var processedDevVulns = make(map[string]bool)
-			var devVulnMutex = &sync.Mutex{}
+		if len(groupIDs) > 0 {
+			session.lstream.Send(log.Infof("Loading Detections from Qualys using group IDs [%s]", strings.Join(groupIDs, ",")))
 
-			wg := &sync.WaitGroup{}
-			func() {
-				for {
-					select {
-					case <-ctx.Done():
-						return
-					case h, ok := <-hosts:
-						if ok {
-							wg.Add(1)
-							go func(h qualys.QHost) {
-								defer handleRoutinePanic(session.lstream)
-								defer wg.Done()
-								session.pushCombosForHost(ctx, h, devVulnMutex, processedDevVulns, out)
-							}(h)
-						} else {
+			var hosts <-chan qualys.QHost
+			if hosts, err = session.apiSession.GetHostDetections(groupIDs, session.payload.KernelFilter); err == nil {
+
+				var processedDevVulns = make(map[string]bool)
+				var devVulnMutex = &sync.Mutex{}
+
+				wg := &sync.WaitGroup{}
+				func() {
+					for {
+						select {
+						case <-ctx.Done():
 							return
+						case h, ok := <-hosts:
+							if ok {
+								wg.Add(1)
+								go func(h qualys.QHost) {
+									defer handleRoutinePanic(session.lstream)
+									defer wg.Done()
+									session.pushCombosForHost(ctx, h, devVulnMutex, processedDevVulns, out)
+								}(h)
+							} else {
+								return
+							}
 						}
 					}
-				}
-			}()
-			wg.Wait()
+				}()
+				wg.Wait()
 
-		} else {
-			session.lstream.Send(log.Error("Error while loading host detections from Qualys", err))
+			} else {
+				session.lstream.Send(log.Error("Error while loading host detections from Qualys", err))
+			}
 		}
+
+		if len(tags) > 0 {
+			session.lstream.Send(log.Infof("Loading Detections from Qualys using tags [%s]", strings.Join(tags, ",")))
+
+			var hosts <-chan qualys.QHost
+			if hosts, err = session.apiSession.GetTagDetections(tags, session.payload.KernelFilter); err == nil {
+
+				var processedDevVulns = make(map[string]bool)
+				var devVulnMutex = &sync.Mutex{}
+
+				wg := &sync.WaitGroup{}
+				func() {
+					for {
+						select {
+						case <-ctx.Done():
+							return
+						case h, ok := <-hosts:
+							if ok {
+								wg.Add(1)
+								go func(h qualys.QHost) {
+									defer handleRoutinePanic(session.lstream)
+									defer wg.Done()
+									session.pushCombosForHost(ctx, h, devVulnMutex, processedDevVulns, out)
+								}(h)
+							} else {
+								return
+							}
+						}
+					}
+				}()
+				wg.Wait()
+
+			} else {
+				session.lstream.Send(log.Error("Error while loading host detections from Qualys", err))
+			}
+		}
+
 	}(out)
 
 	return out, err
@@ -343,48 +394,4 @@ func (session *QsSession) Scans(ctx context.Context, payloads <-chan []byte) (sc
 	}(out)
 
 	return out
-}
-
-func (session *QsSession) DetectionsByTag(ctx context.Context, tags []string) (detections <-chan domain.Detection, err error) {
-	var out = make(chan domain.Detection)
-
-	go func(out chan<- domain.Detection) {
-		defer handleRoutinePanic(session.lstream)
-		defer close(out)
-
-		session.lstream.Send(log.Info("Loading Host Detections from Qualys"))
-		var hosts <-chan qualys.QHost
-		if hosts, err = session.apiSession.GetTagDetections(tags, session.payload.KernelFilter); err == nil {
-
-			var processedDevVulns = make(map[string]bool)
-			var devVulnMutex = &sync.Mutex{}
-
-			wg := &sync.WaitGroup{}
-			func() {
-				for {
-					select {
-					case <-ctx.Done():
-						return
-					case h, ok := <-hosts:
-						if ok {
-							wg.Add(1)
-							go func(h qualys.QHost) {
-								defer handleRoutinePanic(session.lstream)
-								defer wg.Done()
-								session.pushCombosForHost(ctx, h, devVulnMutex, processedDevVulns, out)
-							}(h)
-						} else {
-							return
-						}
-					}
-				}
-			}()
-			wg.Wait()
-
-		} else {
-			session.lstream.Send(log.Error("Error while loading host detections from Qualys", err))
-		}
-	}(out)
-
-	return out, err
 }
