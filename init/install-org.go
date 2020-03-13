@@ -92,8 +92,14 @@ func createJobConfigs(db domain.DatabaseConnection, orgID, scannerSCID, ticketSC
 	}
 	ticketingBody, err := json.Marshal(&ticketingPayload)
 	check(err)
+
+	var groupIDsString = make([]string, 0)
+	for _, ag := range assetGroups {
+		groupIDsString = append(groupIDsString, strconv.Itoa(ag))
+	}
+
 	assetSyncPayload := implementations.AssetSyncPayload{
-		GroupIDs: assetGroups,
+		GroupIDs: groupIDsString,
 	}
 	assetSyncBody, err := json.Marshal(&assetSyncPayload)
 	check(err)

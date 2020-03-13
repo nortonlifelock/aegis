@@ -189,7 +189,7 @@ func (conn *dbconn) CreateDetection(_OrgID string, _SourceID string, _DeviceID s
 }
 
 // CreateDevice executes the stored procedure CreateDevice against the database
-func (conn *dbconn) CreateDevice(_AssetID string, _SourceID string, _Ip string, _Hostname string, _MAC string, _GroupID int, _OrgID string, _OS string, _OSTypeID int) (id int, affectedRows int, err error) {
+func (conn *dbconn) CreateDevice(_AssetID string, _SourceID string, _Ip string, _Hostname string, _MAC string, _GroupID string, _OrgID string, _OS string, _OSTypeID int) (id int, affectedRows int, err error) {
 
 	conn.Exec(&connection.Procedure{
 		Proc:       "CreateDevice",
@@ -2436,7 +2436,7 @@ func (conn *dbconn) GetDeviceInfoByAssetOrgID(inAssetID string, inOrgID string) 
 							var myIP string
 							var myHostName string
 							var myRegion *string
-							var myGroupID *int
+							var myGroupID *string
 							var myInstanceID *string
 
 							if err = rows.Scan(
@@ -2546,7 +2546,7 @@ func (conn *dbconn) GetDeviceInfoByCloudSourceIDAndIP(_IP string, _CloudSourceID
 }
 
 // GetDeviceInfoByGroupIP executes the stored procedure GetDeviceInfoByGroupIP against the database and returns the read results
-func (conn *dbconn) GetDeviceInfoByGroupIP(inIP string, inGroupID int, inOrgID string) (domain.DeviceInfo, error) {
+func (conn *dbconn) GetDeviceInfoByGroupIP(inIP string, inGroupID string, inOrgID string) (domain.DeviceInfo, error) {
 	var err error
 	var retDeviceInfo domain.DeviceInfo
 
@@ -2794,7 +2794,7 @@ func (conn *dbconn) GetDeviceInfoByInstanceID(_InstanceID string, _OrgID string)
 }
 
 // GetDeviceInfoByScannerSourceID executes the stored procedure GetDeviceInfoByScannerSourceID against the database and returns the read results
-func (conn *dbconn) GetDeviceInfoByScannerSourceID(_IP string, _GroupID int, _OrgID string) (domain.DeviceInfo, error) {
+func (conn *dbconn) GetDeviceInfoByScannerSourceID(_IP string, _GroupID string, _OrgID string) (domain.DeviceInfo, error) {
 	var err error
 	var retDeviceInfo domain.DeviceInfo
 
@@ -7834,7 +7834,7 @@ func (conn *dbconn) SetScheduleLastRun(_ID string) (id int, affectedRows int, er
 }
 
 // UpdateAssetIDOsTypeIDOfDevice executes the stored procedure UpdateAssetIDOsTypeIDOfDevice against the database
-func (conn *dbconn) UpdateAssetIDOsTypeIDOfDevice(_ID string, _AssetID string, _ScannerSourceID string, _GroupID int, _OS string, _HostName string, _OsTypeID int, _OrgID string) (id int, affectedRows int, err error) {
+func (conn *dbconn) UpdateAssetIDOsTypeIDOfDevice(_ID string, _AssetID string, _ScannerSourceID string, _GroupID string, _OS string, _HostName string, _OsTypeID int, _OrgID string) (id int, affectedRows int, err error) {
 
 	conn.Exec(&connection.Procedure{
 		Proc:       "UpdateAssetIDOsTypeIDOfDevice",
