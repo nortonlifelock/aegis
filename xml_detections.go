@@ -96,10 +96,10 @@ type QHost struct {
 
 	// Host List Additions
 
-	//EC2Id					string					`xml:"EC2_INSTANCE_ID, omitempty"`
+	EC2Id string `xml:"EC2_INSTANCE_ID, omitempty"`
 	//QGHostI					string					`xml:"QG_HOSTID, omitempty"`
 	//Tags					string					`xml:"TAGS>TAG, omitempty"` // TODO
-	//Metadata				[]QEC2Attribute			`xml:"METADATA>EC2, omitempty"`
+	Metadata []interface{} `xml:"METADATA>EC2, omitempty"`
 }
 
 // QDetection is a member of QHost and must be exported in order to be marshaled
