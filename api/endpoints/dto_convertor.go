@@ -360,7 +360,7 @@ func toJobConfigDto(orgID string, orgCode string, jobConfig domain.JobConfig, is
 			if insource, err := Ms.GetSourceConfigByID(sord(jobConfig.DataInSourceConfigID())); err == nil {
 				if insource != nil {
 					if insource.OrganizationID() == orgID {
-						sourceIn = insource.Source()
+						sourceIn = insource.Address()
 					}
 				}
 			}
@@ -368,7 +368,7 @@ func toJobConfigDto(orgID string, orgCode string, jobConfig domain.JobConfig, is
 			if outsource, err := Ms.GetSourceConfigByID(sord(jobConfig.DataOutSourceConfigID())); err == nil {
 				if outsource != nil {
 					if outsource.OrganizationID() == orgID {
-						sourceOut = outsource.Source()
+						sourceOut = outsource.Address()
 					}
 				}
 			}
