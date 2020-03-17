@@ -116,13 +116,13 @@ func (job *RescanQueueJob) Process(ctx context.Context, id string, appconfig dom
 	return err
 }
 
-func (job *RescanQueueJob) getAssetGroups() (assetGroupBelongsToThisOrgAndScanner map[int]bool, err error) {
-	assetGroupBelongsToThisOrgAndScanner = make(map[int]bool)
+func (job *RescanQueueJob) getAssetGroups() (assetGroupBelongsToThisOrgAndScanner map[string]bool, err error) {
+	assetGroupBelongsToThisOrgAndScanner = make(map[string]bool)
 
 	var assetGroups []domain.AssetGroup
 	if assetGroups, err = job.db.GetAssetGroupForOrg(job.outsource.ID(), job.config.OrganizationID()); err == nil {
 		for _, assetGroup := range assetGroups {
-			assetGroupBelongsToThisOrgAndScanner[assetGroup.GroupID()] = true
+			assetGroupBelongsToThisOrgAndScanner[strconv.Itoa(assetGroup.GroupID())] = true
 		}
 	} else {
 		err = fmt.Errorf("error while loading asset groups - %s", err.Error())
@@ -133,7 +133,7 @@ func (job *RescanQueueJob) getAssetGroups() (assetGroupBelongsToThisOrgAndScanne
 
 func (job *RescanQueueJob) processCleanedIssues(issues <-chan domain.Ticket) {
 	var groupIDToTickets = make(map[string][]domain.Ticket)
-	var assetGroupBelongsToThisOrgAndScanner map[int]bool
+	var assetGroupBelongsToThisOrgAndScanner map[string]bool
 	var err error
 	assetGroupBelongsToThisOrgAndScanner, err = job.getAssetGroups()
 	if err != nil {
@@ -160,7 +160,7 @@ func (job *RescanQueueJob) processCleanedIssues(issues <-chan domain.Ticket) {
 							if deviceInfo != nil {
 								if deviceInfo.GroupID() != nil {
 
-									groupID := strconv.Itoa(*deviceInfo.GroupID())
+									groupID := *deviceInfo.GroupID()
 
 									if assetGroupBelongsToThisOrgAndScanner[*deviceInfo.GroupID()] {
 										if groupIDToTickets[groupID] == nil {
