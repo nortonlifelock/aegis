@@ -24,4 +24,4 @@ SELECT
     D.Region,
     D.InstanceID
 FROM Device D
-WHERE D.OrganizationID = _OrgID AND (D.InstanceId = _InstanceID OR D.HostName LIKE CONCAT('%', _InstanceID, '%'));
+WHERE D.OrganizationID = _OrgID AND D.InstanceId = _InstanceID;

@@ -7,7 +7,7 @@
   IP          VARCHAR(36)  NOT
   HostName    VARCHAR(300) NOT
   Region      VARCHAR(100) NULL
-  GroupID     VARCHAR(100) NULL
+  GroupID     INT          NULL
   InstanceID  VARCHAR(100) NULL
 */
 

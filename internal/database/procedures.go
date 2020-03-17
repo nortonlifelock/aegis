@@ -53,7 +53,7 @@ func (conn *dbconn) GetDeviceByInstanceID(_InstanceID string, _OrgID string) (do
 	return device, err
 }
 
-func (conn *dbconn) GetDeviceByScannerSourceID(_IP string, _GroupID string, _OrgID string) (domain.Device, error) {
+func (conn *dbconn) GetDeviceByScannerSourceID(_IP string, _GroupID int, _OrgID string) (domain.Device, error) {
 	var device domain.Device
 	info, err := conn.GetDeviceInfoByScannerSourceID(_IP, _GroupID, _OrgID)
 	if err == nil {
