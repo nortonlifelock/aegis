@@ -58,7 +58,7 @@ type GeneratedDatabaseConnection interface {
 	GetAllJobConfigsWithOrder(_offset int, _limit int, _configID string, _jobid int, _dataInSourceConfigID string, _dataOutSourceConfigID string, _priorityOverride int, _continuous bool, _Payload string, _waitInSeconds int, _maxInstances int, _autoStart bool, _OrgID string, _updatedBy string, _createdBy string, _sortField string, _sortOrder string, _updatedDate time.Time, _createdDate time.Time, _lastJobStart time.Time, _ID string) ([]JobConfig, error)
 	GetAssetGroup(inOrgID string, _GroupID int, _ScannerConfigSourceID string) (AssetGroup, error)
 	GetAssetGroupForOrg(inScannerSourceConfigID string, inOrgID string) ([]AssetGroup, error)
-	GetAssetGroupForOrgNoScanner(inOrgID string, inGroupID string) ([]AssetGroup, error)
+	GetAssetGroupForOrgNoScanner(inOrgID string, inGroupID string) (AssetGroup, error)
 	GetAssetGroupsByCloudSource(inOrgID string, inCloudSourceID string) ([]AssetGroup, error)
 	GetAssignmentGroupByIP(_SourceID string, _OrganizationID string, _IP string) ([]AssignmentGroup, error)
 	GetAssignmentGroupByOrgIP(_OrganizationID string, _IP string) ([]AssignmentGroup, error)
