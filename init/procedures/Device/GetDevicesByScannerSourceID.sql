@@ -14,7 +14,7 @@
 
 DROP PROCEDURE IF EXISTS `GetDeviceInfoByScannerSourceID`;
 
-CREATE PROCEDURE `GetDeviceInfoByScannerSourceID` (_IP VARCHAR(36), _GroupID VARCHAR(100), _OrgID VARCHAR(36))
+CREATE PROCEDURE `GetDeviceInfoByScannerSourceID` (_IP VARCHAR(36), _GroupID VARCHAR(200), _OrgID VARCHAR(36))
     #BEGIN#
 SELECT
     D.ID,

@@ -1440,6 +1440,56 @@ func (conn *dbconn) GetAssetGroupForOrg(inScannerSourceConfigID string, inOrgID 
 	return retAssetGroup, err
 }
 
+// GetAssetGroupForOrgNoScanner executes the stored procedure GetAssetGroupForOrgNoScanner against the database and returns the read results
+func (conn *dbconn) GetAssetGroupForOrgNoScanner(inOrgID string, inGroupID string) ([]domain.AssetGroup, error) {
+	var err error
+	var retAssetGroup = make([]domain.AssetGroup, 0)
+
+	conn.Read(&connection.Procedure{
+		Proc:       "GetAssetGroupForOrgNoScanner",
+		Parameters: []interface{}{inOrgID, inGroupID},
+		Callback: func(results interface{}, dberr error) {
+			err = dberr
+
+			if err == nil {
+
+				err = conn.getRows(results,
+					func(rows *sql.Rows) (err error) {
+						if err = rows.Err(); err == nil {
+
+							var myGroupID int
+							var myScannerSourceID string
+							var myCloudSourceID *string
+							var myScannerSourceConfigID *string
+
+							if err = rows.Scan(
+
+								&myGroupID,
+								&myScannerSourceID,
+								&myCloudSourceID,
+								&myScannerSourceConfigID,
+							); err == nil {
+
+								newAssetGroup := &dal.AssetGroup{
+									GroupIDvar:               myGroupID,
+									ScannerSourceIDvar:       myScannerSourceID,
+									CloudSourceIDvar:         myCloudSourceID,
+									ScannerSourceConfigIDvar: myScannerSourceConfigID,
+								}
+
+								retAssetGroup = append(retAssetGroup, newAssetGroup)
+							}
+						}
+
+						return err
+					})
+			}
+		},
+	})
+
+	return retAssetGroup, err
+}
+
 // GetAssetGroupsByCloudSource executes the stored procedure GetAssetGroupsByCloudSource against the database and returns the read results
 func (conn *dbconn) GetAssetGroupsByCloudSource(inOrgID string, inCloudSourceID string) ([]domain.AssetGroup, error) {
 	var err error
@@ -2173,6 +2223,92 @@ func (conn *dbconn) GetDetectionInfoBySourceVulnID(_SourceDeviceID string, _Sour
 								}
 
 								retDetectionInfo = newDetectionInfo
+							}
+						}
+
+						return err
+					})
+			}
+		},
+	})
+
+	return retDetectionInfo, err
+}
+
+// GetDetectionInfoForGroupAfter executes the stored procedure GetDetectionInfoForGroupAfter against the database and returns the read results
+func (conn *dbconn) GetDetectionInfoForGroupAfter(_After time.Time, _OrgID string, inGroupID string) ([]domain.DetectionInfo, error) {
+	var err error
+	var retDetectionInfo = make([]domain.DetectionInfo, 0)
+
+	conn.Read(&connection.Procedure{
+		Proc:       "GetDetectionInfoForGroupAfter",
+		Parameters: []interface{}{_After, _OrgID, inGroupID},
+		Callback: func(results interface{}, dberr error) {
+			err = dberr
+
+			if err == nil {
+
+				err = conn.getRows(results,
+					func(rows *sql.Rows) (err error) {
+						if err = rows.Err(); err == nil {
+
+							var myID string
+							var myOrganizationID string
+							var mySourceID string
+							var myDeviceID string
+							var myVulnerabilityID string
+							var myIgnoreID *string
+							var myAlertDate time.Time
+							var myLastFound *time.Time
+							var myLastUpdated *time.Time
+							var myProof string
+							var myPort int
+							var myProtocol string
+							var myActiveKernel *int
+							var myDetectionStatusID int
+							var myTimesSeen int
+							var myUpdated time.Time
+
+							if err = rows.Scan(
+
+								&myID,
+								&myOrganizationID,
+								&mySourceID,
+								&myDeviceID,
+								&myVulnerabilityID,
+								&myIgnoreID,
+								&myAlertDate,
+								&myLastFound,
+								&myLastUpdated,
+								&myProof,
+								&myPort,
+								&myProtocol,
+								&myActiveKernel,
+								&myDetectionStatusID,
+								&myTimesSeen,
+								&myUpdated,
+							); err == nil {
+
+								newDetectionInfo := &dal.DetectionInfo{
+									IDvar:                myID,
+									OrganizationIDvar:    myOrganizationID,
+									SourceIDvar:          mySourceID,
+									DeviceIDvar:          myDeviceID,
+									VulnerabilityIDvar:   myVulnerabilityID,
+									IgnoreIDvar:          myIgnoreID,
+									AlertDatevar:         myAlertDate,
+									LastFoundvar:         myLastFound,
+									LastUpdatedvar:       myLastUpdated,
+									Proofvar:             myProof,
+									Portvar:              myPort,
+									Protocolvar:          myProtocol,
+									ActiveKernelvar:      myActiveKernel,
+									DetectionStatusIDvar: myDetectionStatusID,
+									TimesSeenvar:         myTimesSeen,
+									Updatedvar:           myUpdated,
+								}
+
+								retDetectionInfo = append(retDetectionInfo, newDetectionInfo)
 							}
 						}
 
@@ -7810,6 +7946,35 @@ func (conn *dbconn) SetScheduleLastRun(_ID string) (id int, affectedRows int, er
 	conn.Exec(&connection.Procedure{
 		Proc:       "SetScheduleLastRun",
 		Parameters: []interface{}{_ID},
+		Callback: func(results interface{}, dberr error) {
+			err = dberr
+
+			if result, ok := results.(sql.Result); ok {
+				var idOut int64
+
+				// Get the id of the last inserted record
+				if idOut, err = result.LastInsertId(); err == nil {
+					id = int(idOut)
+				}
+
+				// Get the number of affected rows for the execution
+				if idOut, err = result.RowsAffected(); ok {
+					affectedRows = int(idOut)
+				}
+			}
+
+		},
+	})
+
+	return id, affectedRows, err
+}
+
+// UpdateAssetGroupLastTicket executes the stored procedure UpdateAssetGroupLastTicket against the database
+func (conn *dbconn) UpdateAssetGroupLastTicket(inGroupID string, inOrgID string, inLastTicketTime time.Time) (id int, affectedRows int, err error) {
+
+	conn.Exec(&connection.Procedure{
+		Proc:       "UpdateAssetGroupLastTicket",
+		Parameters: []interface{}{inGroupID, inOrgID, inLastTicketTime},
 		Callback: func(results interface{}, dberr error) {
 			err = dberr
 

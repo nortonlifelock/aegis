@@ -24,6 +24,7 @@ import (
 // due date is in the past
 type TicketingPayload struct {
 	MinDate *time.Time `json:"mindate,omitempty"`
+	Groups  []string   `json:"groups,omitempty"`
 }
 
 // OrgPayload contains the SLA information for how long a vulnerability has to be remediated given the severity
@@ -209,12 +210,20 @@ func (job *TicketingJob) Process(ctx context.Context, id string, appconfig domai
 							if job.assignmentRules, err = job.loadAssignmentRules(); err == nil {
 								if job.tagMaps, err = job.db.GetTagMapsByOrg(job.config.OrganizationID()); err == nil {
 									job.lstream.Send(log.Debug("Scanner connection initialized."))
-									var detections []domain.Detection
-									if detections, err = job.db.GetDetectionsAfter(tord1970(job.config.LastJobStart()), job.config.OrganizationID()); err == nil {
-										job.processVulnerabilities(vscanner, pushDetectionsToChannel(job.ctx, detections))
+
+									if len(job.Payload.Groups) == 0 {
+										var detections []domain.Detection
+										if detections, err = job.db.GetDetectionsAfter(tord1970(job.config.LastJobStart()), job.config.OrganizationID()); err == nil {
+											job.processVulnerabilities(vscanner, pushDetectionsToChannel(job.ctx, detections))
+
+											// TODO update all asset groups last run
+										} else {
+											job.lstream.Send(log.Error("Error occurred while loading device vulnerability information", err))
+										}
 									} else {
-										job.lstream.Send(log.Error("Error occurred while loading device vulnerability information", err))
+
 									}
+
 								} else {
 									job.lstream.Send(log.Error("error while loading tag maps", err))
 								}
