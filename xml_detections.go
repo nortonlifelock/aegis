@@ -96,7 +96,7 @@ type QHost struct {
 
 	// Host List Additions
 
-	EC2Id string `xml:"EC2_INSTANCE_ID, omitempty"`
+	EC2Id string `xml:"EC2_INSTANCE_ID"`
 	//QGHostI					string					`xml:"QG_HOSTID, omitempty"`
 	//Tags					string					`xml:"TAGS>TAG, omitempty"` // TODO
 	Metadata []interface{} `xml:"METADATA>EC2, omitempty"`
