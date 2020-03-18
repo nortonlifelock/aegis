@@ -17,12 +17,12 @@ require (
 	github.com/nortonlifelock/domain v1.0.1-0.20200311181143-b3ffefeaf277
 	github.com/nortonlifelock/dome9 v1.0.0
 	github.com/nortonlifelock/files v1.0.1-0.20200127165427-5178f1323f54
-	github.com/nortonlifelock/jira v1.0.1-0.20200311163735-e0a66bff058d
+	github.com/nortonlifelock/jira v1.0.1-0.20200318174851-c1758a9ed4a1
 	github.com/nortonlifelock/jira-tool v1.0.0
 	github.com/nortonlifelock/job v1.0.1-0.20200127165455-ca80a64d226c
 	github.com/nortonlifelock/log v1.0.1-0.20200129171320-c4a4dd839ed8
-	github.com/nortonlifelock/nexpose v1.0.1-0.20200312200923-206444b619a6
-	github.com/nortonlifelock/qualys v1.0.1-0.20200311180008-1e11fe5dfedc
+	github.com/nortonlifelock/nexpose v1.0.1-0.20200318174825-e7b65e7b05bb
+	github.com/nortonlifelock/qualys v1.0.1-0.20200318174706-35f55ebd2f8d
 	github.com/nortonlifelock/scaffold v1.0.1-0.20200128220520-41da8a42d6d5
 	github.com/pkg/errors v0.9.1
 	github.com/rs/cors v1.7.0
