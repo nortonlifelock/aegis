@@ -51,6 +51,7 @@ github.com/mitchellh/go-homedir v1.1.0/go.mod h1:SfyaCUpYCn1Vlf4IUYiD9fPX4A5wJrk
 github.com/nortonlifelock/aegis v1.0.0 h1:JlH/UngRlWFI556TV5W7QBL884Io6K9NHgTrQMMBVuE=
 github.com/nortonlifelock/aegis v1.0.1-0.20200214175024-391a38de2f21 h1:sYbknY2B2CLEIKtS1rg3fH7zilh35+EBLOSXfEClxH0=
 github.com/nortonlifelock/aegis v1.0.1-0.20200214175024-391a38de2f21/go.mod h1:JwWZu8YoaU462JmPozV3rS4nNowhHjFymk0sN1lNQz0=
+github.com/nortonlifelock/aegis v1.0.1-0.20200214181401-3a5d0fe8c62c/go.mod h1:pprYFZqbbm1fxirlwzyqQtiZha/+r4TvbbOGSYl1tJw=
 github.com/nortonlifelock/aegis-scaffold v1.0.1-0.20200213180058-3ccede17a9f7/go.mod h1:zHXocXsO6BMKn9IWPIjdBSitDJ2m0NBdaa0jX3WE45o=
 github.com/nortonlifelock/aws v1.0.0/go.mod h1:aL7fXkwkl4AiJOoY393+wBa/+fIkpIknbbQj/TwcQvE=
 github.com/nortonlifelock/azure v1.0.1-0.20200127180045-bed3edc24747/go.mod h1:hRxpHJca8syuW8CEz1w7lRXVah8by8HNamacwGlxp3k=
@@ -85,6 +86,8 @@ github.com/nortonlifelock/files v1.0.1-0.20200127165427-5178f1323f54 h1:kPXkjE1l
 github.com/nortonlifelock/files v1.0.1-0.20200127165427-5178f1323f54/go.mod h1:1oRpox7YM9AF1C2IqcOzEaEozMBf4g6w49LanGm14qk=
 github.com/nortonlifelock/funnel v1.0.0 h1:MO+bM/Ih5cqlajo9TdPGwXdCpzKWUA8u0D7cI7Bsf8U=
 github.com/nortonlifelock/funnel v1.0.0/go.mod h1:TuMsXaIdv7u3n3j00+3cjLD9M7CLR9xTeFm4yNJfzyw=
+github.com/nortonlifelock/funnel v1.0.1-0.20200218201219-7e575e0ac54d h1:skvWGFhM1NjDvCsFP5mjmeXk5pXnLPgeHylv2rrtQJg=
+github.com/nortonlifelock/funnel v1.0.1-0.20200218201219-7e575e0ac54d/go.mod h1:ZctlFxJXYjGg68BHXosMmzURmUNaaKL2MOy2Pn0o5Jk=
 github.com/nortonlifelock/implementations v1.0.1-0.20200128212611-6c9b49b4c443/go.mod h1:Xik3aJmyyoRgvNEw13EoYW9eIr/MXahNfGcEKSZ2Das=
 github.com/nortonlifelock/implementations v1.0.1-0.20200213180005-0c6576ebef01/go.mod h1:AI/R0EnXi7HF9K+weWzOUseklfIo5q3s5cAk+FVFlkE=
 github.com/nortonlifelock/integrations v1.0.1-0.20200128212536-771f24189586/go.mod h1:aHaVuTJreWHcUdKOxEDYDKSYu4b+LKgZkCNOI+znKPY=
