@@ -39,7 +39,11 @@ func (h *host) Region() *string {
 }
 
 func (h *host) InstanceID() *string {
-	return nil
+	if len(h.h.EC2Id) > 0 {
+		return &h.h.EC2Id
+	} else {
+		return nil
+	}
 }
 
 func (h *host) ID() string {
