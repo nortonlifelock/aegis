@@ -330,8 +330,12 @@ func (job *AssetSyncJob) enterAssetInformationInDB(asset domain.Device, osTypeID
 			if deviceInDB, err = job.db.GetDeviceByAssetOrgID(sord(asset.SourceID()), job.config.OrganizationID()); err == nil { // TODO include org id parameter
 				if deviceInDB == nil {
 
+					if len(sord(asset.InstanceID())) > 0 {
+						deviceInDB, err = job.db.GetDeviceByInstanceID(sord(asset.InstanceID()), job.config.OrganizationID())
+					}
+
 					// second we try to find the device in the database using the IP
-					if len(asset.IP()) > 0 {
+					if err == nil && deviceInDB == nil && len(asset.IP()) > 0 {
 						deviceInDB, err = job.db.GetDeviceByScannerSourceID(ip, groupID, job.config.OrganizationID())
 					}
 				}
@@ -345,6 +349,7 @@ func (job *AssetSyncJob) enterAssetInformationInDB(asset domain.Device, osTypeID
 							job.insources.SourceID(),
 							ip,
 							asset.HostName(),
+							sord(asset.InstanceID()),
 							asset.MAC(),
 							groupID,
 							job.config.OrganizationID(),

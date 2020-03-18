@@ -189,11 +189,11 @@ func (conn *dbconn) CreateDetection(_OrgID string, _SourceID string, _DeviceID s
 }
 
 // CreateDevice executes the stored procedure CreateDevice against the database
-func (conn *dbconn) CreateDevice(_AssetID string, _SourceID string, _Ip string, _Hostname string, _MAC string, _GroupID string, _OrgID string, _OS string, _OSTypeID int) (id int, affectedRows int, err error) {
+func (conn *dbconn) CreateDevice(_AssetID string, _SourceID string, _Ip string, _Hostname string, inInstanceID string, _MAC string, _GroupID string, _OrgID string, _OS string, _OSTypeID int) (id int, affectedRows int, err error) {
 
 	conn.Exec(&connection.Procedure{
 		Proc:       "CreateDevice",
-		Parameters: []interface{}{_AssetID, _SourceID, _Ip, _Hostname, _MAC, _GroupID, _OrgID, _OS, _OSTypeID},
+		Parameters: []interface{}{_AssetID, _SourceID, _Ip, _Hostname, inInstanceID, _MAC, _GroupID, _OrgID, _OS, _OSTypeID},
 		Callback: func(results interface{}, dberr error) {
 			err = dberr
 
