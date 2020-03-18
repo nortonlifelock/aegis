@@ -1,9 +1,10 @@
 /*
-    RETURN AssetGroup
+    RETURN AssetGroup SINGLE
     GroupID               INT         NOT NULL
     ScannerSourceID       VARCHAR(36) NOT NULL
     CloudSourceID         VARCHAR(36) NULL
     ScannerSourceConfigID VARCHAR(36) NULL
+    LastTicketing         DATETIME    NULL
 */
 
 DROP PROCEDURE IF EXISTS `GetAssetGroupForOrgNoScanner`;
@@ -14,6 +15,7 @@ SELECT
     AG.GroupID,
     AG.ScannerSourceID,
     AG.CloudSourceID,
-    AG.ScannerSourceConfigID
+    AG.ScannerSourceConfigID,
+    AG.LastTicketing
 FROM AssetGroup AG
-WHERE AG.OrganizationID = inOrgID AND (inGroupID = '' OR AG.GroupID = inGroupID);
+WHERE AG.OrganizationID = inOrgID AND AG.GroupID = inGroupID;

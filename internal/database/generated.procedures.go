@@ -1441,9 +1441,9 @@ func (conn *dbconn) GetAssetGroupForOrg(inScannerSourceConfigID string, inOrgID 
 }
 
 // GetAssetGroupForOrgNoScanner executes the stored procedure GetAssetGroupForOrgNoScanner against the database and returns the read results
-func (conn *dbconn) GetAssetGroupForOrgNoScanner(inOrgID string, inGroupID string) ([]domain.AssetGroup, error) {
+func (conn *dbconn) GetAssetGroupForOrgNoScanner(inOrgID string, inGroupID string) (domain.AssetGroup, error) {
 	var err error
-	var retAssetGroup = make([]domain.AssetGroup, 0)
+	var retAssetGroup domain.AssetGroup
 
 	conn.Read(&connection.Procedure{
 		Proc:       "GetAssetGroupForOrgNoScanner",
@@ -1461,6 +1461,7 @@ func (conn *dbconn) GetAssetGroupForOrgNoScanner(inOrgID string, inGroupID strin
 							var myScannerSourceID string
 							var myCloudSourceID *string
 							var myScannerSourceConfigID *string
+							var myLastTicketing *time.Time
 
 							if err = rows.Scan(
 
@@ -1468,6 +1469,7 @@ func (conn *dbconn) GetAssetGroupForOrgNoScanner(inOrgID string, inGroupID strin
 								&myScannerSourceID,
 								&myCloudSourceID,
 								&myScannerSourceConfigID,
+								&myLastTicketing,
 							); err == nil {
 
 								newAssetGroup := &dal.AssetGroup{
@@ -1475,9 +1477,10 @@ func (conn *dbconn) GetAssetGroupForOrgNoScanner(inOrgID string, inGroupID strin
 									ScannerSourceIDvar:       myScannerSourceID,
 									CloudSourceIDvar:         myCloudSourceID,
 									ScannerSourceConfigIDvar: myScannerSourceConfigID,
+									LastTicketingvar:         myLastTicketing,
 								}
 
-								retAssetGroup = append(retAssetGroup, newAssetGroup)
+								retAssetGroup = newAssetGroup
 							}
 						}
 

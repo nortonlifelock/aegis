@@ -212,15 +212,59 @@ func (job *TicketingJob) Process(ctx context.Context, id string, appconfig domai
 									job.lstream.Send(log.Debug("Scanner connection initialized."))
 
 									if len(job.Payload.Groups) == 0 {
+
+										job.lstream.Send(log.Infof("Pulling ALL detections since %s", tord1970(job.config.LastJobStart()).String()))
+
+										startTime := time.Now() // must be before we load the detections from the db
 										var detections []domain.Detection
 										if detections, err = job.db.GetDetectionsAfter(tord1970(job.config.LastJobStart()), job.config.OrganizationID()); err == nil {
 											job.processVulnerabilities(vscanner, pushDetectionsToChannel(job.ctx, detections))
 
-											// TODO update all asset groups last run
+											// passing an empty group ID updates the last ticketing date of ALL groups
+											_, _, err = job.db.UpdateAssetGroupLastTicket("", job.config.OrganizationID(), startTime)
+											if err != nil {
+												job.lstream.Send(log.Criticalf(err, "Error while updating the last ticketed date to %s", startTime.String()))
+											}
 										} else {
 											job.lstream.Send(log.Error("Error occurred while loading device vulnerability information", err))
 										}
 									} else {
+										for _, groupID := range job.Payload.Groups {
+
+											if len(groupID) > 0 {
+												var assetGroup domain.AssetGroup
+												if assetGroup, err = job.db.GetAssetGroupForOrgNoScanner(job.config.OrganizationID(), groupID); err == nil {
+
+													var after time.Time
+													if assetGroup.LastTicketing() == nil || assetGroup.LastTicketing().IsZero() {
+														after = tord1970(nil)
+													} else {
+														after = *assetGroup.LastTicketing()
+													}
+
+													job.lstream.Send(log.Infof("Pulling all detections for group [%s] since %s", groupID, after.String()))
+													startTime := time.Now() // must be before we load the detections from the db
+
+													var detections []domain.Detection
+													if detections, err = job.db.GetDetectionForGroupAfter(after, job.config.OrganizationID(), groupID); err == nil {
+
+														job.processVulnerabilities(vscanner, pushDetectionsToChannel(job.ctx, detections))
+
+														// passing an empty group ID updates the last ticketing date of ALL groups
+														_, _, err = job.db.UpdateAssetGroupLastTicket(groupID, job.config.OrganizationID(), startTime)
+														if err != nil {
+															job.lstream.Send(log.Criticalf(err, "Error while updating the last ticketed date to %s", startTime.String()))
+														}
+													} else {
+														job.lstream.Send(log.Error("Error occurred while loading device vulnerability information", err))
+													}
+												} else {
+													err = fmt.Errorf("error while loading asset group for [%s] - %s", groupID, err.Error())
+												}
+											} else {
+												err = fmt.Errorf("empty group id in payload")
+											}
+										}
 
 									}
 
