@@ -36,6 +36,7 @@ func (session *QsSession) pushCombosForHost(ctx context.Context, h qualys.QHost,
 				processedDevVulns[fmt.Sprintf("%v-%v-%v%s", h.HostID, v.QualysID, port, protocol)] = true
 				devVulnMutex.Unlock()
 
+				fmt.Println(h.HostID, h.EC2Id)
 				select {
 				case <-ctx.Done():
 					return
