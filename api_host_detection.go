@@ -23,6 +23,10 @@ func (session *Session) GetTagDetections(tags []string, kernelFilterFlag int) (o
 		fields["tag_include_selector"] = "all"
 		fields["tag_set_include"] = strings.Join(tags, ",")
 
+		// TODO how to pull azure instance ID?
+		fields["host_metadata"] = "ec2"
+		fields["host_metadata_fields"] = "instanceId"
+
 		session.lstream.Send(log.Infof("Loading detections for hosts tagged by [%s] from Qualys", fields["tag_set_include"]))
 
 		out, _, err = session.getHostDetectionPostData(session.Config.Address()+qsAssetVMHost, fields)
