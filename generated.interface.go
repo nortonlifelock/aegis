@@ -41,7 +41,7 @@ type GeneratedDatabaseConnection interface {
 	CreateUser(_Username string, _FirstName string, _LastName string, _Email string) (id int, affectedRows int, err error)
 	CreateUserPermissions(_UserID string, _OrgID string) (id int, affectedRows int, err error)
 	CreateUserSession(_UserID string, _OrgID string, _SessionKey string) (id int, affectedRows int, err error)
-	CreateVulnInfo(_SourceVulnID string, _Title string, _SourceID string, _CVSSScore float32, _CVSS3Score float32, _Description string, _Solution string, _Software string, _DetectionInformation string) (id int, affectedRows int, err error)
+	CreateVulnInfo(_SourceVulnID string, _Title string, _SourceID string, _CVSSScore float32, _CVSS3Score float32, _Description string, _Threat string, _Solution string, _Software string, _DetectionInformation string) (id int, affectedRows int, err error)
 	CreateVulnInfoNoCVSS3(_SourceVulnID string, _Title string, _SourceID string, _CVSSScore float32, _Description string, _Solution string, _Software string, _DetectionInformation string) (id int, affectedRows int, err error)
 	CreateVulnRef(_VulnInfoID string, _SourceID string, _Reference string, _RefType int) (id int, affectedRows int, err error)
 	DeleteDecomIgnoreForDevice(_sourceID string, _devID string, _orgID string) (id int, affectedRows int, err error)
