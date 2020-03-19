@@ -99,5 +99,5 @@ func (combo *hostDetectionCombo) Device() (domain.Device, error) {
 
 func (combo *hostDetectionCombo) Vulnerability() (domain.Vulnerability, error) {
 	combo.detection.lazyLoadVulnerabilityInfo()
-	return combo.detection, nil
+	return combo.detection.vulnerabilityInfo, nil
 }
