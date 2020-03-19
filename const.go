@@ -44,55 +44,6 @@ const (
 	QueryDateTimeFormatJira = "2006/01/02 15:04"
 )
 
-// Const for status maps
-// These are used as KEYS to grab the equivalent mapped status from the JIRA payload
-const (
-	// MaxThreads defines the amount of threads create API calls for JIRA
-	MaxThreads = 25
-
-	// StatusReopened is the status of a ticket which a scanner confirmed its vulnerability still exists after it was marked resolved
-	StatusReopened = "Reopened"
-
-	// StatusClosedRemediated is the status of a ticket which was marked resolved, and had the vulnerability resolution confirmed by a scanner
-	StatusClosedRemediated = "Closed-Remediated"
-
-	// StatusClosedFalsePositive is the status of a ticket which has the vulnerability confirmed to be a false positive
-	StatusClosedFalsePositive = "Closed-False-Positive"
-
-	// StatusClosedDecommissioned is the status of a ticket for a vulnerability on a device that is no longer active
-	StatusClosedDecommissioned = "Closed-Decommission"
-
-	// StatusOpen is the status of a ticket which has not had any remediation steps taken
-	StatusOpen = "Open"
-
-	// StatusInProgress is the status of a ticket which is in the process of remediation
-	StatusInProgress = "In-Progress"
-
-	// StatusResolvedException is the status of a ticket which does not need to have the vulnerability remediated but not confirmed by a scanner
-	StatusResolvedException = "Resolved-Exception"
-
-	// StatusClosedException is the status of a ticket which does not need to have the vulnerability remediated
-	StatusClosedException = "Closed-Exception"
-
-	// StatusResolvedDecom is the status of a ticket for a vulnerability on a device that is no longer active but not confirmed by a scanner
-	StatusResolvedDecom = "Resolved-Decommissioned"
-
-	// StatusResolvedRemediated is the status of a ticket which was marked resolved but not confirmed by a scanner
-	StatusResolvedRemediated = "Resolved-Remediated"
-
-	// StatusResolvedFalsePositive is the status of a ticket which has the vulnerability confirmed to be a false positive but not verified by a scanner
-	StatusResolvedFalsePositive = "Resolved-FalsePositive"
-
-	// StatusClosedCerf is the status of a ticket that was closed due to an associated CERF (Candidate Exception Request Form)
-	StatusClosedCerf = "Closed-CERF"
-
-	// StatusClosedError is
-	StatusClosedError = "Closed-Error"
-
-	// StatusScanError is used for denoting when a scan failed to reach a device
-	StatusScanError = "Scan-Error"
-)
-
 // API Endpoints
 const (
 	jsearch                = "/rest/api/latest/search"

@@ -691,13 +691,13 @@ func (connector *ConnectorJira) GetTicketsByDeviceIDVulnID(methodOfDiscovery str
 // and the cloudAccountID is stored in the group ID
 func (connector *ConnectorJira) GetOpenTicketsByGroupID(methodOfDiscovery string, orgCode string, groupID string) (tickets <-chan domain.Ticket, err error) {
 	statuses := make(map[string]bool)
-	statuses[connector.GetStatusMap(StatusOpen)] = true
-	statuses[connector.GetStatusMap(StatusReopened)] = true
-	statuses[connector.GetStatusMap(StatusResolvedRemediated)] = true
-	statuses[connector.GetStatusMap(StatusResolvedDecom)] = true
-	statuses[connector.GetStatusMap(StatusResolvedException)] = true
-	statuses[connector.GetStatusMap(StatusResolvedFalsePositive)] = true
-	statuses[connector.GetStatusMap(StatusClosedException)] = true
+	statuses[connector.GetStatusMap(domain.StatusOpen)] = true
+	statuses[connector.GetStatusMap(domain.StatusReopened)] = true
+	statuses[connector.GetStatusMap(domain.StatusResolvedRemediated)] = true
+	statuses[connector.GetStatusMap(domain.StatusResolvedDecom)] = true
+	statuses[connector.GetStatusMap(domain.StatusResolvedException)] = true
+	statuses[connector.GetStatusMap(domain.StatusResolvedFalsePositive)] = true
+	statuses[connector.GetStatusMap(domain.StatusClosedException)] = true
 
 	tickets, err = connector.getOpenTicketsByGroupID(statuses, methodOfDiscovery, orgCode, groupID)
 	return tickets, err

@@ -54,12 +54,12 @@ func (connector *ConnectorJira) getTicketsByClosedStatus(orgCode string, methodO
 		and().
 		beginGroup().
 		beginGroup().
-		equals(connector.GetFieldMap(backendStatus), connector.GetStatusMap(StatusClosedException)).
+		equals(connector.GetFieldMap(backendStatus), connector.GetStatusMap(domain.StatusClosedException)).
 		and().
 		notEmpty(connector.GetFieldMap(backendCERF)).
 		endGroup().
 		or().
-		equals(connector.GetFieldMap(backendStatus), connector.GetStatusMap(StatusClosedFalsePositive)).
+		equals(connector.GetFieldMap(backendStatus), connector.GetStatusMap(domain.StatusClosedFalsePositive)).
 		endGroup().
 		and().
 		greaterOrEquals(connector.GetFieldMap(backendUpdated), fmt.Sprintf("\"%s\"", startDate.Format(QueryDateTimeFormatJira))).
@@ -196,28 +196,28 @@ func (connector *ConnectorJira) getTicketsForRescan(cerfs []domain.CERF, methodO
 			switch algorithm {
 			case domain.RescanExceptions:
 				var status = make(map[string]bool)
-				status[connector.GetStatusMap(StatusClosedException)] = true
+				status[connector.GetStatusMap(domain.StatusClosedException)] = true
 
 				issues, err = connector.getTicketsForExceptionRescan(cerfs, methodOfDiscovery, orgCode, status)
 				break
 			case domain.RescanPassive:
 				var status = make(map[string]bool)
-				status[connector.GetStatusMap(StatusOpen)] = true
-				status[connector.GetStatusMap(StatusInProgress)] = true
-				status[connector.GetStatusMap(StatusReopened)] = true
-				status[connector.GetStatusMap(StatusResolvedException)] = true
+				status[connector.GetStatusMap(domain.StatusOpen)] = true
+				status[connector.GetStatusMap(domain.StatusInProgress)] = true
+				status[connector.GetStatusMap(domain.StatusReopened)] = true
+				status[connector.GetStatusMap(domain.StatusResolvedException)] = true
 
 				issues, err = connector.getTicketsForPassiveRescan(methodOfDiscovery, orgCode, status)
 				break
 			case domain.RescanNormal:
 				var status = make(map[string]bool)
-				status[connector.GetStatusMap(StatusResolvedRemediated)] = true
+				status[connector.GetStatusMap(domain.StatusResolvedRemediated)] = true
 
 				issues, err = connector.getTicketsByStatusDueDateAscending(methodOfDiscovery, orgCode, status)
 				break
 			case domain.RescanDecommission:
 				var status = make(map[string]bool)
-				status[connector.GetStatusMap(StatusResolvedDecom)] = true
+				status[connector.GetStatusMap(domain.StatusResolvedDecom)] = true
 
 				issues, err = connector.getTicketsByStatusDueDateAscending(methodOfDiscovery, orgCode, status)
 				break
@@ -472,9 +472,9 @@ func (connector *ConnectorJira) getDeviceTicketsQueries(issues []domain.Ticket) 
 	if issues != nil {
 		//We getting all the statues except for this status
 		var statuses = []string{
-			connector.GetStatusMap(StatusOpen), connector.GetStatusMap(StatusReopened), connector.GetStatusMap(StatusInProgress),
-			connector.GetStatusMap(StatusResolvedRemediated), connector.GetStatusMap(StatusResolvedFalsePositive), connector.GetStatusMap(StatusResolvedDecom), connector.GetStatusMap(StatusResolvedException),
-			connector.GetStatusMap(StatusClosedException), connector.GetStatusMap(StatusClosedFalsePositive),
+			connector.GetStatusMap(domain.StatusOpen), connector.GetStatusMap(domain.StatusReopened), connector.GetStatusMap(domain.StatusInProgress),
+			connector.GetStatusMap(domain.StatusResolvedRemediated), connector.GetStatusMap(domain.StatusResolvedFalsePositive), connector.GetStatusMap(domain.StatusResolvedDecom), connector.GetStatusMap(domain.StatusResolvedException),
+			connector.GetStatusMap(domain.StatusClosedException), connector.GetStatusMap(domain.StatusClosedFalsePositive),
 		}
 
 		//This map is created to not process the same device_ID again if exist in another issue
@@ -509,9 +509,9 @@ func (connector *ConnectorJira) getDeviceTicketsQueries(issues []domain.Ticket) 
 // getDeviceVulnsQueries gathers the vulnerabilities for the device and maps them to the devices
 func (connector *ConnectorJira) getDeviceVulnsQueries(issues []domain.Ticket) (qs []Query, err error) {
 	if issues != nil {
-		var statuses = []string{connector.GetStatusMap(StatusOpen), connector.GetStatusMap(StatusReopened),
-			connector.GetStatusMap(StatusResolvedException), connector.GetStatusMap(StatusResolvedDecom),
-			connector.GetStatusMap(StatusInProgress)}
+		var statuses = []string{connector.GetStatusMap(domain.StatusOpen), connector.GetStatusMap(domain.StatusReopened),
+			connector.GetStatusMap(domain.StatusResolvedException), connector.GetStatusMap(domain.StatusResolvedDecom),
+			connector.GetStatusMap(domain.StatusInProgress)}
 
 		//Get all the vulns and map them to the devices.
 		var vulnsPerDevices map[string]map[string]bool
