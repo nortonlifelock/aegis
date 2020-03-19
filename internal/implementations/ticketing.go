@@ -14,7 +14,6 @@ import (
 	"github.com/nortonlifelock/aegis/internal/database/dal"
 	"github.com/nortonlifelock/aegis/internal/integrations"
 	"github.com/nortonlifelock/domain"
-	"github.com/nortonlifelock/jira"
 	"github.com/nortonlifelock/log"
 	"github.com/nortonlifelock/scaffold"
 	"github.com/pkg/errors"
@@ -447,16 +446,16 @@ func loadStatuses(tickets integrations.TicketingEngine, statuses map[string]bool
 	// Statuses to Query when looking for existing tickets for the vulnerabilities
 
 	// TODO TODO do we want these hardcoded or configurable?
-	statuses[tickets.GetStatusMap(jira.StatusOpen)] = true
-	statuses[tickets.GetStatusMap(jira.StatusReopened)] = true
-	statuses[tickets.GetStatusMap(jira.StatusResolvedRemediated)] = true
-	statuses[tickets.GetStatusMap(jira.StatusResolvedDecom)] = true
-	statuses[tickets.GetStatusMap(jira.StatusResolvedException)] = true
-	statuses[tickets.GetStatusMap(jira.StatusResolvedFalsePositive)] = true
-	statuses[tickets.GetStatusMap(jira.StatusClosedCerf)] = true
+	statuses[tickets.GetStatusMap(domain.StatusOpen)] = true
+	statuses[tickets.GetStatusMap(domain.StatusReopened)] = true
+	statuses[tickets.GetStatusMap(domain.StatusResolvedRemediated)] = true
+	statuses[tickets.GetStatusMap(domain.StatusResolvedDecom)] = true
+	statuses[tickets.GetStatusMap(domain.StatusResolvedException)] = true
+	statuses[tickets.GetStatusMap(domain.StatusResolvedFalsePositive)] = true
+	statuses[tickets.GetStatusMap(domain.StatusClosedCerf)] = true
 
 	// TODO: Remove this once the closed-error status is part of exceptions
-	statuses[tickets.GetStatusMap(jira.StatusClosedError)] = true
+	statuses[tickets.GetStatusMap(domain.StatusClosedError)] = true
 }
 
 func (job *TicketingJob) checkForExistingTicket(in <-chan *vulnerabilityPayload) <-chan *vulnerabilityPayload {
@@ -506,13 +505,13 @@ func (job *TicketingJob) checkForExistingTicket(in <-chan *vulnerabilityPayload)
 
 								var existingTicketChan <-chan domain.Ticket
 								var statuses = make(map[string]bool)
-								statuses["Open"] = true
-								statuses["In-Progress"] = true
-								statuses["Reopened"] = true
-								statuses["Resolved-Remediated"] = true
-								statuses["Resolved-FalsePositive"] = true
-								statuses["Resolved-Decommissioned"] = true
-								statuses["Resolved-Exception"] = true
+								statuses[job.ticketingEngine.GetStatusMap(domain.StatusOpen)] = true
+								statuses[job.ticketingEngine.GetStatusMap(domain.StatusInProgress)] = true
+								statuses[job.ticketingEngine.GetStatusMap(domain.StatusReopened)] = true
+								statuses[job.ticketingEngine.GetStatusMap(domain.StatusResolvedRemediated)] = true
+								statuses[job.ticketingEngine.GetStatusMap(domain.StatusResolvedFalsePositive)] = true
+								statuses[job.ticketingEngine.GetStatusMap(domain.StatusResolvedDecom)] = true
+								statuses[job.ticketingEngine.GetStatusMap(domain.StatusResolvedException)] = true
 								existingTicketChan, err = job.ticketingEngine.GetTicketsByDeviceIDVulnID(job.insource.Source(), payload.orgCode, sord(payload.device.SourceID()), payload.vuln.SourceID(), statuses, payload.combo.Port(), payload.combo.Protocol())
 								if err == nil {
 
@@ -750,7 +749,7 @@ func (job *TicketingJob) createIndividualTicket(payload *vulnerabilityPayload) {
 			// track the created ticket in our database
 			_, _, err = job.db.CreateTicket(
 				ticketTitle,
-				jira.StatusOpen,
+				domain.StatusOpen,
 				payload.combo.ID(),
 				job.config.OrganizationID(),
 				tord1970(payload.ticket.CreatedDate()),
@@ -828,9 +827,14 @@ func (job *TicketingJob) payloadToTicket(payload *vulnerabilityPayload) (newtix 
 		var template *scaffold.Template
 		template = scaffold.NewTemplateEmpty()
 		template.UpdateBase(descriptionTemplate)
-		template.Repl("%vulnurl", "").
-			Repl("%description", payload.vuln.Description()).
+		template.Repl("%description", payload.vuln.Description()).
 			Repl("%proof", payload.combo.Proof())
+
+		if len(sord(payload.vuln.Threat())) > 0 {
+			template.Repl("%threat", fmt.Sprintf("\n*Threat:*\n%s\n", sord(payload.vuln.Threat())))
+		} else {
+			template.Repl("%threat", "")
+		}
 
 		var description = template.Get()
 
@@ -1119,7 +1123,7 @@ const (
 	descriptionTemplate = `
 	*Description:*
 	%description
-
+	%threat
 	*Proof:*
 	%proof
 	`

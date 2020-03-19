@@ -126,7 +126,7 @@ func attachExceptionToTicket(w http.ResponseWriter, r *http.Request) {
 					_, _, trans.err = engine.UpdateTicket(&exceptionTicket{
 						Ticket: jiraTicket,
 						cerf:   cerf,
-						status: engine.GetStatusMap(jira.StatusClosedException),
+						status: engine.GetStatusMap(domain.StatusClosedException),
 					}, fmt.Sprintf("%s added to ticket at request of %s", cerf, sord(trans.user.Username())))
 
 					if trans.err == nil {

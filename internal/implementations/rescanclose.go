@@ -11,7 +11,6 @@ import (
 
 	"github.com/nortonlifelock/aegis/internal/integrations"
 	"github.com/nortonlifelock/domain"
-	"github.com/nortonlifelock/jira"
 	"github.com/nortonlifelock/log"
 )
 
@@ -121,7 +120,7 @@ func (job *ScanCloseJob) processScanDetections(engine integrations.TicketingEngi
 					defer handleRoutinePanic(job.lstream)
 					defer wg.Done()
 
-					if sord(ticket.Status()) != engine.GetStatusMap(jira.StatusClosedRemediated) { // TODO: Ensure this is correct
+					if sord(ticket.Status()) != engine.GetStatusMap(domain.StatusClosedRemediated) { // TODO: Ensure this is correct
 						job.modifyJiraTicketAccordingToVulnerabilityStatus(
 							engine,
 							&lastCheckedTicket{ticket},
@@ -204,6 +203,15 @@ func (job *ScanCloseJob) mapDetectionsAndDeadHosts(detections <-chan domain.Dete
 	return deviceIDToVulnIDToDetection, deadHostIPToProofMap
 }
 
+type lastUpdatedTicket struct {
+	domain.Ticket
+	lastUpdated time.Time
+}
+
+func (l *lastUpdatedTicket) AlertDate() *time.Time {
+	return &l.lastUpdated
+}
+
 // transitions the status of the JIRA ticket if necessary
 func (job *ScanCloseJob) modifyJiraTicketAccordingToVulnerabilityStatus(engine integrations.TicketingEngine, ticket domain.Ticket, scan domain.ScanSummary, deadHostIPToProofMap map[string]string, deviceIDToVulnIDToDetection map[string]map[string]domain.Detection) {
 	var detectionsFoundForDevice = deviceIDToVulnIDToDetection[ticket.DeviceID()] != nil
@@ -220,6 +228,18 @@ func (job *ScanCloseJob) modifyJiraTicketAccordingToVulnerabilityStatus(engine i
 	if detection != nil {
 		status = detection.Status()
 		inactiveKernel = iord(detection.ActiveKernel()) > 0
+
+		if detection.LastFound() != nil && !detection.LastFound().IsZero() && detection.LastFound().After(tord1970(ticket.AlertDate())) {
+			ticket = &lastUpdatedTicket{
+				Ticket:      ticket,
+				lastUpdated: *detection.LastFound(),
+			}
+
+			_, _, err := engine.UpdateTicket(ticket, "")
+			if err != nil {
+				job.lstream.Send(log.Errorf(err, "error while setting last found date of %s to [%s]", ticket.Title(), detection.LastFound().String()))
+			}
+		}
 	}
 
 	if detectionsFoundForDevice || deviceReportedAsDead {
@@ -237,7 +257,7 @@ func (job *ScanCloseJob) modifyJiraTicketAccordingToVulnerabilityStatus(engine i
 		}
 	} else {
 		job.lstream.Send(log.Errorf(err, "scan [%s] did not seem to cover the device %v - scanner did not report any data for device", job.Payload.ScanID, ticket.DeviceID()))
-		err = engine.Transition(ticket, engine.GetStatusMap(jira.StatusScanError), fmt.Sprintf("scan [%s] did not cover the device %v. Please make sure this asset is still in-scope and associated with an asset group. If this asset is out of scope, please move this ticket to NOTAVRR status or alert the vulnerability management team.", job.Payload.ScanID, ticket.DeviceID()), sord(ticket.AssignedTo()))
+		err = engine.Transition(ticket, engine.GetStatusMap(domain.StatusScanError), fmt.Sprintf("scan [%s] did not cover the device %v. Please make sure this asset is still in-scope and associated with an asset group. If this asset is out of scope, please move this ticket to NOTAVRR status or alert the vulnerability management team.", job.Payload.ScanID, ticket.DeviceID()), sord(ticket.AssignedTo()))
 		if err != nil {
 			job.lstream.Send(log.Errorf(err, "error while adding comment to ticket [%s]", ticket.Title()))
 		}
@@ -248,7 +268,7 @@ func (job *ScanCloseJob) modifyJiraTicketAccordingToVulnerabilityStatus(engine i
 func (job *ScanCloseJob) processTicketForPassiveOrExceptionRescan(deadHostIPToProofMap map[string]string, ticket domain.Ticket, detection domain.Detection, err error, engine integrations.TicketingEngine, status string, inactiveKernel bool, scan domain.ScanSummary) {
 	if (len(deadHostIPToProofMap[*ticket.IPAddress()]) > 0 && len(*ticket.IPAddress()) > 0) || (detection != nil && detection.Status() == domain.DeadHost) {
 		job.lstream.Send(log.Infof("the device for %s seems to be dead, but this is not a decommission scan", ticket.Title()))
-		err = engine.Transition(ticket, engine.GetStatusMap(jira.StatusResolvedDecom), fmt.Sprintf("The device could not be detected though a vulnerability rescan. It has been moved to a resolved decommission status and will be rescanned with another option profile to confirm\nPROOF:\n%s", deadHostIPToProofMap[sord(ticket.IPAddress())]), sord(ticket.AssignedTo()))
+		err = engine.Transition(ticket, engine.GetStatusMap(domain.StatusResolvedDecom), fmt.Sprintf("The device could not be detected though a vulnerability rescan. It has been moved to a resolved decommission status and will be rescanned with another option profile to confirm\nPROOF:\n%s", deadHostIPToProofMap[sord(ticket.IPAddress())]), sord(ticket.AssignedTo()))
 		if err != nil {
 			job.lstream.Send(log.Errorf(err, "error while adding comment to ticket %s", ticket.Title()))
 		}
@@ -260,7 +280,7 @@ func (job *ScanCloseJob) processTicketForPassiveOrExceptionRescan(deadHostIPToPr
 		}
 
 		job.lstream.Send(log.Infof("Vulnerability NO LONGER EXISTS, closing Ticket [%s]", ticket.Title()))
-		if err = job.closeTicket(engine, ticket, scan, engine.GetStatusMap(jira.StatusClosedRemediated), closeReason); err != nil {
+		if err = job.closeTicket(engine, ticket, scan, engine.GetStatusMap(domain.StatusClosedRemediated), closeReason); err != nil {
 			job.lstream.Send(log.Errorf(err, "Error while closing Ticket [%s]", ticket.Title()))
 		}
 	} else if status == domain.Vulnerable {
@@ -286,7 +306,7 @@ func (job *ScanCloseJob) processTicketForDecommRescan(deadHostIPToProofMap map[s
 			closeReason = fmt.Sprintf("Device found to be dead by Scanner\n%v", deadHostIPToProofMap[*ticket.IPAddress()])
 		}
 
-		if err = job.closeTicket(engine, ticket, scan, engine.GetStatusMap(jira.StatusClosedDecommissioned), closeReason); err != nil {
+		if err = job.closeTicket(engine, ticket, scan, engine.GetStatusMap(domain.StatusClosedDecommissioned), closeReason); err != nil {
 			job.lstream.Send(log.Errorf(err, "Error while closing Ticket [%s]", ticket.Title()))
 		}
 	} else if detection == nil || status == domain.Fixed || status == domain.Vulnerable {
@@ -305,13 +325,13 @@ func (job *ScanCloseJob) processTicketForDecommRescan(deadHostIPToProofMap map[s
 func (job *ScanCloseJob) processTicketForNormalRescan(deadHostIPToProofMap map[string]string, ticket domain.Ticket, detection domain.Detection, err error, engine integrations.TicketingEngine, status string, inactiveKernel bool, scan domain.ScanSummary) {
 	if (len(deadHostIPToProofMap[*ticket.IPAddress()]) > 0 && len(*ticket.IPAddress()) > 0) || (detection != nil && detection.Status() == domain.DeadHost) {
 		job.lstream.Send(log.Infof("the device for %s seems to be dead, but this is not a decommission scan", ticket.Title()))
-		err = engine.Transition(ticket, engine.GetStatusMap(jira.StatusResolvedDecom), fmt.Sprintf("The device could not be detected though a vulnerability rescan. It has been moved to a resolved decommission status and will be rescanned with another option profile to confirm\nPROOF:\n%s", deadHostIPToProofMap[sord(ticket.IPAddress())]), sord(ticket.AssignedTo()))
+		err = engine.Transition(ticket, engine.GetStatusMap(domain.StatusResolvedDecom), fmt.Sprintf("The device could not be detected though a vulnerability rescan. It has been moved to a resolved decommission status and will be rescanned with another option profile to confirm\nPROOF:\n%s", deadHostIPToProofMap[sord(ticket.IPAddress())]), sord(ticket.AssignedTo()))
 		if err != nil {
 			job.lstream.Send(log.Errorf(err, "error while adding comment to ticket %s", ticket.Title()))
 		}
 	} else if detection != nil && detection.LastUpdated() != nil && detection.LastUpdated().Before(scan.CreatedDate()) && !detection.LastUpdated().IsZero() && !scan.CreatedDate().IsZero() {
 		job.lstream.Send(log.Infof("the scan didn't check %s for vulnerability %s [%s before %s]", ticket.Title(), ticket.VulnerabilityID(), detection.LastUpdated().Format(time.RFC822), scan.CreatedDate().Format(time.RFC822)))
-		err = engine.Transition(ticket, engine.GetStatusMap(jira.StatusScanError), fmt.Sprintf("The scan did not check the device for the vulnerability likely due to authentication issues"), sord(ticket.AssignedTo()))
+		err = engine.Transition(ticket, engine.GetStatusMap(domain.StatusScanError), fmt.Sprintf("The scan did not check the device for the vulnerability likely due to authentication issues"), sord(ticket.AssignedTo()))
 		if err != nil {
 			job.lstream.Send(log.Errorf(err, "error while transitioning ticket %s", ticket.Title()))
 		}
@@ -323,7 +343,7 @@ func (job *ScanCloseJob) processTicketForNormalRescan(deadHostIPToProofMap map[s
 		}
 
 		job.lstream.Send(log.Infof("Vulnerability NO LONGER EXISTS, closing Ticket [%s]", ticket.Title()))
-		if err = job.closeTicket(engine, ticket, scan, engine.GetStatusMap(jira.StatusClosedRemediated), closeReason); err != nil {
+		if err = job.closeTicket(engine, ticket, scan, engine.GetStatusMap(domain.StatusClosedRemediated), closeReason); err != nil {
 			job.lstream.Send(log.Errorf(err, "Error while closing Ticket [%s]", ticket.Title()))
 		}
 	} else if status == domain.Vulnerable {
@@ -392,7 +412,7 @@ func (job *ScanCloseJob) openTicket(tix domain.Ticket, vuln domain.Detection, sc
 	}
 
 	job.lstream.Send(log.Debugf("TRANSITIONING Ticket [%s]", tix.Title()))
-	err = ticketing.Transition(tix, ticketing.GetStatusMap(jira.StatusReopened), comment, "Unassigned")
+	err = ticketing.Transition(tix, ticketing.GetStatusMap(domain.StatusReopened), comment, "Unassigned")
 	if err != nil {
 		job.lstream.Send(log.Errorf(err, "Unable to transition ticket %s - %s",
 			tix.Title(), err.Error()))
@@ -404,9 +424,9 @@ func (job *ScanCloseJob) shouldOpenTicket(ticketing integrations.TicketingEngine
 	status = strings.ToLower(status)
 	jobType = strings.ToLower(jobType)
 
-	if status == strings.ToLower(ticketing.GetStatusMap(jira.StatusResolvedRemediated)) && jobType == strings.ToLower(domain.RescanNormal) {
+	if status == strings.ToLower(ticketing.GetStatusMap(domain.StatusResolvedRemediated)) && jobType == strings.ToLower(domain.RescanNormal) {
 		shouldOpen = true
-	} else if status == strings.ToLower(ticketing.GetStatusMap(jira.StatusResolvedDecom)) && jobType == strings.ToLower(domain.RescanDecommission) {
+	} else if status == strings.ToLower(ticketing.GetStatusMap(domain.StatusResolvedDecom)) && jobType == strings.ToLower(domain.RescanDecommission) {
 		shouldOpen = true
 	}
 
