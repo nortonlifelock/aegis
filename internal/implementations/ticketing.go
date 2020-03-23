@@ -635,7 +635,7 @@ func (job *TicketingJob) prepareTicketCreation(in <-chan *vulnerabilityPayload) 
 
 						var tagsForDevice []domain.Tag
 						// map cloud service fields to ticket if necessary
-						tagsForDevice, err = job.handleCloudTagMappings(payload.ticket)
+						tagsForDevice, err = job.handleCloudTagMappings(payload.ticket, payload.device)
 						if err == nil {
 							job.getAssignmentInformation(tagsForDevice, payload)
 						} else {
@@ -955,34 +955,15 @@ func (job *TicketingJob) gatherHostInfoFromDevice(payload *vulnerabilityPayload)
 
 // the cloud sync job pulls tag information from cloud service providers. we can use that tag information to overwrite JIRA fields or append
 // the information to a JIRA field
-func (job *TicketingJob) handleCloudTagMappings(tic domain.Ticket) (tagsForDevice []domain.Tag, err error) {
+func (job *TicketingJob) handleCloudTagMappings(tic domain.Ticket, device domain.Device) (tagsForDevice []domain.Tag, err error) {
 	tagsForDevice = make([]domain.Tag, 0)
 
-	if len(sord(tic.IPAddress())) > 0 {
-		var ips = strings.Split(sord(tic.IPAddress()), ",")
-
-		var device domain.Device
-		device, err = job.getDeviceByIPList(ips)
-
-		if err == nil {
-			if device != nil { // device with ip found in database, check for it's tags
-				// grab all the cloud tags for a device
-				tagsForDevice, err = job.db.GetTagsForDevice(device.ID())
-				if err == nil {
-					if len(job.tagMaps) > 0 {
-						err = job.mapAllTagsForDevice(tic, tagsForDevice, job.tagMaps)
-					}
-				}
-			} else {
-				// TODO no device found in db - email warning
-				job.lstream.Send(log.Warningf(nil, "could not find device with any of ips [%s]", sord(tic.IPAddress())))
-			}
-		} else {
-			err = fmt.Errorf("error while grabbing device - %s", err.Error())
+	// grab all the cloud tags for a device
+	tagsForDevice, err = job.db.GetTagsForDevice(device.ID())
+	if err == nil {
+		if len(job.tagMaps) > 0 {
+			err = job.mapAllTagsForDevice(tic, tagsForDevice, job.tagMaps)
 		}
-
-	} else {
-		err = fmt.Errorf("ticket [%s] did not have an associated IP", tic.Title())
 	}
 
 	return tagsForDevice, err
@@ -1088,22 +1069,22 @@ func (tmt tagMappedTicket) Labels() *string {
 	return &val
 }
 
-func (job *TicketingJob) getDeviceByIPList(ips []string) (device domain.Device, err error) {
-	for index := range ips {
-		ip := ips[index]
-
-		device, err = job.db.GetDeviceByIP(ip, job.config.OrganizationID())
-		if err == nil {
-			if device != nil {
-				break
-			}
-		} else {
-			break
-		}
-	}
-
-	return device, err
-}
+//func (job *TicketingJob) getDeviceByIPList(ips []string) (device domain.Device, err error) {
+//	for index := range ips {
+//		ip := ips[index]
+//
+//		device, err = job.db.GetDeviceByIP(ip, job.config.OrganizationID())
+//		if err == nil {
+//			if device != nil {
+//				break
+//			}
+//		} else {
+//			break
+//		}
+//	}
+//
+//	return device, err
+//}
 
 // transforms the specific OS from the scanner and transforms it to a generic OS that can be chosen in a dropdown field
 func (job *TicketingJob) gatherOSDropdown(input string) (output string) {
