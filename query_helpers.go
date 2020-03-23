@@ -366,6 +366,27 @@ func (connector *ConnectorJira) getByCustomJQLChan(JQL string) (issues <-chan do
 	return issues
 }
 
+func (connector *ConnectorJira) DeleteProject(project string) (err error) {
+	var replace = "{projectIdOrKey}"
+
+	var endPoint = html.EscapeString(jproject)
+	endPoint = strings.Replace(endPoint, replace, project, 1)
+
+	var request *http.Request
+
+	if request, err = connector.client.NewRequest(http.MethodDelete, endPoint, nil); err == nil {
+
+		var response *http.Response
+		if response, err = connector.funnelClient.Do(request); err == nil {
+			if response != nil {
+				defer response.Body.Close()
+			}
+		}
+	}
+
+	return err
+}
+
 // DeleteTicket delete the ticket in JIRA corresponding to the id parameter. Used by the JIRA tool
 func (connector *ConnectorJira) DeleteTicket(id string) (err error) {
 	var replace = "{issueIdOrKey}"

@@ -52,6 +52,7 @@ const (
 	jstatus                = "/rest/api/2/status"
 	jissuetype             = "/rest/api/2/issuetype"
 	jticket                = "/rest/api/2/issue/{issueIdOrKey}"
+	jproject               = "/rest/api/2/project/{projectIdOrKey}"
 	jeditablefields        = "/rest/api/2/issue/{issueIdOrKey}/editmeta"
 	jcreateissue           = "rest/api/2/issue/"
 	jeditableprojectfields = "/rest/api/2/issue/createmeta?projectKeys={project}&expand=projects.issuetypes.fields"
