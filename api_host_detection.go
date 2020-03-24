@@ -18,6 +18,7 @@ func (session *Session) GetTagDetections(tags []string, kernelFilterFlag int) (o
 		fields["truncation_limit"] = "0"   // Pull groups of 2500 assets at a time until all assets are loaded
 		fields["show_reopened_info"] = "1" // Show the additional information related to vulnerabilities that have been Reopened in Qualys
 		fields["arf_kernel_filter"] = strconv.Itoa(kernelFilterFlag)
+		fields["status"] = "New,Active,Re-Opened,Fixed" // If this parameter is not passed to the API, by default, the output contains detections with New, Active or Re-Opened <STATUS> only
 		fields["use_tags"] = "1"
 		fields["tag_set_by"] = "id"
 		fields["tag_include_selector"] = "all"
@@ -51,38 +52,10 @@ func (session *Session) GetHostDetections(groups []string, kernelFilterFlag int)
 		// Handle the API request fields for Qualys
 		var fields = make(map[string]string)
 		fields["action"] = "list"
-		fields["truncation_limit"] = "2500" // Pull groups of 2500 assets at a time until all assets are loaded
-		fields["show_reopened_info"] = "1"  // Show the additional information related to vulnerabilities that have been Reopened in Qualys
-		//if !includeFixed {
-		//	fields["status"] = "New,Active,Re-Opened" // Exclude "Fixed" vulnerabilities from the results
-		//}
+		fields["truncation_limit"] = "2500"             // Pull groups of 2500 assets at a time until all assets are loaded
+		fields["show_reopened_info"] = "1"              // Show the additional information related to vulnerabilities that have been Reopened in Qualys
+		fields["status"] = "New,Active,Re-Opened,Fixed" // If this parameter is not passed to the API, by default, the output contains detections with New, Active or Re-Opened <STATUS> only
 		fields["arf_kernel_filter"] = strconv.Itoa(kernelFilterFlag)
-
-		// Look into
-		// TODO: Max days since updated detection value - Only detections who's number of days have changed
-		// TODO: Detection update since and detection update for - Time slice - Allows you to slice out stuff since the last time you ran
-		// TODO: Cut down the amount of data - Remove Active once we've started tracking, after the first Sync. We can assumee it's still active if it's not fixed
-		// TODO: Detections processed before and after // Probably won't need this
-		// TODO: Need to sync with Qualys where there are adhoc scans so that we're syncing our data between them and us
-		// TODO: Allows multithreading, break up based on ids 3 or 4 threads at a time
-		// TODO: AG Titles and AG Ids - AG API - Be careful of state divergence that don't get synced back
-
-		// TODO: Dead hosts API endpoint is coming up
-
-		// TODO: Vulnerability Supersedence -- INTERESTING -- Try to get this added in. -- REPLACES with potentially more valid solution
-
-		// TODO: We need to talk about this with GSO!!!
-		// TODO: YOU CAN REMOVE THESE FROM THE GUI
-		// TODO: Changed vulnerabilities in the KB will no longer come through the API
-		// TODO: Show disabled flag will help us find these
-
-		// TODO: Host asset api returns really good asset information on the box
-		// POST CALL WITH XML INPUT
-		// AWS assets include aws metadata
-		// /search/am/hostasset
-
-		// TODO: Look into WAS for evaluating 3rd party API endpoints
-
 		fields["ag_ids"] = strings.Join(groups, ",")
 
 		session.lstream.Send(log.Infof("Loading [%s] Hosts from Qualys", fields["truncation_limit"]))
@@ -117,6 +90,7 @@ func (session *Session) GetHostSpecificDetections(ip []string, kernelFilterFlag 
 		//	fields["status"] = "New,Active,Re-Opened" // Exclude "Fixed" vulnerabilities from the results
 		//}
 		fields["arf_kernel_filter"] = strconv.Itoa(kernelFilterFlag)
+		fields["status"] = "New,Active,Re-Opened,Fixed" // If this parameter is not passed to the API, by default, the output contains detections with New, Active or Re-Opened <STATUS> only
 
 		// Concatenate the IP addresses together in a comma separated list of values
 		fields["ips"] = strings.Join(ip, ",")
