@@ -202,30 +202,36 @@ func (session *QsSession) populateOnlineAppliances(groups []*qualys.QSAssetGroup
 		for _, groupAppliance := range groupAppliances {
 			if !seenAppliance[groupAppliance] {
 				seenAppliance[groupAppliance] = true
+
 				if len(groupAppliance) > 0 {
-					appliances = append(appliances, groupAppliance)
+					if intVal, err := strconv.Atoi(groupAppliance); err == nil && intVal > 0 {
+						appliances = append(appliances, groupAppliance)
+					} else if err != nil {
+						session.lstream.Send(log.Errorf(err, "could not parse [%s] as an integer for gathering appliances", groupAppliance))
+					}
 				}
 			}
 		}
 	}
 
-	var output *qualys.QAppliances
-	output, err = session.apiSession.GetApplianceInformation(appliances)
+	if len(appliances) > 0 {
+		var output *qualys.QAppliances
+		output, err = session.apiSession.GetApplianceInformation(appliances)
 
-	if err == nil {
+		if err == nil {
+			for _, group := range groups {
+				groupAppliances := strings.Split(group.Appliances, ",")
+				group.OnlineAppliances = make([]int, 0)
 
-		for _, group := range groups {
-			groupAppliances := strings.Split(group.Appliances, ",")
-			group.OnlineAppliances = make([]int, 0)
-
-			for _, appliance := range output.Appliances {
-				if appliance.Status == "Online" {
-					if elementExistsInSlice(groupAppliances, strconv.Itoa(appliance.ID)) {
-						group.OnlineAppliances = append(group.OnlineAppliances, appliance.ID)
+				for _, appliance := range output.Appliances {
+					if appliance.Status == "Online" {
+						if elementExistsInSlice(groupAppliances, strconv.Itoa(appliance.ID)) {
+							group.OnlineAppliances = append(group.OnlineAppliances, appliance.ID)
+						}
 					}
 				}
-			}
 
+			}
 		}
 	}
 
