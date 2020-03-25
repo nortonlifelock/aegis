@@ -188,7 +188,7 @@ func (session *QsSession) populateGroupVulnerabilityChecks(detections []domain.M
 
 func (session *QsSession) prepareIPsAndAGMapping(ips []string) (groupIDToScanBundle map[int]*scanBundle, err error) {
 	var groups []*qualys.QSAssetGroup
-	if groups, err = session.getAssetGroups(session.payload.AssetGroups); err == nil {
+	if groups, err = session.getAssetGroups(append(session.payload.AssetGroups, session.payload.ExternalGroups...)); err == nil {
 		groupIDToScanBundle = make(map[int]*scanBundle)
 
 		// even though slices in golang are pass-by-value, groups is a slice of pointers, so modifying the elements on the slice
