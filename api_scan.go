@@ -52,13 +52,16 @@ func (session *Session) CreateScan(scanTitle string, optionProfileID string, app
 
 	var fields = make(map[string]string)
 
+	if networkID > 0 {
+		fields["ip_network_id"] = strconv.Itoa(networkID)
+	}
+
 	if external {
 		fields["iscanner_name"] = externalScanner
 	} else {
 		// Ensure we have engines to scan with
 		if len(appliances) > 0 {
 			fields["iscanner_id"] = strings.Join(appliances, ",") // concat the appliance values together in a comma separated list for passing to the API
-			fields["ip_network_id"] = strconv.Itoa(networkID)
 		} else {
 			err = fmt.Errorf("no scan appliances available to scan with for ips [%s]", strings.Join(ips, ","))
 		}
