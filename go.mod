@@ -22,7 +22,7 @@ require (
 	github.com/nortonlifelock/job v1.0.1-0.20200127165455-ca80a64d226c
 	github.com/nortonlifelock/log v1.0.1-0.20200129171320-c4a4dd839ed8
 	github.com/nortonlifelock/nexpose v1.0.1-0.20200318174825-e7b65e7b05bb
-	github.com/nortonlifelock/qualys v1.0.1-0.20200324192458-226f2ab94100
+	github.com/nortonlifelock/qualys v1.0.1-0.20200325181616-d2246a80c5f5
 	github.com/nortonlifelock/scaffold v1.0.1-0.20200128220520-41da8a42d6d5
 	github.com/pkg/errors v0.9.1
 	github.com/rs/cors v1.7.0
