@@ -35,8 +35,8 @@ type ScanCloseJob struct {
 type ScanClosePayload struct {
 	RescanPayload
 	Scan    interface{} `json:"scan"`
-	Devices []string    `json:"devices"`
-	Group   string      `json:"group"`
+	Devices []string    `json:"devices"` // this field isn't used in processing, but is useful historical/debugging data
+	Group   string      `json:"group"`   // this field isn't used in processing, but is useful historical/debugging data
 	ScanID  string      `json:"scan_id"`
 }
 

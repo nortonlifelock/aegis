@@ -831,7 +831,7 @@ func (job *TicketingJob) payloadToTicket(payload *vulnerabilityPayload) (newtix 
 			Repl("%proof", payload.combo.Proof())
 
 		if len(sord(payload.vuln.Threat())) > 0 {
-			template.Repl("%threat", fmt.Sprintf("\n*Threat:*\n%s\n", sord(payload.vuln.Threat())))
+			template.Repl("%threat", fmt.Sprintf("*Threat:*\n%s\n", sord(payload.vuln.Threat())))
 		} else {
 			template.Repl("%threat", "")
 		}
@@ -1101,13 +1101,10 @@ func (job *TicketingJob) gatherOSDropdown(input string) (output string) {
 }
 
 const (
-	descriptionTemplate = `
-	*Description:*
+	descriptionTemplate = `%threat*Impact:*
 	%description
-	%threat
 	*Proof:*
-	%proof
-	`
+	%proof`
 )
 
 var reportedByMutex sync.Mutex
