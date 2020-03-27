@@ -137,6 +137,7 @@ func (conn *Connection) ScanResults(ctx context.Context, payload []byte) (<-chan
 	var detections chan domain.Detection
 	var err error
 	var deadHostIPToProof = make(chan domain.KeyValue) // TODO how to get these results?
+	defer close(deadHostIPToProof)
 
 	if len(payload) > 0 {
 		ctx = ctxtest(ctx)
