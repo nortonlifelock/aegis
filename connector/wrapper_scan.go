@@ -10,7 +10,6 @@ import (
 type scan struct {
 	session *QsSession
 
-	// TODO do we need the scan name?
 	Name string ` json:"name,omitempty"`
 
 	ScanID string `json:"scanId,omitempty"`
@@ -30,6 +29,10 @@ type scan struct {
 
 func (s *scan) ID() string {
 	return s.ScanID
+}
+
+func (s *scan) Title() string {
+	return s.Name
 }
 
 func (s *scan) Status() (status string, err error) {

@@ -2,6 +2,7 @@ package qualys
 
 import (
 	"fmt"
+	"github.com/nortonlifelock/log"
 	"strconv"
 	"strings"
 )
@@ -100,4 +101,29 @@ func (session *Session) CreateScan(scanTitle string, optionProfileID string, app
 	}
 
 	return scanID, scanRef, err
+}
+
+func (session *Session) GetScheduledScan(scanTitle string) (scan *ScanQualys, err error) {
+	var output = QScanListOutput{}
+	var fields = make(map[string]string)
+	fields["action"] = "list"
+	fields["type"] = "Scheduled"
+	fields["state"] = "Running,Paused,Queued,Loading"
+
+	if err = session.post(session.Config.Address()+qsVMScan, fields, &output); err == nil {
+
+		var found bool
+		for index, scheduledScan := range output.Response.Scans {
+			if scheduledScan.Title == scanTitle {
+				found = true
+				scan = &output.Response.Scans[index]
+			}
+		}
+
+		if !found {
+			session.lstream.Send(log.Debugf("there is currently not a running scheduled with title [%s]", scanTitle))
+		}
+	}
+
+	return scan, err
 }

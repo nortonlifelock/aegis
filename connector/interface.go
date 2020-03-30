@@ -378,10 +378,32 @@ func (session *QsSession) Scans(ctx context.Context, payloads <-chan []byte) (sc
 				if ok {
 					scan := &scan{session: session}
 					if err := json.Unmarshal(payload, scan); err == nil {
-						select {
-						case <-ctx.Done():
-							return
-						case out <- scan:
+
+						if len(scan.Name) > 0 && len(scan.ScanID) == 0 {
+							// this block hits when the title for an expected scheduled scan was passed instead of a scan reference
+							// here we must check to see if one of those scan schedules actually have a scan running, if it does - we push it on the channel
+
+							// the empty scan ID means that a scheduled scan isn't running with that name currently, or the recently created scan with that name hasn't had it's scan ID
+							// loaded yet. We check for a running scan and populate the scan ID of the scheduled
+							scheduledScan, err := session.apiSession.GetScheduledScan(scan.Name)
+							if err == nil {
+								if scheduledScan != nil {
+									scan.ScanID = scheduledScan.Reference
+									select {
+									case <-ctx.Done():
+										return
+									case out <- scan:
+									}
+								}
+							} else {
+								session.lstream.Send(log.Errorf(err, "error while finding scheduled scan for [%s]", scan.Name))
+							}
+						} else {
+							select {
+							case <-ctx.Done():
+								return
+							case out <- scan:
+							}
 						}
 					} else {
 						session.lstream.Send(log.Errorf(err, "error while marshaling scan"))
