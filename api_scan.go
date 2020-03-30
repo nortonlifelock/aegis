@@ -108,7 +108,7 @@ func (session *Session) GetScheduledScan(scanTitle string) (scan *ScanQualys, er
 	var fields = make(map[string]string)
 	fields["action"] = "list"
 	fields["type"] = "Scheduled"
-	fields["state"] = "Running,Paused,Queued,Loading"
+	fields["state"] = "Running,Paused,Queued,Loading,Finished" // TODO remove finished after testing
 
 	if err = session.post(session.Config.Address()+qsVMScan, fields, &output); err == nil {
 
@@ -117,10 +117,15 @@ func (session *Session) GetScheduledScan(scanTitle string) (scan *ScanQualys, er
 			if scheduledScan.Title == scanTitle {
 				found = true
 				scan = &output.Response.Scans[index]
+				break
 			}
 		}
 
-		if !found {
+		if found {
+			if scan != nil {
+				session.lstream.Send(log.Debugf("found a scheduled scan with title [%s|%s]", scanTitle, scan.Reference))
+			}
+		} else {
 			session.lstream.Send(log.Debugf("there is currently not a running scheduled with title [%s]", scanTitle))
 		}
 	}
