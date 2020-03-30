@@ -43,6 +43,10 @@ func (s *Scan) ID() string {
 	return s.ScanID
 }
 
+func (s *Scan) Title() string {
+	return s.Name
+}
+
 // Status returns the status of the scan in Nexpose
 func (s *Scan) Status() (status string, err error) {
 
