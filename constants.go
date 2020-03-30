@@ -116,6 +116,9 @@ const (
 
 	// RescanDecommission is a constant that dictates the type of rescan job is currently running. This controls, for example, the types of tickets collected
 	RescanDecommission = "DECOMMISSIONED"
+
+	// RescanScheduled is a constant that dictates the type of rescan job is currently running. Scheduled rescans are treated like normal rescans
+	RescanScheduled = "SCHEDULED"
 )
 
 // Reference Types string to filter references coming from Nexpose/Qualys api
