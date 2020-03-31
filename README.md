@@ -54,6 +54,7 @@ Installing Aegis:
 ```sh
 git clone https://github.com/nortonlifelock/aegis
 
+?.
 cd ./aegis/cmd || exit
 go install aegis.go
 
@@ -178,13 +179,58 @@ aegis -config app.json -cpath "path to configuration file"
    Starts automatically and runs continuously. This job monitors JIRA and kicks off a RescanJob for tickets in particular statuses. There are four types of RSQ:
    1. Normal - looks tickets in a Resolved-Remediated status. These are for standard vulnerability rescans. Tickets are moved to Closed-Remediated once remediation has been confirmed by a scanner, or reopened if the scanner still detects the vulnerability.
    2. Decommission - looks for tickets in a Resolved-Decommission status. These are for confirming a device has been moved offline. These tickets are moved to Closed-Decommissioned once a scanner has confirmed they are a dead host, or reopened if the host is still alive.
-   3. Passive
+   3. Passive - looks for tickets in an open, reopened, in-progress, resolved-exception status created within 20 days and due within 15 days
    4. Exception - looks for tickets in Closed-Exception status with an exception that expires within 30 days and verifies that the ticket has the vulnerability fixed before the exception expires. If the vulnerability is fixed the ticket is moved to Closed-Remediated. If the vulnerability is not fixed, the ticket is left in Closed-Exception.
 2. RescanJob
 
-    Created by the RescanQueueJob. This job is responsible for creating the scan in Qualys/Nexpose for the devices/vulnerabilities reported in the tickets. 
+    Created by the RescanQueueJob. This job is responsible for creating the scan in Qualys/Nexpose for the devices/vulnerabilities reported in the tickets.
 3. ScanSyncJob
+
+    Monitors scans created by the RescanJob. When it notices a scan has finished, the ScanSyncJob queues up a ScanCloseJob to close out the tickets based on the results of the scan
 4. ScanCloseJob
+
+    Pulls the detection information for the scanned hosts from Qualys/Nexpose and uses that detection information to close out the tickets. This job updates the LastFound/LastUpdated/LastChecked date of the ticket. If no detections were reported for the device and the device was not reported as dead, the ticket is moved to Scan-Error (likely host data purge)
+    1. Normal
+        1. If the device is reported as dead, it’s tickets are moved to resolved-decommission
+        2. If the last updated date is before the scan date, the ticket is moved to scan-error (likely authentication issues)
+        3. If the detection was marked as fixed, or no detection was returned for that device/vulnerability combo, the ticket is moved to closed-remediated
+        4. If the device/vulnerability combo still exists and the ticket is in resolved-remediated, the ticket is reopened
+    2. Decommission
+        1. If the device is reported as dead, it’s tickets are moved to closed-decommission and the device is marked as decommissioned in the Ignore table
+        2. If the device is not reported as dead and the ticket is in resolved-decommission, the ticket is reopened
+    3. Passive
+        1. If the device is reported as dead, it’s tickets are moved to resolved-decommission
+        2. If the detection was marked as fixed, or no detection was returned for that device/vulnerability combo, the ticket is moved to closed-remediated
+        3. If the device/vulnerability combo still exists and the ticket is in resolved-remediated, nothing happens
+    4. Exception: same as passive
+
+## Synchronization Processes
+### Jobs involved:
+
+1. ExceptionJob
+
+    Creates entries in the Ignore table by pulling recently updated Closed-FalsePositive tickets and Closed-Exception tickets with non-empty CERFs
+2. CloudSyncJob
+
+    Sync cloud tag information into the Tag table of the database. We correlate could assets to scanner assets by correlating a scanner asset group to a cloud environment in the AssetGroup table (using ScannerSourceID and CloudSourceID fields)
+3. VulnSyncJob
+
+    Creates and updates entries in the VulnerabilityInfo table
+4. TicketSyncJob
+
+    Pulls recently updated tickets from JIRA and keeps the DB information on the ticket fresh
+5. AssetSyncJob
+
+    Pulls detection information from Qualys/Nexpose API and stores it in db. Uses the vulnerability information information pulled and stored during the VulnSyncJob. Also stores device information in DB. Looks at Ignore table and attaches it to detection if appropriate. Global exceptions are also checked here. Detections created/updated here are what are processed during a ticketing run
 
 ## Ticketing Process
 ### Jobs involved:
+
+1. TicketingJob
+
+    1. Unfixed detections with no ignore ID attached that were recently updated/created are pulled from the DB
+    2. If they have a CVSS lower than what is specified in the CVSS min field in the organization payload, they are skipped.
+    3. We first check the DB, and then JIRA for an existing ticket in the following statuses: Open, In-Progress, Reopened, Resolved-Remediated, Resolved-FalsePositive, Resolved-Decommissioned, Resolved-Exception
+    4. We do mapping from cloud tags to ticket fields (if a tag mapping is specified)
+    5. The ticket is assigned according to the org’s AssignmentRules table
+    6. The ticket is created in JIRA and has an entry made in the Ticket table of the DB
