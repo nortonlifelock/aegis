@@ -47,24 +47,28 @@ func (connector *ConnectorJira) GetTicket(sourceKey string) (ticket domain.Ticke
 }
 
 // GetAdditionalTicketsForVulnPerDevice gets the additional tickets for the Vulns that have been scanned on all devices
-func (connector *ConnectorJira) GetAdditionalTicketsForVulnPerDevice(tickets []domain.Ticket) (relatedTickets <-chan domain.Ticket, err error) {
-	if len(tickets) > 0 {
-		var queries []Query
-		if queries, err = connector.getDeviceVulnsQueries(tickets); err == nil {
-			relatedTickets = connector.runQueriesForIssues(queries, tickets)
+func (connector *ConnectorJira) GetRelatedTicketsForRescan(tickets []domain.Ticket, methodOfDiscovery string, orgCode string, rescanType string) (relatedTickets <-chan domain.Ticket, err error) {
+	switch rescanType {
+	case domain.RescanNormal:
+		if len(tickets) > 0 {
+			var queries []Query
+			if queries, err = connector.getDeviceVulnsQueries(tickets); err == nil {
+				relatedTickets = connector.runQueriesForIssues(queries, tickets)
+			}
 		}
-	}
-
-	return relatedTickets, err
-}
-
-// GetAdditionalTicketsForDecomDevices gets the additional tickets by looking for all the tickets for the decommed devices(except those with "Closed-Remediated".
-func (connector *ConnectorJira) GetAdditionalTicketsForDecomDevices(tickets []domain.Ticket) (relatedTickets <-chan domain.Ticket, err error) {
-	if len(tickets) > 0 {
-		var queries []Query
-		if queries, err = connector.getDeviceTicketsQueries(tickets); err == nil {
-			relatedTickets = connector.runQueriesForIssues(queries, tickets)
+	case domain.RescanDecommission:
+		if len(tickets) > 0 {
+			var queries []Query
+			if queries, err = connector.getDeviceTicketsQueries(tickets); err == nil {
+				relatedTickets = connector.runQueriesForIssues(queries, tickets)
+			}
 		}
+	case domain.RescanScheduled:
+		relatedTickets, err = connector.getTicketsForRescan(nil, methodOfDiscovery, orgCode, domain.RescanNormal)
+	case domain.RescanPassive, domain.RescanExceptions:
+		// do nothing
+	default:
+		err = fmt.Errorf("unrecognized rescan type: [%s]", rescanType)
 	}
 
 	return relatedTickets, err
