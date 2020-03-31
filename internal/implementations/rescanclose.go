@@ -222,6 +222,8 @@ func (job *ScanCloseJob) modifyJiraTicketAccordingToVulnerabilityStatus(engine i
 		detection = deviceIDToVulnIDToDetection[ticket.DeviceID()][combineVulnerabilityIDAndServicePortTicket(ticket)]
 	}
 
+	var scheduledScan = job.Payload.Type == domain.RescanScheduled
+
 	var err error
 	var status string
 	var inactiveKernel bool
@@ -242,15 +244,15 @@ func (job *ScanCloseJob) modifyJiraTicketAccordingToVulnerabilityStatus(engine i
 		}
 	}
 
-	if detectionsFoundForDevice || deviceReportedAsDead {
+	if detectionsFoundForDevice || deviceReportedAsDead || scheduledScan {
 		switch job.Payload.Type {
 		case domain.RescanNormal:
 			job.processTicketForNormalRescan(deadHostIPToProofMap, ticket, detection, err, engine, status, inactiveKernel, scan)
 		case domain.RescanDecommission:
 			job.processTicketForDecommRescan(deadHostIPToProofMap, ticket, detection, err, engine, scan, status)
-		case domain.RescanExceptions:
-			job.processTicketForPassiveOrExceptionRescan(deadHostIPToProofMap, ticket, detection, err, engine, status, inactiveKernel, scan)
-		case domain.RescanPassive:
+		case domain.RescanScheduled:
+			job.processTicketForScheduledScan(ticket, detection, err, engine, status, inactiveKernel, scan)
+		case domain.RescanExceptions, domain.RescanPassive:
 			job.processTicketForPassiveOrExceptionRescan(deadHostIPToProofMap, ticket, detection, err, engine, status, inactiveKernel, scan)
 		default:
 			job.lstream.Send(log.Critical(fmt.Sprintf("Unrecognized scan type [%s]", job.Payload.Type), nil))
@@ -319,6 +321,37 @@ func (job *ScanCloseJob) processTicketForDecommRescan(deadHostIPToProofMap map[s
 		}
 	} else {
 		job.lstream.Send(log.Errorf(fmt.Errorf("unrecognized status [%v]", status), "scan close job did not recognize vulnerability status"))
+	}
+}
+
+func (job *ScanCloseJob) processTicketForScheduledScan(ticket domain.Ticket, detection domain.Detection, err error, engine integrations.TicketingEngine, status string, inactiveKernel bool, scan domain.ScanSummary) {
+	if detection != nil {
+		if status == domain.Fixed {
+			// Non-decommission scan, the detection appears to be fixed, so close the ticket
+			var closeReason = closeComment
+			if inactiveKernel {
+				closeReason = inactiveKernelComment
+			}
+
+			job.lstream.Send(log.Infof("Vulnerability NO LONGER EXISTS, closing Ticket [%s]", ticket.Title()))
+			if err = job.closeTicket(engine, ticket, scan, engine.GetStatusMap(domain.StatusClosedRemediated), closeReason); err != nil {
+				job.lstream.Send(log.Errorf(err, "Error while closing Ticket [%s]", ticket.Title()))
+			}
+		} else if status == domain.Vulnerable {
+			if job.shouldOpenTicket(engine, sord(ticket.Status()), job.Payload.Type) {
+				job.lstream.Send(log.Infof("Vulnerability STILL EXISTS, re-opening Ticket [%s]", ticket.Title()))
+				if err = job.openTicket(ticket, detection, scan, engine); err != nil {
+					job.lstream.Send(log.Errorf(err, "Error while opening Ticket [%s]", ticket.Title()))
+				}
+			} else {
+				job.lstream.Send(log.Infof("Vulnerability still exists, but the ticket it not in the proper resolved state - leaving Ticket [%s] in its current status", ticket.Title()))
+			}
+		} else {
+			job.lstream.Send(log.Errorf(fmt.Errorf("unrecognized status [%v]", status), "scan close job did not recognize vulnerability status"))
+		}
+	} else {
+		// we grab more tickets than detections for scheduled scans, so we can tell which tickets were covered in a scheduled scan by seeing if it as an associated detection
+		// a detection covered in the scan should never return nil, even for a fixed vulnerability
 	}
 }
 
@@ -424,7 +457,7 @@ func (job *ScanCloseJob) shouldOpenTicket(ticketing integrations.TicketingEngine
 	status = strings.ToLower(status)
 	jobType = strings.ToLower(jobType)
 
-	if status == strings.ToLower(ticketing.GetStatusMap(domain.StatusResolvedRemediated)) && jobType == strings.ToLower(domain.RescanNormal) {
+	if status == strings.ToLower(ticketing.GetStatusMap(domain.StatusResolvedRemediated)) && (jobType == strings.ToLower(domain.RescanNormal) || jobType == strings.ToLower(domain.RescanScheduled)) {
 		shouldOpen = true
 	} else if status == strings.ToLower(ticketing.GetStatusMap(domain.StatusResolvedDecom)) && jobType == strings.ToLower(domain.RescanDecommission) {
 		shouldOpen = true
@@ -454,27 +487,30 @@ func (job *ScanCloseJob) closeTicket(ticketing integrations.TicketingEngine, tix
 func (job *ScanCloseJob) loadAdditionalTickets(ticketing integrations.TicketingEngine, tickets []domain.Ticket) (additionalTickets []domain.Ticket, err error) {
 	additionalTickets = make([]domain.Ticket, 0)
 
-	var additionalTicketsChan <-chan domain.Ticket
-	if strings.ToLower(job.Payload.Type) == strings.ToLower(domain.RescanDecommission) {
-		additionalTicketsChan, err = ticketing.GetAdditionalTicketsForDecomDevices(tickets)
-	} else if strings.ToLower(job.Payload.Type) == strings.ToLower(domain.RescanNormal) {
-		additionalTicketsChan, err = ticketing.GetAdditionalTicketsForVulnPerDevice(tickets)
-	}
+	var orgcode string
+	// Get the organization from the database using the id in the ticket object
+	var torg domain.Organization
+	if torg, err = job.db.GetOrganizationByID(job.config.OrganizationID()); err == nil {
+		orgcode = torg.Code()
 
-	var seen = make(map[string]bool)
-	for _, tic := range tickets {
-		seen[tic.Title()] = true
-	}
+		var additionalTicketsChan <-chan domain.Ticket
+		additionalTicketsChan, err = ticketing.GetRelatedTicketsForRescan(tickets, job.insource.Source(), orgcode, job.Payload.Type)
 
-	if err == nil && additionalTicketsChan != nil {
-		for {
-			if ticket, ok := <-additionalTicketsChan; ok {
-				if !seen[ticket.Title()] {
-					seen[ticket.Title()] = true
-					additionalTickets = append(additionalTickets, ticket)
+		var seen = make(map[string]bool)
+		for _, tic := range tickets {
+			seen[tic.Title()] = true
+		}
+
+		if err == nil && additionalTicketsChan != nil {
+			for {
+				if ticket, ok := <-additionalTicketsChan; ok {
+					if !seen[ticket.Title()] {
+						seen[ticket.Title()] = true
+						additionalTickets = append(additionalTickets, ticket)
+					}
+				} else {
+					break
 				}
-			} else {
-				break
 			}
 		}
 	}

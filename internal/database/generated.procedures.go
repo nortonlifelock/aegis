@@ -5286,6 +5286,8 @@ func (conn *dbconn) GetScanSummary(_SourceID string, _OrgID string, _ScanID stri
 							var myOrgID string
 							var mySourceKey *string
 							var myScanStatus string
+							var myParentJobID string
+							var myScanClosePayload string
 							var myCreatedDate time.Time
 							var myUpdatedDate *time.Time
 
@@ -5296,18 +5298,22 @@ func (conn *dbconn) GetScanSummary(_SourceID string, _OrgID string, _ScanID stri
 								&myOrgID,
 								&mySourceKey,
 								&myScanStatus,
+								&myParentJobID,
+								&myScanClosePayload,
 								&myCreatedDate,
 								&myUpdatedDate,
 							); err == nil {
 
 								newScanSummary := &dal.ScanSummary{
-									SourceIDvar:    mySourceID,
-									TemplateIDvar:  myTemplateID,
-									OrgIDvar:       myOrgID,
-									SourceKeyvar:   mySourceKey,
-									ScanStatusvar:  myScanStatus,
-									CreatedDatevar: myCreatedDate,
-									UpdatedDatevar: myUpdatedDate,
+									SourceIDvar:         mySourceID,
+									TemplateIDvar:       myTemplateID,
+									OrgIDvar:            myOrgID,
+									SourceKeyvar:        mySourceKey,
+									ScanStatusvar:       myScanStatus,
+									ParentJobIDvar:      myParentJobID,
+									ScanClosePayloadvar: myScanClosePayload,
+									CreatedDatevar:      myCreatedDate,
+									UpdatedDatevar:      myUpdatedDate,
 								}
 
 								retScanSummary = newScanSummary

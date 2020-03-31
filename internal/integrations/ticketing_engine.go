@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/nortonlifelock/domain"
 	"github.com/nortonlifelock/crypto"
+	"github.com/nortonlifelock/domain"
 	"github.com/nortonlifelock/jira"
 	"github.com/pkg/errors"
 )
@@ -25,8 +25,7 @@ type TicketingEngine interface {
 	GetCERFExpirationUpdates(startDate time.Time) (cerfs map[string]time.Time, err error)
 	GetOpenTicketsByGroupID(methodOfDiscovery string, orgCode string, groupID string) (tickets <-chan domain.Ticket, err error)
 
-	GetAdditionalTicketsForVulnPerDevice(tickets []domain.Ticket) (issues <-chan domain.Ticket, err error)
-	GetAdditionalTicketsForDecomDevices(tickets []domain.Ticket) (issues <-chan domain.Ticket, err error)
+	GetRelatedTicketsForRescan(tickets []domain.Ticket, methodOfDiscovery string, orgCode string, rescanType string) (issues <-chan domain.Ticket, err error)
 
 	AssignmentGroupExists(groupName string) (exists bool, err error)
 

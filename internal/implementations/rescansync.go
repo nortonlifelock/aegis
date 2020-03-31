@@ -2,6 +2,7 @@ package implementations
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"github.com/nortonlifelock/aegis/internal/integrations"
 	"github.com/nortonlifelock/domain"
@@ -15,6 +16,7 @@ import (
 type ScanSyncJob struct {
 	id          string
 	payloadJSON string
+	payload     *ScanSyncPayload
 	ctx         context.Context
 	db          domain.DatabaseConnection
 	lstream     log.Logger
@@ -24,6 +26,13 @@ type ScanSyncJob struct {
 	outsource   domain.SourceConfig
 }
 
+type ScanSyncPayload struct {
+	// these scheduled scans are pushed to Qualys AFTER the unfinished scans from the db
+	// the scheduled scans in here may overlap with the unfinished scans from the db, but the driver should be able to filter out the additionals
+	// using the scan titles
+	ScheduledScanPayloads []string `json:"scheduled_scans"`
+}
+
 // Process monitors unfinished scans in the database, and queries the scanners to keep the status of the scans in the database up-to-date
 // if the scanner reports the scan as finished, this job queues up a job history for a scan close job that will process the results of the scan
 func (job *ScanSyncJob) Process(ctx context.Context, id string, appconfig domain.Config, db domain.DatabaseConnection, lstream log.Logger, payload string, jobConfig domain.JobConfig, inSource []domain.SourceConfig, outSource []domain.SourceConfig) (err error) {
@@ -31,59 +40,65 @@ func (job *ScanSyncJob) Process(ctx context.Context, id string, appconfig domain
 	var ok bool
 	if job.ctx, job.id, job.appconfig, job.db, job.lstream, job.payloadJSON, job.config, job.insource, job.outsource, ok = validInputs(ctx, id, appconfig, db, lstream, payload, jobConfig, inSource, outSource); ok {
 
-		var scanner integrations.Vscanner
+		job.payload = &ScanSyncPayload{}
+		if err = json.Unmarshal([]byte(job.payloadJSON), job.payload); err == nil {
+			var scanner integrations.Vscanner
 
-		var sourceName = job.insource.Source()
+			var sourceName = job.insource.Source()
 
-		job.lstream.Send(log.Debugf("Establishing %s session", sourceName))
-		scanner, err = integrations.NewVulnScanner(job.ctx, sourceName, job.db, job.lstream, job.appconfig, job.insource)
+			job.lstream.Send(log.Debugf("Establishing %s session", sourceName))
+			scanner, err = integrations.NewVulnScanner(job.ctx, sourceName, job.db, job.lstream, job.appconfig, job.insource)
 
-		if err == nil {
+			if err == nil {
 
-			var baseJob domain.JobRegistration
-			if baseJob, err = job.getBaseJob(); err == nil {
-				var unfinishedScans []domain.ScanSummary
-				unfinishedScans, err = job.db.GetUnfinishedScanSummariesBySourceConfigOrgID(job.insource.ID(), job.config.OrganizationID())
+				var baseJob domain.JobRegistration
+				if baseJob, err = job.getBaseJob(); err == nil {
+					var unfinishedScans []domain.ScanSummary
+					unfinishedScans, err = job.db.GetUnfinishedScanSummariesBySourceConfigOrgID(job.insource.ID(), job.config.OrganizationID())
 
-				if err == nil {
-					if unfinishedScans != nil && len(unfinishedScans) > 0 {
-						job.lstream.Send(log.Infof("Found [%v] Scans to Sync", len(unfinishedScans)))
+					if err == nil {
+						if (unfinishedScans != nil && len(unfinishedScans) > 0) || len(job.payload.ScheduledScanPayloads) > 0 {
+							job.lstream.Send(log.Infof("Found [%v] Scans to Sync", len(unfinishedScans)+len(job.payload.ScheduledScanPayloads)))
 
-						var scanData <-chan domain.Scan
-						if scanData = scanner.Scans(job.ctx, job.pushScansOntoChannel(unfinishedScans)); err == nil {
+							var scanData <-chan domain.Scan
+							if scanData = scanner.Scans(job.ctx, job.pushScansOntoChannel(unfinishedScans)); err == nil {
 
-							for {
-								select {
-								case <-job.ctx.Done():
-									return
-								case scanToCheck, ok := <-scanData:
-									if ok {
-										var correspondingScanSummary domain.ScanSummary
-										if correspondingScanSummary, err = getCorrespondingScanSummary(scanToCheck, unfinishedScans); err == nil {
-											job.processSyncedScan(scanToCheck, correspondingScanSummary, baseJob)
-										} else {
-											job.lstream.Send(log.Errorf(err, "could not find scan summary"))
-										}
-									} else {
+								for {
+									select {
+									case <-job.ctx.Done():
 										return
+									case scanToCheck, ok := <-scanData:
+										if ok {
+											var correspondingScanSummary domain.ScanSummary
+											if correspondingScanSummary, err = job.getCorrespondingScanSummary(scanToCheck, unfinishedScans); err == nil {
+												job.processSyncedScan(scanToCheck, correspondingScanSummary, baseJob)
+											} else {
+												job.lstream.Send(log.Errorf(err, "could not find scan summary"))
+											}
+										} else {
+											return
+										}
 									}
 								}
+							} else {
+								job.lstream.Send(log.Errorf(err, "Error while syncing scans for %s - %s", sourceName, err.Error()))
 							}
 						} else {
-							job.lstream.Send(log.Errorf(err, "Error while syncing scans for %s - %s", sourceName, err.Error()))
+							job.lstream.Send(log.Debugf("No unfinished scans found for %s", sourceName))
 						}
 					} else {
-						job.lstream.Send(log.Debugf("No unfinished scans found for %s", sourceName))
+						job.lstream.Send(log.Errorf(err, "Error while grabbing unfinished scans from the database [%s]", err.Error()))
 					}
 				} else {
-					job.lstream.Send(log.Errorf(err, "Error while grabbing unfinished scans from the database [%s]", err.Error()))
+					job.lstream.Send(log.Error("error while gathering base job", err))
 				}
 			} else {
-				job.lstream.Send(log.Error("error while gathering base job", err))
+				job.lstream.Send(log.Error("Error while creating vulnerability scanner", err))
 			}
 		} else {
-			job.lstream.Send(log.Error("Error while creating vulnerability scanner", err))
+			job.lstream.Send(log.Errorf(err, "error while unmarshalling job history payload"))
 		}
+
 	} else {
 		err = fmt.Errorf("input validation failed")
 	}
@@ -174,6 +189,14 @@ func (job *ScanSyncJob) pushScansOntoChannel(in []domain.ScanSummary) <-chan []b
 				job.lstream.Send(log.Errorf(err, "error while unmarshalling scan close payload"))
 			}
 		}
+
+		for _, scan := range job.payload.ScheduledScanPayloads {
+			select {
+			case <-job.ctx.Done():
+				return
+			case out <- []byte(scan):
+			}
+		}
 	}()
 
 	return out
@@ -191,7 +214,7 @@ func (job *ScanSyncJob) getBaseJob() (baseJob domain.JobRegistration, err error)
 	return baseJob, err
 }
 
-func getCorrespondingScanSummary(in domain.Scan, options []domain.ScanSummary) (out domain.ScanSummary, err error) {
+func (job *ScanSyncJob) getCorrespondingScanSummary(in domain.Scan, options []domain.ScanSummary) (out domain.ScanSummary, err error) {
 	if len(in.ID()) > 0 {
 		for _, option := range options {
 			if sord(option.SourceKey()) == in.ID() {
@@ -201,7 +224,38 @@ func getCorrespondingScanSummary(in domain.Scan, options []domain.ScanSummary) (
 		}
 
 		if out == nil {
-			err = fmt.Errorf("could not find scan summary for %v", in.ID())
+			scanClosePayload := &ScanClosePayload{}
+			scanClosePayload.Scan = in
+			scanClosePayload.ScanID = in.ID()
+			scanClosePayload.Type = domain.RescanScheduled
+
+			var bytePayload []byte
+
+			if bytePayload, err = json.Marshal(scanClosePayload); err == nil {
+				_, _, err = job.db.CreateScanSummary(
+					job.insource.SourceID(),
+					job.insource.ID(),
+					job.config.OrganizationID(),
+					in.ID(),
+					domain.ScanQUEUED,
+					string(bytePayload),
+					job.id,
+				)
+
+				if err == nil {
+					job.lstream.Send(log.Infof("created ScanSummary db entry for [%s/%s]", in.ID(), in.Title()))
+
+					if out, err = job.db.GetScanSummary(job.insource.SourceID(), job.config.OrganizationID(), in.ID()); err == nil {
+						if out == nil {
+							job.lstream.Send(log.Infof("could not find scheduled scan summary [%s]", in.ID()))
+						}
+					} else {
+						job.lstream.Send(log.Infof("error while grabbing scheduled scan summary [%s]", in.ID()))
+					}
+				} else {
+					job.lstream.Send(log.Infof("failed to create ScanSummary db entry for [%s/%s]", in.ID(), in.Title()))
+				}
+			}
 		}
 	} else {
 		err = fmt.Errorf("empty scan ID")

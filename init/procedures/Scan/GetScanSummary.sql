@@ -1,10 +1,12 @@
 /*
   RETURN ScanSummary SINGLE
-  SourceID          NVARCHAR(36)              NOT
+  SourceID          NVARCHAR(36)     NOT
   TemplateID        NVARCHAR(100)    NULL
-  OrgID             NVARCHAR(36)              NOT
+  OrgID             NVARCHAR(36)     NOT
   SourceKey         NVARCHAR(100)    NULL
   ScanStatus        NVARCHAR(30)     NOT
+  ParentJobID       VARCHAR(36)      NOT
+  ScanClosePayload  MEDIUMTEXT       NOT
   CreatedDate       DATETIME         NOT
   UpdatedDate       DATETIME         NULL
 */
@@ -19,6 +21,8 @@ CREATE PROCEDURE `GetScanSummary` (_SourceID VARCHAR(36), _OrgID VARCHAR(36), _S
     SS.OrgId,
     SS.SourceKey,
     SS.ScanStatus,
+    SS.ParentJobId,
+    SS.ScanClosePayload,
     SS.CreatedDate,
     SS.UpdatedDate
   FROM ScanSummary SS
