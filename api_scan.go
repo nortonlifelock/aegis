@@ -3,6 +3,7 @@ package qualys
 import (
 	"fmt"
 	"github.com/nortonlifelock/log"
+	"net/http"
 	"strconv"
 	"strings"
 )
@@ -108,7 +109,7 @@ func (session *Session) GetAssetTagTargetOfScheduledScan(scheduleTitle string) (
 	var fields = make(map[string]string)
 	fields["action"] = "list"
 
-	if err = session.post(session.Config.Address()+qsScheduledScan, fields, &output); err == nil {
+	if err = session.httpCall(http.MethodGet, session.Config.Address()+qsScheduledScan, fields, nil, &output); err == nil {
 		for _, scheduledScan := range output.Response.ScheduleScanList.Scan {
 			if scheduledScan.Title == scheduleTitle {
 				tagSetTarget = scheduledScan.AssetTags.TagSetInclude
