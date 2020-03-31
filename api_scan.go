@@ -108,7 +108,7 @@ func (session *Session) GetAssetTagTargetOfScheduledScan(scheduleTitle string) (
 	var fields = make(map[string]string)
 	fields["action"] = "list"
 
-	if err = session.post(session.Config.Address()+qsVMScan, fields, &output); err == nil {
+	if err = session.post(session.Config.Address()+qsScheduledScan, fields, &output); err == nil {
 		for _, scheduledScan := range output.Response.ScheduleScanList.Scan {
 			if scheduledScan.Title == scheduleTitle {
 				tagSetTarget = scheduledScan.AssetTags.TagSetInclude
