@@ -2,6 +2,7 @@ package qualys
 
 const (
 	qsVMScan              = "/api/2.0/fo/scan/"
+	qsScheduledScan       = "/api/2.0/fo/schedule/scan/"
 	qsAssetVMHost         = "/api/2.0/fo/asset/host/vm/detection/"
 	qsVulnerabilities     = "/api/2.0/fo/knowledge_base/vuln/"
 	qsSearchList          = "/api/2.0/fo/qid/search_list/static/"

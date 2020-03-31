@@ -103,6 +103,22 @@ func (session *Session) CreateScan(scanTitle string, optionProfileID string, app
 	return scanID, scanRef, err
 }
 
+func (session *Session) GetAssetTagTargetOfScheduledScan(scheduleTitle string) (tagSetTarget string, err error) {
+	var output = ScheduleScanListOutput{}
+	var fields = make(map[string]string)
+	fields["action"] = "list"
+
+	if err = session.post(session.Config.Address()+qsVMScan, fields, &output); err == nil {
+		for _, scheduledScan := range output.Response.ScheduleScanList.Scan {
+			if scheduledScan.Title == scheduleTitle {
+				tagSetTarget = scheduledScan.AssetTags.TagSetInclude
+			}
+		}
+	}
+
+	return tagSetTarget, err
+}
+
 func (session *Session) GetScheduledScan(scanTitle string) (scan *ScanQualys, err error) {
 	var output = QScanListOutput{}
 	var fields = make(map[string]string)

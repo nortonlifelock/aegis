@@ -17,7 +17,6 @@ type scan struct {
 	// The identifier of the scan template
 	TemplateID string `json:"templateId,omitempty"`
 
-	// TODO - do we need GroupID/EngineIDs? If not, we should remove
 	// GroupID holds the scan's site id that was used to create the scan in Qualys
 	GroupID string `json:"groupId,omitempty"`
 
@@ -25,6 +24,8 @@ type scan struct {
 	EngineIDs []string `json:"engineId,omitempty"`
 
 	Created time.Time `json:"created"`
+
+	Scheduled bool `json:"scheduled"`
 }
 
 func (s *scan) ID() string {
