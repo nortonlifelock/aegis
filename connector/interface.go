@@ -3,7 +3,6 @@ package connector
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"github.com/nortonlifelock/domain"
 	"github.com/nortonlifelock/log"
 	"github.com/nortonlifelock/qualys"
@@ -430,27 +429,15 @@ func (session *QsSession) Scans(ctx context.Context, payloads <-chan []byte) (sc
 							scheduledScan, err := session.apiSession.GetScheduledScan(scan.Name)
 							if err == nil {
 								if scheduledScan != nil {
+									seen[scan.Name] = true
+									scan.ScanID = scheduledScan.Reference
+									scan.Created = scheduledScan.LaunchDate
+									scan.Scheduled = true
 
-									tagsCoveredByScheduledScan, err := session.apiSession.GetAssetTagTargetOfScheduledScan(scan.Name)
-									if err == nil {
-										tags := strings.Split(tagsCoveredByScheduledScan, ",")
-										for index, tag := range tags {
-											tags[index] = fmt.Sprintf("%s%s", tagPrefix, tag)
-										}
-
-										seen[scan.Name] = true
-										scan.ScanID = scheduledScan.Reference
-										scan.Created = scheduledScan.LaunchDate
-										scan.GroupID = strings.Join(tags, ",")
-										scan.Scheduled = true
-
-										select {
-										case <-ctx.Done():
-											return
-										case out <- scan:
-										}
-									} else {
-										session.lstream.Send(log.Errorf(err, "error while loading the asset tag target of [%s]", scan.Name))
+									select {
+									case <-ctx.Done():
+										return
+									case out <- scan:
 									}
 								}
 							} else {
