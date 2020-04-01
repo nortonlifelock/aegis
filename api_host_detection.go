@@ -20,11 +20,19 @@ func (session *Session) GetTagDetections(tags []string, kernelFilterFlag int) (o
 		fields["arf_kernel_filter"] = strconv.Itoa(kernelFilterFlag)
 		fields["status"] = "New,Active,Re-Opened,Fixed" // If this parameter is not passed to the API, by default, the output contains detections with New, Active or Re-Opened <STATUS> only
 		fields["use_tags"] = "1"
-		fields["tag_set_by"] = "id"
+
+		// we can provide either the name of the tag, or the id of the tag
+		// names are strings, ids are integers. here we check if the tags appear to be integers or strings
+		if _, convertErr := strconv.Atoi(tags[0]); convertErr == nil {
+			fields["tag_set_by"] = "id"
+		} else {
+			fields["tag_set_by"] = "name"
+		}
+
 		fields["tag_include_selector"] = "all"
 		fields["tag_set_include"] = strings.Join(tags, ",")
 
-		// TODO how to pull azure instance ID?
+		// TODO ec2 is currently the only metadata that Qualys supports
 		fields["host_metadata"] = "ec2"
 		fields["host_metadata_fields"] = "instanceId"
 

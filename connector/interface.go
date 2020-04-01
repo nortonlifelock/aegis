@@ -13,6 +13,8 @@ import (
 	"time"
 )
 
+const tagPrefix = "tag-"
+
 // KnowledgeBase grabs all vulnerabilities from the Qualys knowledge base and pushes them onto a channel
 func (session *QsSession) KnowledgeBase(ctx context.Context, since *time.Time) <-chan domain.Vulnerability {
 	var out = make(chan domain.Vulnerability, 50)
@@ -74,7 +76,6 @@ func (session *QsSession) Detections(ctx context.Context, ids []string) (detecti
 
 		var tags = make([]string, 0)
 		var groupIDs = make([]string, 0)
-		const tagPrefix = "tag-"
 		for _, id := range ids {
 			if strings.Index(id, tagPrefix) >= 0 {
 				tags = append(tags, id[strings.Index(id, tagPrefix)+len(tagPrefix):])
@@ -432,7 +433,7 @@ func (session *QsSession) Scans(ctx context.Context, payloads <-chan []byte) (sc
 									if err == nil {
 										tags := strings.Split(tagsCoveredByScheduledScan, ",")
 										for index, tag := range tags {
-											tags[index] = fmt.Sprintf("tag-%s", tag)
+											tags[index] = fmt.Sprintf("%s%s", tagPrefix, tag)
 										}
 
 										seen[scan.Name] = true
