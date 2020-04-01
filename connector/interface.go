@@ -3,6 +3,7 @@ package connector
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"github.com/nortonlifelock/domain"
 	"github.com/nortonlifelock/log"
 	"github.com/nortonlifelock/qualys"
@@ -429,10 +430,15 @@ func (session *QsSession) Scans(ctx context.Context, payloads <-chan []byte) (sc
 
 									tagsCoveredByScheduledScan, err := session.apiSession.GetAssetTagTargetOfScheduledScan(scan.Name)
 									if err == nil {
+										tags := strings.Split(tagsCoveredByScheduledScan, ",")
+										for _, tag := range tags {
+											tag = fmt.Sprintf("tag-%s", tag)
+										}
+
 										seen[scan.Name] = true
 										scan.ScanID = scheduledScan.Reference
 										scan.Created = scheduledScan.LaunchDate
-										scan.GroupID = tagsCoveredByScheduledScan
+										scan.GroupID = strings.Join(tags, ",")
 										scan.Scheduled = true
 
 										select {

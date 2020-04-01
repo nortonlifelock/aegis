@@ -117,6 +117,10 @@ func (session *Session) GetAssetTagTargetOfScheduledScan(scheduleTitle string) (
 		}
 	}
 
+	if len(tagSetTarget) == 0 {
+		err = fmt.Errorf("could not find asset tag target of scheduled scan [%s]", scheduleTitle)
+	}
+
 	return tagSetTarget, err
 }
 
