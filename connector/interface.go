@@ -254,22 +254,24 @@ func (session *QsSession) ScanResults(ctx context.Context, payload []byte) (<-ch
 				if len(scanInfo.GroupID) > 0 {
 					detections, err := session.Detections(ctx, strings.Split(scanInfo.GroupID, ","))
 					if err == nil {
-						for {
-							select {
-							case <-ctx.Done():
-								return
-							case val, ok := <-detections:
-								if ok {
-									select {
-									case <-ctx.Done():
+						func() {
+							for {
+								select {
+								case <-ctx.Done():
+									return
+								case val, ok := <-detections:
+									if ok {
+										select {
+										case <-ctx.Done():
+											return
+										case out <- val:
+										}
+									} else {
 										return
-									case out <- val:
 									}
-								} else {
-									break
 								}
 							}
-						}
+						}()
 					} else {
 						session.lstream.Send(log.Errorf(err, "error while loading detections for [%s]", scanInfo.GroupID))
 					}
