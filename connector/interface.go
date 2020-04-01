@@ -431,8 +431,8 @@ func (session *QsSession) Scans(ctx context.Context, payloads <-chan []byte) (sc
 									tagsCoveredByScheduledScan, err := session.apiSession.GetAssetTagTargetOfScheduledScan(scan.Name)
 									if err == nil {
 										tags := strings.Split(tagsCoveredByScheduledScan, ",")
-										for _, tag := range tags {
-											tag = fmt.Sprintf("tag-%s", tag)
+										for index, tag := range tags {
+											tags[index] = fmt.Sprintf("tag-%s", tag)
 										}
 
 										seen[scan.Name] = true
