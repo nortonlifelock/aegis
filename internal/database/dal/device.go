@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"github.com/nortonlifelock/domain"
-	"strconv"
 )
 
 // Device implements the domain.Device interface and utilizes the DeviceInfo object (which is tied to the database table Device)
@@ -56,7 +55,7 @@ func (device *Device) InstanceID() *string {
 func (device *Device) GroupID() *string {
 	var groupID string
 	if device.Info.GroupID() != nil {
-		groupID = strconv.Itoa(*device.Info.GroupID())
+		groupID = *device.Info.GroupID()
 	}
 
 	return &groupID

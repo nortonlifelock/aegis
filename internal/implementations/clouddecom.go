@@ -10,7 +10,6 @@ import (
 
 	"github.com/nortonlifelock/aegis/internal/integrations"
 	"github.com/nortonlifelock/domain"
-	"github.com/nortonlifelock/jira"
 	"github.com/nortonlifelock/log"
 )
 
@@ -227,7 +226,7 @@ func (job *CloudDecommissionJob) closeTicketsForDecommissionedAssets(tickets <-c
 
 							if err := ticketingEngine.Transition(
 								tic,
-								ticketingEngine.GetStatusMap(jira.StatusClosedDecommissioned),
+								ticketingEngine.GetStatusMap(domain.StatusClosedDecommissioned),
 								"Asset decommissioned as it was not located in the cloud asset inventory",
 								sord(tic.AssignedTo())); err == nil {
 								job.lstream.Send(log.Infof("%v marked as decommissioned as it's IP [%v] was not in the AWS inventory", tic.Title(), sord(tic.IPAddress())))

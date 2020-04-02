@@ -43,7 +43,7 @@ type AssetSyncJob struct {
 
 // AssetSyncPayload holds the asset groups to be synced by the job. loaded from the job history Payload
 type AssetSyncPayload struct {
-	GroupIDs []int `json:"groups"`
+	GroupIDs []string `json:"groups"`
 }
 
 // buildPayload loads the Payload from the job history into the Payload object
@@ -81,7 +81,20 @@ func (job *AssetSyncJob) Process(ctx context.Context, id string, appconfig domai
 					job.lstream.Send(log.Debug("Scanner connection created, beginning processing..."))
 
 					if job.globalExceptions, job.deviceIDToVulnIDToException, err = job.preloadIgnores(); err == nil {
-						for _, groupID := range job.Payload.GroupIDs {
+
+						var cloudTags = make([]string, 0)
+						var groupIDs = make([]string, 0)
+						const tagPrefix = "tag-"
+						for _, id := range job.Payload.GroupIDs {
+							if strings.Index(id, tagPrefix) >= 0 {
+								cloudTags = append(cloudTags, id)
+							} else {
+								groupIDs = append(groupIDs, id)
+							}
+						}
+
+						// it is important to pass the groupIDs one at a time so we know which group a returned asset belongs to
+						for _, groupID := range groupIDs {
 							if err = job.createAssetGroupInDB(groupID, job.insources.SourceID(), job.insources.ID()); err == nil {
 								select {
 								case <-job.ctx.Done():
@@ -90,11 +103,18 @@ func (job *AssetSyncJob) Process(ctx context.Context, id string, appconfig domai
 								}
 
 								job.lstream.Send(log.Infof("started processing %v", groupID))
-								job.processGroup(vscanner, groupID)
+								job.processGroup(vscanner, []string{groupID})
 								job.lstream.Send(log.Infof("finished processing %v", groupID))
 							} else {
 								job.lstream.Send(log.Error("error while creating asset group", err))
 							}
+						}
+
+						// the cloud tags must all be passed together, as they are used in coordination to find assets
+						if len(cloudTags) > 0 {
+							job.lstream.Send(log.Infof("started processing %v", cloudTags))
+							job.processGroup(vscanner, cloudTags)
+							job.lstream.Send(log.Infof("finished processing %v", cloudTags))
 						}
 					} else {
 						job.lstream.Send(log.Errorf(err, "error while loading global exceptions"))
@@ -142,11 +162,9 @@ func (job *AssetSyncJob) fanInDetections(in <-chan domain.Detection) (devIDToDet
 }
 
 // This method is responsible for gathering the assets of the group, as well as kicking off the threads that process each asset
-func (job *AssetSyncJob) processGroup(vscanner integrations.Vscanner, groupID int) {
-	var groupIDString = strconv.Itoa(groupID)
-
+func (job *AssetSyncJob) processGroup(vscanner integrations.Vscanner, groupIDs []string) {
 	// gather the asset information
-	detectionChan, err := vscanner.Detections(job.ctx, []string{groupIDString})
+	detectionChan, err := vscanner.Detections(job.ctx, groupIDs)
 	if err == nil {
 
 		devIDToDetections := job.fanInDetections(detectionChan)
@@ -183,9 +201,9 @@ func (job *AssetSyncJob) processGroup(vscanner integrations.Vscanner, groupID in
 								job.lstream.Send(log.Errorf(err, "error while loading decomm ignore entry"))
 							}
 
-							err = job.addDeviceInformationToDB(asset, groupID)
+							err = job.addDeviceInformationToDB(asset, strings.Join(groupIDs, ","))
 							if err == nil {
-								job.processAsset(deviceID, asset, detections, groupID, decomIgnoreID)
+								job.processAsset(deviceID, asset, detections, decomIgnoreID)
 							} else {
 								job.lstream.Send(log.Errorf(err, "error while adding asset information to the database"))
 							}
@@ -240,7 +258,7 @@ func (job *AssetSyncJob) getDecommIgnoreEntryForAsset(deviceID string, scannerSo
 }
 
 // Only process the asset if it has not been processed by another group
-func (job *AssetSyncJob) processAsset(deviceID string, asset domain.Device, detections []domain.Detection, groupID int, decomIgnoreID string) {
+func (job *AssetSyncJob) processAsset(deviceID string, asset domain.Device, detections []domain.Detection, decomIgnoreID string) {
 	var err error
 
 	if len(sord(asset.SourceID())) > 0 {
@@ -276,7 +294,7 @@ func (job *AssetSyncJob) processAsset(deviceID string, asset domain.Device, dete
 }
 
 // This method creates/gathers the entry for the OS Type as well as updates/creates the asset information in the database
-func (job *AssetSyncJob) addDeviceInformationToDB(asset domain.Device, groupID int) (err error) {
+func (job *AssetSyncJob) addDeviceInformationToDB(asset domain.Device, groupID string) (err error) {
 	var ostFromDb domain.OperatingSystemType
 	if len(asset.OS()) > 0 {
 		ostFromDb, err = job.grabAndCreateOsType(asset.OS())
@@ -300,7 +318,7 @@ func (job *AssetSyncJob) addDeviceInformationToDB(asset domain.Device, groupID i
 // this method checks the database to see if an asset under that ip/org and creates an entry if one doesn't exist.
 // if an entry exists but does not have an asset id set (which occurs when the CloudSync Job) finds the asset first,
 // this method then enters the asset id for that entry
-func (job *AssetSyncJob) enterAssetInformationInDB(asset domain.Device, osTypeID int, groupID int) (err error) {
+func (job *AssetSyncJob) enterAssetInformationInDB(asset domain.Device, osTypeID int, groupID string) (err error) {
 	if asset != nil {
 
 		if len(sord(asset.SourceID())) > 0 {
@@ -312,8 +330,12 @@ func (job *AssetSyncJob) enterAssetInformationInDB(asset domain.Device, osTypeID
 			if deviceInDB, err = job.db.GetDeviceByAssetOrgID(sord(asset.SourceID()), job.config.OrganizationID()); err == nil { // TODO include org id parameter
 				if deviceInDB == nil {
 
+					if len(sord(asset.InstanceID())) > 0 {
+						deviceInDB, err = job.db.GetDeviceByInstanceID(sord(asset.InstanceID()), job.config.OrganizationID())
+					}
+
 					// second we try to find the device in the database using the IP
-					if len(asset.IP()) > 0 {
+					if err == nil && deviceInDB == nil && len(asset.IP()) > 0 {
 						deviceInDB, err = job.db.GetDeviceByScannerSourceID(ip, groupID, job.config.OrganizationID())
 					}
 				}
@@ -327,6 +349,7 @@ func (job *AssetSyncJob) enterAssetInformationInDB(asset domain.Device, osTypeID
 							job.insources.SourceID(),
 							ip,
 							asset.HostName(),
+							sord(asset.InstanceID()),
 							asset.MAC(),
 							groupID,
 							job.config.OrganizationID(),
@@ -575,18 +598,23 @@ func (job *AssetSyncJob) grabAndCreateOsType(operatingSystem string) (output dom
 	return output, err
 }
 
-func (job *AssetSyncJob) createAssetGroupInDB(groupID int, scannerSourceID string, scannerSourceConfigID string) (err error) {
-	var assetGroup domain.AssetGroup
-	if assetGroup, err = job.db.GetAssetGroup(job.config.OrganizationID(), groupID, scannerSourceConfigID); err == nil {
-		if assetGroup == nil {
-			if _, _, err = job.db.CreateAssetGroup(job.config.OrganizationID(), groupID, scannerSourceID, scannerSourceConfigID); err == nil {
+func (job *AssetSyncJob) createAssetGroupInDB(groupID string, scannerSourceID string, scannerSourceConfigID string) (err error) {
+	var groupIDInt int
+	if groupIDInt, err = strconv.Atoi(groupID); err == nil {
+		var assetGroup domain.AssetGroup
+		if assetGroup, err = job.db.GetAssetGroup(job.config.OrganizationID(), groupIDInt, scannerSourceConfigID); err == nil {
+			if assetGroup == nil {
+				if _, _, err = job.db.CreateAssetGroup(job.config.OrganizationID(), groupIDInt, scannerSourceID, scannerSourceConfigID); err == nil {
 
-			} else {
-				err = fmt.Errorf("error while creating asset group - %v", err.Error())
+				} else {
+					err = fmt.Errorf("error while creating asset group - %v", err.Error())
+				}
 			}
+		} else {
+			err = fmt.Errorf("error while grabbing asset group - %v", err.Error())
 		}
 	} else {
-		err = fmt.Errorf("error while grabbing asset group - %v", err.Error())
+		err = fmt.Errorf("expected integer but got [%s]", groupID)
 	}
 
 	return err

@@ -38,5 +38,4 @@ CREATE PROCEDURE `GetAutoStartJobs` ()
     JC.UpdatedBy,
     JC.Payload
   FROM JobConfig JC
-  WHERE JC.Continuous = TRUE
-        AND JC.AutoStart = TRUE;
+     WHERE JC.AutoStart = TRUE;

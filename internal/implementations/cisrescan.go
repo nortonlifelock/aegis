@@ -12,7 +12,6 @@ import (
 
 	"github.com/nortonlifelock/aegis/internal/integrations"
 	"github.com/nortonlifelock/domain"
-	"github.com/nortonlifelock/jira"
 	"github.com/nortonlifelock/log"
 )
 
@@ -366,8 +365,8 @@ func (t *staleTicket) LastChecked() *time.Time {
 func (t *staleTicket) Status() (val *string) {
 	val = t.Ticket.Status()
 
-	if strings.ToLower(sord(t.Ticket.Status())) == strings.ToLower(t.engine.GetStatusMap(jira.StatusResolvedRemediated)) {
-		s := t.engine.GetStatusMap(jira.StatusReopened)
+	if strings.ToLower(sord(t.Ticket.Status())) == strings.ToLower(t.engine.GetStatusMap(domain.StatusResolvedRemediated)) {
+		s := t.engine.GetStatusMap(domain.StatusReopened)
 		val = &s
 	}
 
@@ -406,7 +405,7 @@ type closedTicket struct {
 
 // Status overrides the domain.Ticket method
 func (c closedTicket) Status() *string {
-	val := c.engine.GetStatusMap(jira.StatusClosedRemediated)
+	val := c.engine.GetStatusMap(domain.StatusClosedRemediated)
 	return &val
 }
 

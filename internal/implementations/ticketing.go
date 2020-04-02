@@ -14,7 +14,6 @@ import (
 	"github.com/nortonlifelock/aegis/internal/database/dal"
 	"github.com/nortonlifelock/aegis/internal/integrations"
 	"github.com/nortonlifelock/domain"
-	"github.com/nortonlifelock/jira"
 	"github.com/nortonlifelock/log"
 	"github.com/nortonlifelock/scaffold"
 	"github.com/pkg/errors"
@@ -24,6 +23,7 @@ import (
 // due date is in the past
 type TicketingPayload struct {
 	MinDate *time.Time `json:"mindate,omitempty"`
+	Groups  []string   `json:"groups,omitempty"`
 }
 
 // OrgPayload contains the SLA information for how long a vulnerability has to be remediated given the severity
@@ -209,12 +209,64 @@ func (job *TicketingJob) Process(ctx context.Context, id string, appconfig domai
 							if job.assignmentRules, err = job.loadAssignmentRules(); err == nil {
 								if job.tagMaps, err = job.db.GetTagMapsByOrg(job.config.OrganizationID()); err == nil {
 									job.lstream.Send(log.Debug("Scanner connection initialized."))
-									var detections []domain.Detection
-									if detections, err = job.db.GetDetectionsAfter(tord1970(job.config.LastJobStart()), job.config.OrganizationID()); err == nil {
-										job.processVulnerabilities(vscanner, pushDetectionsToChannel(job.ctx, detections))
+
+									if len(job.Payload.Groups) == 0 {
+
+										job.lstream.Send(log.Infof("Pulling ALL detections since %s", tord1970(job.config.LastJobStart()).String()))
+
+										startTime := time.Now() // must be before we load the detections from the db
+										var detections []domain.Detection
+										if detections, err = job.db.GetDetectionsAfter(tord1970(job.config.LastJobStart()), job.config.OrganizationID()); err == nil {
+											job.processVulnerabilities(vscanner, pushDetectionsToChannel(job.ctx, detections))
+
+											// passing an empty group ID updates the last ticketing date of ALL groups
+											_, _, err = job.db.UpdateAssetGroupLastTicket("", job.config.OrganizationID(), startTime)
+											if err != nil {
+												job.lstream.Send(log.Criticalf(err, "Error while updating the last ticketed date to %s", startTime.String()))
+											}
+										} else {
+											job.lstream.Send(log.Error("Error occurred while loading device vulnerability information", err))
+										}
 									} else {
-										job.lstream.Send(log.Error("Error occurred while loading device vulnerability information", err))
+										for _, groupID := range job.Payload.Groups {
+
+											if len(groupID) > 0 {
+												var assetGroup domain.AssetGroup
+												if assetGroup, err = job.db.GetAssetGroupForOrgNoScanner(job.config.OrganizationID(), groupID); err == nil {
+
+													var after time.Time
+													if assetGroup.LastTicketing() == nil || assetGroup.LastTicketing().IsZero() {
+														after = tord1970(nil)
+													} else {
+														after = *assetGroup.LastTicketing()
+													}
+
+													job.lstream.Send(log.Infof("Pulling all detections for group [%s] since %s", groupID, after.String()))
+													startTime := time.Now() // must be before we load the detections from the db
+
+													var detections []domain.Detection
+													if detections, err = job.db.GetDetectionForGroupAfter(after, job.config.OrganizationID(), groupID); err == nil {
+
+														job.processVulnerabilities(vscanner, pushDetectionsToChannel(job.ctx, detections))
+
+														// passing an empty group ID updates the last ticketing date of ALL groups
+														_, _, err = job.db.UpdateAssetGroupLastTicket(groupID, job.config.OrganizationID(), startTime)
+														if err != nil {
+															job.lstream.Send(log.Criticalf(err, "Error while updating the last ticketed date to %s", startTime.String()))
+														}
+													} else {
+														job.lstream.Send(log.Error("Error occurred while loading device vulnerability information", err))
+													}
+												} else {
+													err = fmt.Errorf("error while loading asset group for [%s] - %s", groupID, err.Error())
+												}
+											} else {
+												err = fmt.Errorf("empty group id in payload")
+											}
+										}
+
 									}
+
 								} else {
 									job.lstream.Send(log.Error("error while loading tag maps", err))
 								}
@@ -394,16 +446,16 @@ func loadStatuses(tickets integrations.TicketingEngine, statuses map[string]bool
 	// Statuses to Query when looking for existing tickets for the vulnerabilities
 
 	// TODO TODO do we want these hardcoded or configurable?
-	statuses[tickets.GetStatusMap(jira.StatusOpen)] = true
-	statuses[tickets.GetStatusMap(jira.StatusReopened)] = true
-	statuses[tickets.GetStatusMap(jira.StatusResolvedRemediated)] = true
-	statuses[tickets.GetStatusMap(jira.StatusResolvedDecom)] = true
-	statuses[tickets.GetStatusMap(jira.StatusResolvedException)] = true
-	statuses[tickets.GetStatusMap(jira.StatusResolvedFalsePositive)] = true
-	statuses[tickets.GetStatusMap(jira.StatusClosedCerf)] = true
+	statuses[tickets.GetStatusMap(domain.StatusOpen)] = true
+	statuses[tickets.GetStatusMap(domain.StatusReopened)] = true
+	statuses[tickets.GetStatusMap(domain.StatusResolvedRemediated)] = true
+	statuses[tickets.GetStatusMap(domain.StatusResolvedDecom)] = true
+	statuses[tickets.GetStatusMap(domain.StatusResolvedException)] = true
+	statuses[tickets.GetStatusMap(domain.StatusResolvedFalsePositive)] = true
+	statuses[tickets.GetStatusMap(domain.StatusClosedCerf)] = true
 
 	// TODO: Remove this once the closed-error status is part of exceptions
-	statuses[tickets.GetStatusMap(jira.StatusClosedError)] = true
+	statuses[tickets.GetStatusMap(domain.StatusClosedError)] = true
 }
 
 func (job *TicketingJob) checkForExistingTicket(in <-chan *vulnerabilityPayload) <-chan *vulnerabilityPayload {
@@ -453,13 +505,13 @@ func (job *TicketingJob) checkForExistingTicket(in <-chan *vulnerabilityPayload)
 
 								var existingTicketChan <-chan domain.Ticket
 								var statuses = make(map[string]bool)
-								statuses["Open"] = true
-								statuses["In-Progress"] = true
-								statuses["Reopened"] = true
-								statuses["Resolved-Remediated"] = true
-								statuses["Resolved-FalsePositive"] = true
-								statuses["Resolved-Decommissioned"] = true
-								statuses["Resolved-Exception"] = true
+								statuses[job.ticketingEngine.GetStatusMap(domain.StatusOpen)] = true
+								statuses[job.ticketingEngine.GetStatusMap(domain.StatusInProgress)] = true
+								statuses[job.ticketingEngine.GetStatusMap(domain.StatusReopened)] = true
+								statuses[job.ticketingEngine.GetStatusMap(domain.StatusResolvedRemediated)] = true
+								statuses[job.ticketingEngine.GetStatusMap(domain.StatusResolvedFalsePositive)] = true
+								statuses[job.ticketingEngine.GetStatusMap(domain.StatusResolvedDecom)] = true
+								statuses[job.ticketingEngine.GetStatusMap(domain.StatusResolvedException)] = true
 								existingTicketChan, err = job.ticketingEngine.GetTicketsByDeviceIDVulnID(job.insource.Source(), payload.orgCode, sord(payload.device.SourceID()), payload.vuln.SourceID(), statuses, payload.combo.Port(), payload.combo.Protocol())
 								if err == nil {
 
@@ -583,7 +635,7 @@ func (job *TicketingJob) prepareTicketCreation(in <-chan *vulnerabilityPayload) 
 
 						var tagsForDevice []domain.Tag
 						// map cloud service fields to ticket if necessary
-						tagsForDevice, err = job.handleCloudTagMappings(payload.ticket)
+						tagsForDevice, err = job.handleCloudTagMappings(payload.ticket, payload.device)
 						if err == nil {
 							job.getAssignmentInformation(tagsForDevice, payload)
 						} else {
@@ -697,7 +749,7 @@ func (job *TicketingJob) createIndividualTicket(payload *vulnerabilityPayload) {
 			// track the created ticket in our database
 			_, _, err = job.db.CreateTicket(
 				ticketTitle,
-				jira.StatusOpen,
+				domain.StatusOpen,
 				payload.combo.ID(),
 				job.config.OrganizationID(),
 				tord1970(payload.ticket.CreatedDate()),
@@ -775,9 +827,14 @@ func (job *TicketingJob) payloadToTicket(payload *vulnerabilityPayload) (newtix 
 		var template *scaffold.Template
 		template = scaffold.NewTemplateEmpty()
 		template.UpdateBase(descriptionTemplate)
-		template.Repl("%vulnurl", "").
-			Repl("%description", payload.vuln.Description()).
+		template.Repl("%description", payload.vuln.Description()).
 			Repl("%proof", payload.combo.Proof())
+
+		if len(sord(payload.vuln.Threat())) > 0 {
+			template.Repl("%threat", fmt.Sprintf("*Threat:*\n%s\n", sord(payload.vuln.Threat())))
+		} else {
+			template.Repl("%threat", "")
+		}
 
 		var description = template.Get()
 
@@ -898,34 +955,15 @@ func (job *TicketingJob) gatherHostInfoFromDevice(payload *vulnerabilityPayload)
 
 // the cloud sync job pulls tag information from cloud service providers. we can use that tag information to overwrite JIRA fields or append
 // the information to a JIRA field
-func (job *TicketingJob) handleCloudTagMappings(tic domain.Ticket) (tagsForDevice []domain.Tag, err error) {
+func (job *TicketingJob) handleCloudTagMappings(tic domain.Ticket, device domain.Device) (tagsForDevice []domain.Tag, err error) {
 	tagsForDevice = make([]domain.Tag, 0)
 
-	if len(sord(tic.IPAddress())) > 0 {
-		var ips = strings.Split(sord(tic.IPAddress()), ",")
-
-		var device domain.Device
-		device, err = job.getDeviceByIPList(ips)
-
-		if err == nil {
-			if device != nil { // device with ip found in database, check for it's tags
-				// grab all the cloud tags for a device
-				tagsForDevice, err = job.db.GetTagsForDevice(device.ID())
-				if err == nil {
-					if len(job.tagMaps) > 0 {
-						err = job.mapAllTagsForDevice(tic, tagsForDevice, job.tagMaps)
-					}
-				}
-			} else {
-				// TODO no device found in db - email warning
-				job.lstream.Send(log.Warningf(nil, "could not find device with any of ips [%s]", sord(tic.IPAddress())))
-			}
-		} else {
-			err = fmt.Errorf("error while grabbing device - %s", err.Error())
+	// grab all the cloud tags for a device
+	tagsForDevice, err = job.db.GetTagsForDevice(device.ID())
+	if err == nil {
+		if len(job.tagMaps) > 0 {
+			err = job.mapAllTagsForDevice(tic, tagsForDevice, job.tagMaps)
 		}
-
-	} else {
-		err = fmt.Errorf("ticket [%s] did not have an associated IP", tic.Title())
 	}
 
 	return tagsForDevice, err
@@ -1031,22 +1069,22 @@ func (tmt tagMappedTicket) Labels() *string {
 	return &val
 }
 
-func (job *TicketingJob) getDeviceByIPList(ips []string) (device domain.Device, err error) {
-	for index := range ips {
-		ip := ips[index]
-
-		device, err = job.db.GetDeviceByIP(ip, job.config.OrganizationID())
-		if err == nil {
-			if device != nil {
-				break
-			}
-		} else {
-			break
-		}
-	}
-
-	return device, err
-}
+//func (job *TicketingJob) getDeviceByIPList(ips []string) (device domain.Device, err error) {
+//	for index := range ips {
+//		ip := ips[index]
+//
+//		device, err = job.db.GetDeviceByIP(ip, job.config.OrganizationID())
+//		if err == nil {
+//			if device != nil {
+//				break
+//			}
+//		} else {
+//			break
+//		}
+//	}
+//
+//	return device, err
+//}
 
 // transforms the specific OS from the scanner and transforms it to a generic OS that can be chosen in a dropdown field
 func (job *TicketingJob) gatherOSDropdown(input string) (output string) {
@@ -1063,13 +1101,10 @@ func (job *TicketingJob) gatherOSDropdown(input string) (output string) {
 }
 
 const (
-	descriptionTemplate = `
-	*Description:*
+	descriptionTemplate = `%threat*Impact:*
 	%description
-
 	*Proof:*
-	%proof
-	`
+	%proof`
 )
 
 var reportedByMutex sync.Mutex

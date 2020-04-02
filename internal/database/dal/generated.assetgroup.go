@@ -8,6 +8,7 @@ package dal
 
 import (
 	"encoding/json"
+	"time"
 )
 
 //**********************************************************
@@ -18,6 +19,7 @@ import (
 type AssetGroup struct {
 	CloudSourceIDvar         *string
 	GroupIDvar               int
+	LastTicketingvar         *time.Time
 	OrganizationIDvar        string
 	ScannerSourceConfigIDvar *string
 	ScannerSourceIDvar       string
@@ -32,6 +34,7 @@ func (myAssetGroup AssetGroup) MarshalJSON() ([]byte, error) {
 	return json.Marshal(map[string]interface{}{
 		"CloudSourceID":         myAssetGroup.CloudSourceIDvar,
 		"GroupID":               myAssetGroup.GroupIDvar,
+		"LastTicketing":         myAssetGroup.LastTicketingvar,
 		"OrganizationID":        myAssetGroup.OrganizationIDvar,
 		"ScannerSourceConfigID": myAssetGroup.ScannerSourceConfigIDvar,
 		"ScannerSourceID":       myAssetGroup.ScannerSourceIDvar,
@@ -46,6 +49,11 @@ func (myAssetGroup *AssetGroup) CloudSourceID() (param *string) {
 // GroupID returns the GroupID parameter from the AssetGroup struct
 func (myAssetGroup *AssetGroup) GroupID() (param int) {
 	return myAssetGroup.GroupIDvar
+}
+
+// LastTicketing returns the LastTicketing parameter from the AssetGroup struct
+func (myAssetGroup *AssetGroup) LastTicketing() (param *time.Time) {
+	return myAssetGroup.LastTicketingvar
 }
 
 // OrganizationID returns the OrganizationID parameter from the AssetGroup struct

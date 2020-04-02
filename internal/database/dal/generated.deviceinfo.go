@@ -16,7 +16,7 @@ import (
 
 // DeviceInfo defines the struct that implements the DeviceInfo interface
 type DeviceInfo struct {
-	GroupIDvar         *int
+	GroupIDvar         *string
 	HostNamevar        string
 	IDvar              string
 	IPvar              string
@@ -51,7 +51,7 @@ func (myDeviceInfo DeviceInfo) MarshalJSON() ([]byte, error) {
 }
 
 // GroupID returns the GroupID parameter from the DeviceInfo struct
-func (myDeviceInfo *DeviceInfo) GroupID() (param *int) {
+func (myDeviceInfo *DeviceInfo) GroupID() (param *string) {
 	return myDeviceInfo.GroupIDvar
 }
 
@@ -103,6 +103,11 @@ func (myDeviceInfo *DeviceInfo) SourceID() (param *string) {
 // State returns the State parameter from the DeviceInfo struct
 func (myDeviceInfo *DeviceInfo) State() (param *string) {
 	return myDeviceInfo.Statevar
+}
+
+// SetGroupID sets the GroupID parameter from the DeviceInfo struct
+func (myDeviceInfo *DeviceInfo) SetGroupID(val string) {
+	myDeviceInfo.GroupIDvar = &val
 }
 
 // SetHostName sets the HostName parameter from the DeviceInfo struct

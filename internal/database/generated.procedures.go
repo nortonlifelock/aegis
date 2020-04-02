@@ -189,11 +189,11 @@ func (conn *dbconn) CreateDetection(_OrgID string, _SourceID string, _DeviceID s
 }
 
 // CreateDevice executes the stored procedure CreateDevice against the database
-func (conn *dbconn) CreateDevice(_AssetID string, _SourceID string, _Ip string, _Hostname string, _MAC string, _GroupID int, _OrgID string, _OS string, _OSTypeID int) (id int, affectedRows int, err error) {
+func (conn *dbconn) CreateDevice(_AssetID string, _SourceID string, _Ip string, _Hostname string, inInstanceID string, _MAC string, _GroupID string, _OrgID string, _OS string, _OSTypeID int) (id int, affectedRows int, err error) {
 
 	conn.Exec(&connection.Procedure{
 		Proc:       "CreateDevice",
-		Parameters: []interface{}{_AssetID, _SourceID, _Ip, _Hostname, _MAC, _GroupID, _OrgID, _OS, _OSTypeID},
+		Parameters: []interface{}{_AssetID, _SourceID, _Ip, _Hostname, inInstanceID, _MAC, _GroupID, _OrgID, _OS, _OSTypeID},
 		Callback: func(results interface{}, dberr error) {
 			err = dberr
 
@@ -740,11 +740,11 @@ func (conn *dbconn) CreateUserSession(_UserID string, _OrgID string, _SessionKey
 }
 
 // CreateVulnInfo executes the stored procedure CreateVulnInfo against the database
-func (conn *dbconn) CreateVulnInfo(_SourceVulnID string, _Title string, _SourceID string, _CVSSScore float32, _CVSS3Score float32, _Description string, _Solution string, _Software string, _DetectionInformation string) (id int, affectedRows int, err error) {
+func (conn *dbconn) CreateVulnInfo(_SourceVulnID string, _Title string, _SourceID string, _CVSSScore float32, _CVSS3Score float32, _Description string, _Threat string, _Solution string, _Software string, _DetectionInformation string) (id int, affectedRows int, err error) {
 
 	conn.Exec(&connection.Procedure{
 		Proc:       "CreateVulnInfo",
-		Parameters: []interface{}{_SourceVulnID, _Title, _SourceID, _CVSSScore, _CVSS3Score, _Description, _Solution, _Software, _DetectionInformation},
+		Parameters: []interface{}{_SourceVulnID, _Title, _SourceID, _CVSSScore, _CVSS3Score, _Description, _Threat, _Solution, _Software, _DetectionInformation},
 		Callback: func(results interface{}, dberr error) {
 			err = dberr
 
@@ -769,11 +769,11 @@ func (conn *dbconn) CreateVulnInfo(_SourceVulnID string, _Title string, _SourceI
 }
 
 // CreateVulnInfoNoCVSS3 executes the stored procedure CreateVulnInfoNoCVSS3 against the database
-func (conn *dbconn) CreateVulnInfoNoCVSS3(_SourceVulnID string, _Title string, _SourceID string, _CVSSScore float32, _Description string, _Solution string, _Software string, _DetectionInformation string) (id int, affectedRows int, err error) {
+func (conn *dbconn) CreateVulnInfoNoCVSS3(_SourceVulnID string, _Title string, _SourceID string, _CVSSScore float32, _Description string, _Threat string, _Solution string, _Software string, _DetectionInformation string) (id int, affectedRows int, err error) {
 
 	conn.Exec(&connection.Procedure{
 		Proc:       "CreateVulnInfoNoCVSS3",
-		Parameters: []interface{}{_SourceVulnID, _Title, _SourceID, _CVSSScore, _Description, _Solution, _Software, _DetectionInformation},
+		Parameters: []interface{}{_SourceVulnID, _Title, _SourceID, _CVSSScore, _Description, _Threat, _Solution, _Software, _DetectionInformation},
 		Callback: func(results interface{}, dberr error) {
 			err = dberr
 
@@ -1428,6 +1428,59 @@ func (conn *dbconn) GetAssetGroupForOrg(inScannerSourceConfigID string, inOrgID 
 								}
 
 								retAssetGroup = append(retAssetGroup, newAssetGroup)
+							}
+						}
+
+						return err
+					})
+			}
+		},
+	})
+
+	return retAssetGroup, err
+}
+
+// GetAssetGroupForOrgNoScanner executes the stored procedure GetAssetGroupForOrgNoScanner against the database and returns the read results
+func (conn *dbconn) GetAssetGroupForOrgNoScanner(inOrgID string, inGroupID string) (domain.AssetGroup, error) {
+	var err error
+	var retAssetGroup domain.AssetGroup
+
+	conn.Read(&connection.Procedure{
+		Proc:       "GetAssetGroupForOrgNoScanner",
+		Parameters: []interface{}{inOrgID, inGroupID},
+		Callback: func(results interface{}, dberr error) {
+			err = dberr
+
+			if err == nil {
+
+				err = conn.getRows(results,
+					func(rows *sql.Rows) (err error) {
+						if err = rows.Err(); err == nil {
+
+							var myGroupID int
+							var myScannerSourceID string
+							var myCloudSourceID *string
+							var myScannerSourceConfigID *string
+							var myLastTicketing *time.Time
+
+							if err = rows.Scan(
+
+								&myGroupID,
+								&myScannerSourceID,
+								&myCloudSourceID,
+								&myScannerSourceConfigID,
+								&myLastTicketing,
+							); err == nil {
+
+								newAssetGroup := &dal.AssetGroup{
+									GroupIDvar:               myGroupID,
+									ScannerSourceIDvar:       myScannerSourceID,
+									CloudSourceIDvar:         myCloudSourceID,
+									ScannerSourceConfigIDvar: myScannerSourceConfigID,
+									LastTicketingvar:         myLastTicketing,
+								}
+
+								retAssetGroup = newAssetGroup
 							}
 						}
 
@@ -2185,6 +2238,92 @@ func (conn *dbconn) GetDetectionInfoBySourceVulnID(_SourceDeviceID string, _Sour
 	return retDetectionInfo, err
 }
 
+// GetDetectionInfoForGroupAfter executes the stored procedure GetDetectionInfoForGroupAfter against the database and returns the read results
+func (conn *dbconn) GetDetectionInfoForGroupAfter(_After time.Time, _OrgID string, inGroupID string) ([]domain.DetectionInfo, error) {
+	var err error
+	var retDetectionInfo = make([]domain.DetectionInfo, 0)
+
+	conn.Read(&connection.Procedure{
+		Proc:       "GetDetectionInfoForGroupAfter",
+		Parameters: []interface{}{_After, _OrgID, inGroupID},
+		Callback: func(results interface{}, dberr error) {
+			err = dberr
+
+			if err == nil {
+
+				err = conn.getRows(results,
+					func(rows *sql.Rows) (err error) {
+						if err = rows.Err(); err == nil {
+
+							var myID string
+							var myOrganizationID string
+							var mySourceID string
+							var myDeviceID string
+							var myVulnerabilityID string
+							var myIgnoreID *string
+							var myAlertDate time.Time
+							var myLastFound *time.Time
+							var myLastUpdated *time.Time
+							var myProof string
+							var myPort int
+							var myProtocol string
+							var myActiveKernel *int
+							var myDetectionStatusID int
+							var myTimesSeen int
+							var myUpdated time.Time
+
+							if err = rows.Scan(
+
+								&myID,
+								&myOrganizationID,
+								&mySourceID,
+								&myDeviceID,
+								&myVulnerabilityID,
+								&myIgnoreID,
+								&myAlertDate,
+								&myLastFound,
+								&myLastUpdated,
+								&myProof,
+								&myPort,
+								&myProtocol,
+								&myActiveKernel,
+								&myDetectionStatusID,
+								&myTimesSeen,
+								&myUpdated,
+							); err == nil {
+
+								newDetectionInfo := &dal.DetectionInfo{
+									IDvar:                myID,
+									OrganizationIDvar:    myOrganizationID,
+									SourceIDvar:          mySourceID,
+									DeviceIDvar:          myDeviceID,
+									VulnerabilityIDvar:   myVulnerabilityID,
+									IgnoreIDvar:          myIgnoreID,
+									AlertDatevar:         myAlertDate,
+									LastFoundvar:         myLastFound,
+									LastUpdatedvar:       myLastUpdated,
+									Proofvar:             myProof,
+									Portvar:              myPort,
+									Protocolvar:          myProtocol,
+									ActiveKernelvar:      myActiveKernel,
+									DetectionStatusIDvar: myDetectionStatusID,
+									TimesSeenvar:         myTimesSeen,
+									Updatedvar:           myUpdated,
+								}
+
+								retDetectionInfo = append(retDetectionInfo, newDetectionInfo)
+							}
+						}
+
+						return err
+					})
+			}
+		},
+	})
+
+	return retDetectionInfo, err
+}
+
 // GetDetectionStatusByID executes the stored procedure GetDetectionStatusByID against the database and returns the read results
 func (conn *dbconn) GetDetectionStatusByID(_ID int) (domain.DetectionStatus, error) {
 	var err error
@@ -2436,7 +2575,7 @@ func (conn *dbconn) GetDeviceInfoByAssetOrgID(inAssetID string, inOrgID string) 
 							var myIP string
 							var myHostName string
 							var myRegion *string
-							var myGroupID *int
+							var myGroupID *string
 							var myInstanceID *string
 
 							if err = rows.Scan(
@@ -2546,7 +2685,7 @@ func (conn *dbconn) GetDeviceInfoByCloudSourceIDAndIP(_IP string, _CloudSourceID
 }
 
 // GetDeviceInfoByGroupIP executes the stored procedure GetDeviceInfoByGroupIP against the database and returns the read results
-func (conn *dbconn) GetDeviceInfoByGroupIP(inIP string, inGroupID int, inOrgID string) (domain.DeviceInfo, error) {
+func (conn *dbconn) GetDeviceInfoByGroupIP(inIP string, inGroupID string, inOrgID string) (domain.DeviceInfo, error) {
 	var err error
 	var retDeviceInfo domain.DeviceInfo
 
@@ -2794,7 +2933,7 @@ func (conn *dbconn) GetDeviceInfoByInstanceID(_InstanceID string, _OrgID string)
 }
 
 // GetDeviceInfoByScannerSourceID executes the stored procedure GetDeviceInfoByScannerSourceID against the database and returns the read results
-func (conn *dbconn) GetDeviceInfoByScannerSourceID(_IP string, _GroupID int, _OrgID string) (domain.DeviceInfo, error) {
+func (conn *dbconn) GetDeviceInfoByScannerSourceID(_IP string, _GroupID string, _OrgID string) (domain.DeviceInfo, error) {
 	var err error
 	var retDeviceInfo domain.DeviceInfo
 
@@ -6971,6 +7110,7 @@ func (conn *dbconn) GetVulnInfoByID(_ID string) (domain.VulnerabilityInfo, error
 							var myCVSSScore float32
 							var myCVSS3Score *float32
 							var myDescription string
+							var myThreat *string
 							var mySolution string
 
 							if err = rows.Scan(
@@ -6983,6 +7123,7 @@ func (conn *dbconn) GetVulnInfoByID(_ID string) (domain.VulnerabilityInfo, error
 								&myCVSSScore,
 								&myCVSS3Score,
 								&myDescription,
+								&myThreat,
 								&mySolution,
 							); err == nil {
 
@@ -6995,6 +7136,7 @@ func (conn *dbconn) GetVulnInfoByID(_ID string) (domain.VulnerabilityInfo, error
 									CVSSScorevar:       myCVSSScore,
 									CVSS3Scorevar:      myCVSS3Score,
 									Descriptionvar:     myDescription,
+									Threatvar:          myThreat,
 									Solutionvar:        mySolution,
 								}
 
@@ -7036,6 +7178,7 @@ func (conn *dbconn) GetVulnInfoBySource(_Source string) ([]domain.VulnerabilityI
 							var myCVSSScore float32
 							var myCVSS3Score *float32
 							var myDescription string
+							var myThreat *string
 							var mySolution string
 
 							if err = rows.Scan(
@@ -7048,6 +7191,7 @@ func (conn *dbconn) GetVulnInfoBySource(_Source string) ([]domain.VulnerabilityI
 								&myCVSSScore,
 								&myCVSS3Score,
 								&myDescription,
+								&myThreat,
 								&mySolution,
 							); err == nil {
 
@@ -7060,6 +7204,7 @@ func (conn *dbconn) GetVulnInfoBySource(_Source string) ([]domain.VulnerabilityI
 									CVSSScorevar:       myCVSSScore,
 									CVSS3Scorevar:      myCVSS3Score,
 									Descriptionvar:     myDescription,
+									Threatvar:          myThreat,
 									Solutionvar:        mySolution,
 								}
 
@@ -7100,6 +7245,7 @@ func (conn *dbconn) GetVulnInfoBySourceID(_SourceID string) ([]domain.Vulnerabil
 							var myCVSSScore float32
 							var myCVSS3Score *float32
 							var myDescription string
+							var myThreat *string
 							var mySolution string
 							var myCreated *time.Time
 							var myUpdated *time.Time
@@ -7113,6 +7259,7 @@ func (conn *dbconn) GetVulnInfoBySourceID(_SourceID string) ([]domain.Vulnerabil
 								&myCVSSScore,
 								&myCVSS3Score,
 								&myDescription,
+								&myThreat,
 								&mySolution,
 								&myCreated,
 								&myUpdated,
@@ -7126,6 +7273,7 @@ func (conn *dbconn) GetVulnInfoBySourceID(_SourceID string) ([]domain.Vulnerabil
 									CVSSScorevar:       myCVSSScore,
 									CVSS3Scorevar:      myCVSS3Score,
 									Descriptionvar:     myDescription,
+									Threatvar:          myThreat,
 									Solutionvar:        mySolution,
 									Createdvar:         myCreated,
 									Updatedvar:         myUpdated,
@@ -7169,6 +7317,7 @@ func (conn *dbconn) GetVulnInfoBySourceVulnID(_SourceVulnID string) (domain.Vuln
 							var myCVSSScore float32
 							var myCVSS3Score *float32
 							var myDescription string
+							var myThreat *string
 							var mySolution string
 							var mySoftware *string
 							var myDetectionInformation *string
@@ -7183,6 +7332,7 @@ func (conn *dbconn) GetVulnInfoBySourceVulnID(_SourceVulnID string) (domain.Vuln
 								&myCVSSScore,
 								&myCVSS3Score,
 								&myDescription,
+								&myThreat,
 								&mySolution,
 								&mySoftware,
 								&myDetectionInformation,
@@ -7197,6 +7347,7 @@ func (conn *dbconn) GetVulnInfoBySourceVulnID(_SourceVulnID string) (domain.Vuln
 									CVSSScorevar:            myCVSSScore,
 									CVSS3Scorevar:           myCVSS3Score,
 									Descriptionvar:          myDescription,
+									Threatvar:               myThreat,
 									Solutionvar:             mySolution,
 									Softwarevar:             mySoftware,
 									DetectionInformationvar: myDetectionInformation,
@@ -7239,6 +7390,7 @@ func (conn *dbconn) GetVulnInfoBySourceVulnIDSourceID(_SourceVulnID string, _Sou
 							var myCVSSScore float32
 							var myCVSS3Score *float32
 							var myDescription string
+							var myThreat *string
 							var mySolution string
 							var myCreated *time.Time
 							var myUpdated *time.Time
@@ -7253,6 +7405,7 @@ func (conn *dbconn) GetVulnInfoBySourceVulnIDSourceID(_SourceVulnID string, _Sou
 								&myCVSSScore,
 								&myCVSS3Score,
 								&myDescription,
+								&myThreat,
 								&mySolution,
 								&myCreated,
 								&myUpdated,
@@ -7267,6 +7420,7 @@ func (conn *dbconn) GetVulnInfoBySourceVulnIDSourceID(_SourceVulnID string, _Sou
 									CVSSScorevar:       myCVSSScore,
 									CVSS3Scorevar:      myCVSS3Score,
 									Descriptionvar:     myDescription,
+									Threatvar:          myThreat,
 									Solutionvar:        mySolution,
 									Createdvar:         myCreated,
 									Updatedvar:         myUpdated,
@@ -7833,8 +7987,37 @@ func (conn *dbconn) SetScheduleLastRun(_ID string) (id int, affectedRows int, er
 	return id, affectedRows, err
 }
 
+// UpdateAssetGroupLastTicket executes the stored procedure UpdateAssetGroupLastTicket against the database
+func (conn *dbconn) UpdateAssetGroupLastTicket(inGroupID string, inOrgID string, inLastTicketTime time.Time) (id int, affectedRows int, err error) {
+
+	conn.Exec(&connection.Procedure{
+		Proc:       "UpdateAssetGroupLastTicket",
+		Parameters: []interface{}{inGroupID, inOrgID, inLastTicketTime},
+		Callback: func(results interface{}, dberr error) {
+			err = dberr
+
+			if result, ok := results.(sql.Result); ok {
+				var idOut int64
+
+				// Get the id of the last inserted record
+				if idOut, err = result.LastInsertId(); err == nil {
+					id = int(idOut)
+				}
+
+				// Get the number of affected rows for the execution
+				if idOut, err = result.RowsAffected(); ok {
+					affectedRows = int(idOut)
+				}
+			}
+
+		},
+	})
+
+	return id, affectedRows, err
+}
+
 // UpdateAssetIDOsTypeIDOfDevice executes the stored procedure UpdateAssetIDOsTypeIDOfDevice against the database
-func (conn *dbconn) UpdateAssetIDOsTypeIDOfDevice(_ID string, _AssetID string, _ScannerSourceID string, _GroupID int, _OS string, _HostName string, _OsTypeID int, _OrgID string) (id int, affectedRows int, err error) {
+func (conn *dbconn) UpdateAssetIDOsTypeIDOfDevice(_ID string, _AssetID string, _ScannerSourceID string, _GroupID string, _OS string, _HostName string, _OsTypeID int, _OrgID string) (id int, affectedRows int, err error) {
 
 	conn.Exec(&connection.Procedure{
 		Proc:       "UpdateAssetIDOsTypeIDOfDevice",
@@ -8414,11 +8597,11 @@ func (conn *dbconn) UpdateUserByID(_ID string, _FirstName string, _LastName stri
 }
 
 // UpdateVulnByID executes the stored procedure UpdateVulnByID against the database
-func (conn *dbconn) UpdateVulnByID(_ID string, _SourceVulnID string, _Title string, _SourceID string, _CVSSScore float32, _CVSS3Score float32, _Description string, _Solution string, _Software string, _DetectionInformation string) (id int, affectedRows int, err error) {
+func (conn *dbconn) UpdateVulnByID(_ID string, _SourceVulnID string, _Title string, _SourceID string, _CVSSScore float32, _CVSS3Score float32, _Description string, _Threat string, _Solution string, _Software string, _DetectionInformation string) (id int, affectedRows int, err error) {
 
 	conn.Exec(&connection.Procedure{
 		Proc:       "UpdateVulnByID",
-		Parameters: []interface{}{_ID, _SourceVulnID, _Title, _SourceID, _CVSSScore, _CVSS3Score, _Description, _Solution, _Software, _DetectionInformation},
+		Parameters: []interface{}{_ID, _SourceVulnID, _Title, _SourceID, _CVSSScore, _CVSS3Score, _Description, _Threat, _Solution, _Software, _DetectionInformation},
 		Callback: func(results interface{}, dberr error) {
 			err = dberr
 
@@ -8443,11 +8626,11 @@ func (conn *dbconn) UpdateVulnByID(_ID string, _SourceVulnID string, _Title stri
 }
 
 // UpdateVulnByIDNoCVSS3 executes the stored procedure UpdateVulnByIDNoCVSS3 against the database
-func (conn *dbconn) UpdateVulnByIDNoCVSS3(_ID string, _SourceVulnID string, _Title string, _SourceID string, _CVSSScore float32, _Description string, _Solution string, _Software string, _DetectionInformation string) (id int, affectedRows int, err error) {
+func (conn *dbconn) UpdateVulnByIDNoCVSS3(_ID string, _SourceVulnID string, _Title string, _SourceID string, _CVSSScore float32, _Description string, _Threat string, _Solution string, _Software string, _DetectionInformation string) (id int, affectedRows int, err error) {
 
 	conn.Exec(&connection.Procedure{
 		Proc:       "UpdateVulnByIDNoCVSS3",
-		Parameters: []interface{}{_ID, _SourceVulnID, _Title, _SourceID, _CVSSScore, _Description, _Solution, _Software, _DetectionInformation},
+		Parameters: []interface{}{_ID, _SourceVulnID, _Title, _SourceID, _CVSSScore, _Description, _Threat, _Solution, _Software, _DetectionInformation},
 		Callback: func(results interface{}, dberr error) {
 			err = dberr
 
