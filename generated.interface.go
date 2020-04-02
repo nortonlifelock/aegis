@@ -69,6 +69,7 @@ type GeneratedDatabaseConnection interface {
 	GetCategoryByName(_Name string) ([]Category, error)
 	GetDetectionInfo(_DeviceID string, _VulnerabilityID string, _Port int, _Protocol string) (DetectionInfo, error)
 	GetDetectionInfoAfter(_After time.Time, _OrgID string) ([]DetectionInfo, error)
+	GetDetectionInfoByID(_ID string) (DetectionInfo, error)
 	GetDetectionInfoBySourceVulnID(_SourceDeviceID string, _SourceVulnerabilityID string, _Port int, _Protocol string) (DetectionInfo, error)
 	GetDetectionInfoForGroupAfter(_After time.Time, _OrgID string, inGroupID string) ([]DetectionInfo, error)
 	GetDetectionStatusByID(_ID int) (DetectionStatus, error)
