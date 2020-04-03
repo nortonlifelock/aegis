@@ -47,7 +47,7 @@ func (connector *ConnectorJira) GetTicket(sourceKey string) (ticket domain.Ticke
 }
 
 // GetAdditionalTicketsForVulnPerDevice gets the additional tickets for the Vulns that have been scanned on all devices
-func (connector *ConnectorJira) GetRelatedTicketsForRescan(tickets []domain.Ticket, methodOfDiscovery string, orgCode string, rescanType string) (relatedTickets <-chan domain.Ticket, err error) {
+func (connector *ConnectorJira) GetRelatedTicketsForRescan(tickets []domain.Ticket, groupID string, methodOfDiscovery string, orgCode string, rescanType string) (relatedTickets <-chan domain.Ticket, err error) {
 	switch rescanType {
 	case domain.RescanNormal:
 		if len(tickets) > 0 {
@@ -64,7 +64,7 @@ func (connector *ConnectorJira) GetRelatedTicketsForRescan(tickets []domain.Tick
 			}
 		}
 	case domain.RescanScheduled:
-		relatedTickets, err = connector.getTicketsForRescan(nil, methodOfDiscovery, orgCode, domain.RescanNormal)
+		relatedTickets, err = connector.getTicketsForRescan(nil, groupID, methodOfDiscovery, orgCode, domain.RescanNormal)
 	case domain.RescanPassive, domain.RescanExceptions:
 		// do nothing
 	default:
@@ -680,7 +680,9 @@ func (connector *ConnectorJira) GetCERFExpirationUpdates(startDate time.Time) (c
 
 // GetTicketsForRescan returns tickets for the rescan job. The type of rescan job is defined in Algorithm, and controls the tickets that are returned
 func (connector *ConnectorJira) GetTicketsForRescan(cerfs []domain.CERF, MethodOfDiscovery string, OrgCode string, Algorithm string) (tickets <-chan domain.Ticket, err error) {
-	tickets, err = connector.getTicketsForRescan(cerfs, MethodOfDiscovery, OrgCode, Algorithm)
+	var groupID = "" // empty group ID, as we do not discriminate the tickets we look for based on group ID
+
+	tickets, err = connector.getTicketsForRescan(cerfs, groupID, MethodOfDiscovery, OrgCode, Algorithm)
 	return tickets, err
 }
 

@@ -65,7 +65,7 @@ func (connector *ConnectorJira) mapDalTicketToJiraIssue(ticket domain.Ticket) (j
 
 		if ticket.AlertDate() != nil {
 			// Strip the date off of the alert date when storing it
-			_ = ji.setCF(connector, backendScanDate, tord(ticket.AlertDate()).Format(DateOnlySlashJira))
+			_ = ji.setCF(connector, backendScanDate, tord(ticket.AlertDate()).Format(DateOnlyJira))
 		}
 
 		connector.setJIFieldsRequiringTruncation(ticket, ji)

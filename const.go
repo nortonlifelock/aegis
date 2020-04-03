@@ -40,8 +40,6 @@ const (
 	// DateOnlyJira is used to set the date of JIRA tickets where more fine-grained dates is not needed
 	DateOnlyJira = "2006-01-02"
 
-	DateOnlySlashJira = "01/02/2006"
-
 	// QueryDateTimeFormatJira is the format of dates in a JQL
 	QueryDateTimeFormatJira = "2006/01/02 15:04"
 )

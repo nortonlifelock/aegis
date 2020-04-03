@@ -189,7 +189,7 @@ func (connector *ConnectorJira) getTicketsByDeviceIDVulnID(methodOfDiscovery str
 	return issues, err
 }
 
-func (connector *ConnectorJira) getTicketsForRescan(cerfs []domain.CERF, methodOfDiscovery string, orgCode string, algorithm string) (issues <-chan domain.Ticket, err error) {
+func (connector *ConnectorJira) getTicketsForRescan(cerfs []domain.CERF, groupID string, methodOfDiscovery string, orgCode string, algorithm string) (issues <-chan domain.Ticket, err error) {
 
 	if len(methodOfDiscovery) > 0 {
 		if len(orgCode) > 0 {
@@ -213,13 +213,13 @@ func (connector *ConnectorJira) getTicketsForRescan(cerfs []domain.CERF, methodO
 				var status = make(map[string]bool)
 				status[connector.GetStatusMap(domain.StatusResolvedRemediated)] = true
 
-				issues, err = connector.getTicketsByStatusDueDateAscending(methodOfDiscovery, orgCode, status)
+				issues, err = connector.getTicketsByStatusDueDateAscending(groupID, methodOfDiscovery, orgCode, status)
 				break
 			case domain.RescanDecommission:
 				var status = make(map[string]bool)
 				status[connector.GetStatusMap(domain.StatusResolvedDecom)] = true
 
-				issues, err = connector.getTicketsByStatusDueDateAscending(methodOfDiscovery, orgCode, status)
+				issues, err = connector.getTicketsByStatusDueDateAscending(groupID, methodOfDiscovery, orgCode, status)
 				break
 			default:
 				err = fmt.Errorf("error: unknown algorithm [%s]", algorithm)
@@ -235,7 +235,7 @@ func (connector *ConnectorJira) getTicketsForRescan(cerfs []domain.CERF, methodO
 	return issues, err
 }
 
-func (connector *ConnectorJira) getTicketsByStatusDueDateAscending(methodOfDiscovery string, orgCode string, statuses map[string]bool) (issues <-chan domain.Ticket, err error) {
+func (connector *ConnectorJira) getTicketsByStatusDueDateAscending(groupID string, methodOfDiscovery string, orgCode string, statuses map[string]bool) (issues <-chan domain.Ticket, err error) {
 	if statuses != nil {
 
 		if len(statuses) > 0 {
@@ -258,6 +258,10 @@ func (connector *ConnectorJira) getTicketsByStatusDueDateAscending(methodOfDisco
 				}
 
 				index++
+			}
+
+			if len(groupID) > 0 {
+				q.and().contains(connector.GetFieldMap(backendGroupID), groupID)
 			}
 
 			q.endGroup().
