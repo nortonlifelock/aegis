@@ -136,9 +136,9 @@ type vulnerabilityPayload struct {
 
 	combo domain.Detection
 	// device, vuln, and detectedDate are pulled off combo using Accessor methods, but are cached to prevent repeated error checking
-	device       domain.Device
-	vuln         domain.Vulnerability
-	detectedDate *time.Time
+	device    domain.Device
+	vuln      domain.Vulnerability
+	lastFound *time.Time
 
 	// holds the statuses that are used to query existing tickets when checking for duplicates
 	statuses map[string]bool
@@ -697,12 +697,12 @@ func (job *TicketingJob) createTicket(in <-chan *vulnerabilityPayload) {
 	wg.Wait()
 }
 
-func (job *TicketingJob) calculateSLA(vuln domain.Vulnerability, alertDate time.Time) (priority string, dueDate time.Time, create bool) {
+func (job *TicketingJob) calculateSLA(vuln domain.Vulnerability) (priority string, dueDate time.Time, create bool) {
 	severity := job.getSLAForVuln(vuln)
 	if severity != nil {
 		create = true
 		priority = severity.Name
-		dueDate = job.calculateDueDate(alertDate, severity.Duration)
+		dueDate = job.calculateDueDate(severity.Duration)
 	}
 
 	return priority, dueDate, create
@@ -721,8 +721,8 @@ func (job *TicketingJob) getSLAForVuln(vuln domain.Vulnerability) (highestApplic
 	return highestApplicableSeverity
 }
 
-func (job *TicketingJob) calculateDueDate(alertDate time.Time, durationInDays int) (dueDate time.Time) {
-	dueDate = alertDate.AddDate(0, 0, durationInDays)
+func (job *TicketingJob) calculateDueDate(durationInDays int) (dueDate time.Time) {
+	dueDate = time.Now().AddDate(0, 0, durationInDays)
 
 	if job.Payload.MinDate != nil {
 		var minDate = job.Payload.MinDate.AddDate(0, 0, durationInDays)
@@ -797,12 +797,12 @@ func (job *TicketingJob) payloadToTicket(payload *vulnerabilityPayload) (newtix 
 
 	// Determine Due Date and Priority
 	var duedate time.Time
-	var alertdate = time.Now()
-	if payload.detectedDate != nil {
-		alertdate = *payload.detectedDate
+	var lastFound = time.Now()
+	if payload.lastFound != nil {
+		lastFound = *payload.lastFound
 	}
 	var priority string
-	priority, duedate, create = job.calculateSLA(payload.vuln, alertdate)
+	priority, duedate, create = job.calculateSLA(payload.vuln)
 	if create {
 
 		cves, vendorRefs := job.gatherReferences(payload)
@@ -879,7 +879,7 @@ func (job *TicketingJob) payloadToTicket(payload *vulnerabilityPayload) (newtix 
 			CVEReferencesvar:    &cves,
 
 			CreatedDatevar: &created,
-			AlertDatevar:   &alertdate,
+			AlertDatevar:   &lastFound,
 			DueDatevar:     &duedate,
 			OrgCodevar:     &payload.orgCode,
 		}

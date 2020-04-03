@@ -94,7 +94,7 @@ func createBulkUpdateUpload(request *apiRequest, user domain.User) (wrapper erro
 		if count < allowedUploadsPerUser {
 			if len(request.BulkUpdateFile.Filename) > 0 && len(request.BulkUpdateFile.Contents) > 0 {
 
-				if len(request.BulkUpdateFile.Contents) < int(math.Pow(2, 19)) {
+				if len(request.BulkUpdateFile.Contents) < int(math.Pow(2, 20)) {
 					if filepath.Ext(request.BulkUpdateFile.Filename) == ".csv" {
 
 						var updateContents = request.BulkUpdateFile.Contents
