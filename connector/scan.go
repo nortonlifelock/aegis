@@ -31,8 +31,8 @@ type Scan struct {
 	// ScanID holds the scan's identifier as returned from nexpose
 	ScanID string `json:"scanId,omitempty"`
 
-	// GroupID holds the scan's site id that was used to create the scan in nexpose
-	GroupID string `json:"groupId,omitempty"`
+	// AssetGroupID holds the ID of the asset group that the scan is being executed against
+	AssetGroupID string `json:"groupId,omitempty"`
 
 	// VulnerabilityIDs holds the list of vulnerability identifiers scanned for in the scan
 	VulnerabilityIDs []string `json:"vulnerabilities,omitempty"`
@@ -45,6 +45,10 @@ func (s *Scan) ID() string {
 
 func (s *Scan) Title() string {
 	return s.Name
+}
+
+func (s *Scan) GroupID() string {
+	return s.AssetGroupID
 }
 
 // Status returns the status of the scan in Nexpose
@@ -118,7 +122,7 @@ func (conn *Connection) createScanForDetections(detectionsToRescan []domain.Matc
 				Name:             scanName,
 				TemplateID:       scanTemplate,
 				ScanID:           scanID,
-				GroupID:          groupToRescan,
+				AssetGroupID:     groupToRescan,
 				Assets:           devices,
 				VulnerabilityIDs: vulns,
 			}
