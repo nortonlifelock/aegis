@@ -4,5 +4,6 @@ package domain
 type Scan interface {
 	ID() string
 	Title() string
+	GroupID() string
 	Status() (string, error)
 }
