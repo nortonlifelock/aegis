@@ -49,8 +49,8 @@ func (session *QsSession) createVulnerabilityScanForGroup(ctx context.Context, o
 					ScanID:     scanRef,
 					TemplateID: fmt.Sprintf("%s%s%s", optionProfileID, templateDelimiter, searchListID),
 
-					GroupID:   strconv.Itoa(bundle.groupID),
-					EngineIDs: intArrayToStringArray(bundle.appliances),
+					AssetGroupID: strconv.Itoa(bundle.groupID),
+					EngineIDs:    intArrayToStringArray(bundle.appliances),
 
 					Created: time.Now(),
 				}
@@ -138,8 +138,8 @@ func (session *QsSession) createDiscoveryScanForGroup(ctx context.Context, out c
 						ScanID:     scanRef,
 						TemplateID: optionProfileID,
 
-						GroupID:   strconv.Itoa(bundle.groupID),
-						EngineIDs: intArrayToStringArray(bundle.appliances),
+						AssetGroupID: strconv.Itoa(bundle.groupID),
+						EngineIDs:    intArrayToStringArray(bundle.appliances),
 
 						Created: time.Now(),
 					}

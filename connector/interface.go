@@ -250,8 +250,8 @@ func (session *QsSession) ScanResults(ctx context.Context, payload []byte) (<-ch
 					session.lstream.Send(log.Errorf(err, "zero length scan ID received in payload"))
 				}
 			} else {
-				if len(scanInfo.GroupID) > 0 {
-					detections, err := session.Detections(ctx, strings.Split(scanInfo.GroupID, ","))
+				if len(scanInfo.AssetGroupID) > 0 {
+					detections, err := session.Detections(ctx, strings.Split(scanInfo.AssetGroupID, ","))
 					if err == nil {
 						func() {
 							for {
@@ -272,7 +272,7 @@ func (session *QsSession) ScanResults(ctx context.Context, payload []byte) (<-ch
 							}
 						}()
 					} else {
-						session.lstream.Send(log.Errorf(err, "error while loading detections for [%s]", scanInfo.GroupID))
+						session.lstream.Send(log.Errorf(err, "error while loading detections for [%s]", scanInfo.AssetGroupID))
 					}
 				} else {
 					session.lstream.Send(log.Errorf(err, "Scheduled scan [%s] did not specify the group IDs or cloud tags that it executed against"))

@@ -17,8 +17,8 @@ type scan struct {
 	// The identifier of the scan template
 	TemplateID string `json:"templateId,omitempty"`
 
-	// GroupID holds the scan's site id that was used to create the scan in Qualys
-	GroupID string `json:"groupId,omitempty"`
+	// AssetGroupID holds the ID of the asset group that the scan is being executed against
+	AssetGroupID string `json:"groupId,omitempty"`
 
 	// The identifier of the scan engine.
 	EngineIDs []string `json:"engineId,omitempty"`
@@ -34,6 +34,10 @@ func (s *scan) ID() string {
 
 func (s *scan) Title() string {
 	return s.Name
+}
+
+func (s *scan) GroupID() string {
+	return s.AssetGroupID
 }
 
 func (s *scan) Status() (status string, err error) {
