@@ -224,13 +224,18 @@ func (job *ScanSyncJob) getCorrespondingScanSummary(in domain.Scan, options []do
 		}
 
 		if out == nil {
-			scanClosePayload := &ScanClosePayload{}
-			scanClosePayload.Scan = in
-			scanClosePayload.ScanID = in.ID()
-			scanClosePayload.Type = domain.RescanScheduled
+			scanClosePayload := &ScanClosePayload{
+				RescanPayload: RescanPayload{
+					Group:   in.GroupID(),
+					Tickets: nil,
+					Type:    domain.RescanScheduled,
+				},
+				Scan:    in,
+				Devices: nil,
+				ScanID:  in.ID(),
+			}
 
 			var bytePayload []byte
-
 			if bytePayload, err = json.Marshal(scanClosePayload); err == nil {
 				_, _, err = job.db.CreateScanSummary(
 					job.insource.SourceID(),

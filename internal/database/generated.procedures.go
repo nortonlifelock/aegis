@@ -44,7 +44,7 @@ func (conn *dbconn) CleanUp() (id int, affectedRows int, err error) {
 }
 
 // CreateAssetGroup executes the stored procedure CreateAssetGroup against the database
-func (conn *dbconn) CreateAssetGroup(inOrgID string, _GroupID int, _ScannerSourceID string, _ScannerSourceConfigID string) (id int, affectedRows int, err error) {
+func (conn *dbconn) CreateAssetGroup(inOrgID string, _GroupID string, _ScannerSourceID string, _ScannerSourceConfigID string) (id int, affectedRows int, err error) {
 
 	conn.Exec(&connection.Procedure{
 		Proc:       "CreateAssetGroup",
@@ -1341,7 +1341,7 @@ func (conn *dbconn) GetAllJobConfigsWithOrder(_offset int, _limit int, _configID
 }
 
 // GetAssetGroup executes the stored procedure GetAssetGroup against the database and returns the read results
-func (conn *dbconn) GetAssetGroup(inOrgID string, _GroupID int, _ScannerConfigSourceID string) (domain.AssetGroup, error) {
+func (conn *dbconn) GetAssetGroup(inOrgID string, _GroupID string, _ScannerConfigSourceID string) (domain.AssetGroup, error) {
 	var err error
 	var retAssetGroup domain.AssetGroup
 
@@ -1357,7 +1357,7 @@ func (conn *dbconn) GetAssetGroup(inOrgID string, _GroupID int, _ScannerConfigSo
 					func(rows *sql.Rows) (err error) {
 						if err = rows.Err(); err == nil {
 
-							var myGroupID int
+							var myGroupID string
 							var myScannerSourceID string
 							var myCloudSourceID *string
 							var myScannerSourceConfigID *string
@@ -1407,7 +1407,7 @@ func (conn *dbconn) GetAssetGroupForOrg(inScannerSourceConfigID string, inOrgID 
 					func(rows *sql.Rows) (err error) {
 						if err = rows.Err(); err == nil {
 
-							var myGroupID int
+							var myGroupID string
 							var myScannerSourceID string
 							var myCloudSourceID *string
 							var myScannerSourceConfigID *string
@@ -1457,7 +1457,7 @@ func (conn *dbconn) GetAssetGroupForOrgNoScanner(inOrgID string, inGroupID strin
 					func(rows *sql.Rows) (err error) {
 						if err = rows.Err(); err == nil {
 
-							var myGroupID int
+							var myGroupID string
 							var myScannerSourceID string
 							var myCloudSourceID *string
 							var myScannerSourceConfigID *string
@@ -1510,7 +1510,7 @@ func (conn *dbconn) GetAssetGroupsByCloudSource(inOrgID string, inCloudSourceID 
 					func(rows *sql.Rows) (err error) {
 						if err = rows.Err(); err == nil {
 
-							var myGroupID int
+							var myGroupID string
 							var myOrganizationID string
 							var myScannerSourceID string
 							var myCloudSourceID *string

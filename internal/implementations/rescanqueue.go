@@ -7,7 +7,6 @@ import (
 	"github.com/nortonlifelock/aegis/internal/integrations"
 	"github.com/nortonlifelock/domain"
 	"github.com/nortonlifelock/log"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -122,7 +121,7 @@ func (job *RescanQueueJob) getAssetGroups() (assetGroupBelongsToThisOrgAndScanne
 	var assetGroups []domain.AssetGroup
 	if assetGroups, err = job.db.GetAssetGroupForOrg(job.outsource.ID(), job.config.OrganizationID()); err == nil {
 		for _, assetGroup := range assetGroups {
-			assetGroupBelongsToThisOrgAndScanner[strconv.Itoa(assetGroup.GroupID())] = true
+			assetGroupBelongsToThisOrgAndScanner[assetGroup.GroupID()] = true
 		}
 	} else {
 		err = fmt.Errorf("error while loading asset groups - %s", err.Error())

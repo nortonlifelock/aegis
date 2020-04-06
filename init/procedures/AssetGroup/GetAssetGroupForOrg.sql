@@ -1,6 +1,6 @@
 /*
     RETURN AssetGroup
-    GroupID         INT         NOT NULL
+    GroupID         VARCHAR(300)         NOT NULL
     ScannerSourceID VARCHAR(36) NOT NULL
     CloudSourceID   VARCHAR(36) NULL
     ScannerSourceConfigID VARCHAR(36) NULL

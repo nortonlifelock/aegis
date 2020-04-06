@@ -8,7 +8,6 @@ import (
 	"github.com/nortonlifelock/domain"
 	"github.com/nortonlifelock/log"
 	"regexp"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -112,9 +111,14 @@ func (job *AssetSyncJob) Process(ctx context.Context, id string, appconfig domai
 
 						// the cloud tags must all be passed together, as they are used in coordination to find assets
 						if len(cloudTags) > 0 {
-							job.lstream.Send(log.Infof("started processing %v", cloudTags))
-							job.processGroup(vscanner, cloudTags)
-							job.lstream.Send(log.Infof("finished processing %v", cloudTags))
+							var cloudTagsAsString = strings.Join(cloudTags, ",")
+							if err = job.createAssetGroupInDB(cloudTagsAsString, job.insources.SourceID(), job.insources.ID()); err == nil {
+								job.lstream.Send(log.Infof("started processing %v", cloudTags))
+								job.processGroup(vscanner, cloudTags)
+								job.lstream.Send(log.Infof("finished processing %v", cloudTags))
+							} else {
+								job.lstream.Send(log.Error("error while creating asset group", err))
+							}
 						}
 					} else {
 						job.lstream.Send(log.Errorf(err, "error while loading global exceptions"))
@@ -599,22 +603,17 @@ func (job *AssetSyncJob) grabAndCreateOsType(operatingSystem string) (output dom
 }
 
 func (job *AssetSyncJob) createAssetGroupInDB(groupID string, scannerSourceID string, scannerSourceConfigID string) (err error) {
-	var groupIDInt int
-	if groupIDInt, err = strconv.Atoi(groupID); err == nil {
-		var assetGroup domain.AssetGroup
-		if assetGroup, err = job.db.GetAssetGroup(job.config.OrganizationID(), groupIDInt, scannerSourceConfigID); err == nil {
-			if assetGroup == nil {
-				if _, _, err = job.db.CreateAssetGroup(job.config.OrganizationID(), groupIDInt, scannerSourceID, scannerSourceConfigID); err == nil {
+	var assetGroup domain.AssetGroup
+	if assetGroup, err = job.db.GetAssetGroup(job.config.OrganizationID(), groupID, scannerSourceConfigID); err == nil {
+		if assetGroup == nil {
+			if _, _, err = job.db.CreateAssetGroup(job.config.OrganizationID(), groupID, scannerSourceID, scannerSourceConfigID); err == nil {
 
-				} else {
-					err = fmt.Errorf("error while creating asset group - %v", err.Error())
-				}
+			} else {
+				err = fmt.Errorf("error while creating asset group - %v", err.Error())
 			}
-		} else {
-			err = fmt.Errorf("error while grabbing asset group - %v", err.Error())
 		}
 	} else {
-		err = fmt.Errorf("expected integer but got [%s]", groupID)
+		err = fmt.Errorf("error while grabbing asset group - %v", err.Error())
 	}
 
 	return err

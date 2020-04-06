@@ -226,13 +226,16 @@ func (job *RescanJob) createScanClosePayload(scan domain.Scan, matches []domain.
 		devices = append(devices, match.IP())
 	}
 
-	scanClosePayload := &ScanClosePayload{}
-	scanClosePayload.Scan = scan
-	scanClosePayload.ScanID = scan.ID()
-	scanClosePayload.Tickets = tickets
-	scanClosePayload.Devices = devices
-	scanClosePayload.Group = job.Payload.Group
-	scanClosePayload.Type = job.Payload.Type
+	scanClosePayload := &ScanClosePayload{
+		RescanPayload: RescanPayload{
+			Group:   job.Payload.Group,
+			Tickets: tickets,
+			Type:    job.Payload.Type,
+		},
+		Scan:    scan,
+		Devices: devices,
+		ScanID:  scan.ID(),
+	}
 
 	return scanClosePayload
 }

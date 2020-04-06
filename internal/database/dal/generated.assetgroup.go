@@ -18,7 +18,7 @@ import (
 // AssetGroup defines the struct that implements the AssetGroup interface
 type AssetGroup struct {
 	CloudSourceIDvar         *string
-	GroupIDvar               int
+	GroupIDvar               string
 	LastTicketingvar         *time.Time
 	OrganizationIDvar        string
 	ScannerSourceConfigIDvar *string
@@ -47,7 +47,7 @@ func (myAssetGroup *AssetGroup) CloudSourceID() (param *string) {
 }
 
 // GroupID returns the GroupID parameter from the AssetGroup struct
-func (myAssetGroup *AssetGroup) GroupID() (param int) {
+func (myAssetGroup *AssetGroup) GroupID() (param string) {
 	return myAssetGroup.GroupIDvar
 }
 
@@ -74,6 +74,11 @@ func (myAssetGroup *AssetGroup) ScannerSourceID() (param string) {
 // SetCloudSourceID sets the CloudSourceID parameter from the AssetGroup struct
 func (myAssetGroup *AssetGroup) SetCloudSourceID(val string) {
 	myAssetGroup.CloudSourceIDvar = &val
+}
+
+// SetGroupID sets the GroupID parameter from the AssetGroup struct
+func (myAssetGroup *AssetGroup) SetGroupID(val string) {
+	myAssetGroup.GroupIDvar = val
 }
 
 // SetOrganizationID sets the OrganizationID parameter from the AssetGroup struct

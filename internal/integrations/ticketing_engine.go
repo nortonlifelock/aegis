@@ -25,7 +25,7 @@ type TicketingEngine interface {
 	GetCERFExpirationUpdates(startDate time.Time) (cerfs map[string]time.Time, err error)
 	GetOpenTicketsByGroupID(methodOfDiscovery string, orgCode string, groupID string) (tickets <-chan domain.Ticket, err error)
 
-	GetRelatedTicketsForRescan(tickets []domain.Ticket, methodOfDiscovery string, orgCode string, rescanType string) (issues <-chan domain.Ticket, err error)
+	GetRelatedTicketsForRescan(tickets []domain.Ticket, groupID string, methodOfDiscovery string, orgCode string, rescanType string) (issues <-chan domain.Ticket, err error)
 
 	AssignmentGroupExists(groupName string) (exists bool, err error)
 

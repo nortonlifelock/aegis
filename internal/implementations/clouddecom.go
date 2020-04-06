@@ -2,8 +2,9 @@ package implementations
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
-	"strconv"
+
 	"strings"
 	"sync"
 	"time"
@@ -17,6 +18,7 @@ import (
 type CloudDecommissionJob struct {
 	id          string
 	payloadJSON string
+	Payload     *CloudDecommissionPayload
 	ctx         context.Context
 	db          domain.DatabaseConnection
 	lstream     log.Logger
@@ -26,29 +28,52 @@ type CloudDecommissionJob struct {
 	outsources  []domain.SourceConfig
 }
 
+type CloudDecommissionPayload struct {
+	// OnlyCheckIPs is an optional field. If it is not empty, a decommission check will only be done against these specific IPs as opposed to the entire cloud inventory
+	OnlyCheckIPs []string `json:"only_check_ips"`
+}
+
+// buildPayload loads the Payload from the job history into the Payload object
+func (job *CloudDecommissionJob) buildPayload(pjson string) (err error) {
+	job.Payload = &CloudDecommissionPayload{}
+
+	if len(pjson) > 0 {
+		err = json.Unmarshal([]byte(pjson), job.Payload)
+	} else {
+		err = fmt.Errorf("no Payload provided to job")
+	}
+
+	return err
+}
+
 // Process grabs a history of the devices tracked by the database. All devices belonging to a cloud service (AWS/Azure) are checked to see if they are still existent in the cloud inventory of that service. If they do not exist, the device is decommissioned in the database and its tickets are closed
 // It also grabs the devices that were previously decommissioned, and verifies that they still no longer exist in the cloud inventory. If they are discovered to be alive again, their entry in the ignore table is deleted
 func (job *CloudDecommissionJob) Process(ctx context.Context, id string, appconfig domain.Config, db domain.DatabaseConnection, lstream log.Logger, payload string, jobConfig domain.JobConfig, inSource []domain.SourceConfig, outSource []domain.SourceConfig) (err error) {
-
 	var ok bool
 	if job.ctx, job.id, job.appconfig, job.db, job.lstream, job.payloadJSON, job.config, job.insources, job.outsources, ok = validInputsMultipleSources(ctx, id, appconfig, db, lstream, payload, jobConfig, inSource, outSource); ok {
+		if err = job.buildPayload(job.payloadJSON); err == nil {
+			// TODO ensure the source of each cloud connection in the same
+			var cloudConnections = make([]integrations.CloudServiceConnection, 0)
 
-		// TODO ensure the source of each cloud connection in the same
-		var cloudConnections = make([]integrations.CloudServiceConnection, 0)
-
-		for _, insource := range job.insources {
-			var connection integrations.CloudServiceConnection
-			if connection, err = integrations.GetCloudServiceConnection(job.db, insource.Source(), insource, job.appconfig, job.lstream); err == nil {
-				cloudConnections = append(cloudConnections, connection)
-			} else {
-				job.lstream.Send(log.Error("error while establishing connection", err))
-				break
+			for _, insource := range job.insources {
+				var connection integrations.CloudServiceConnection
+				if connection, err = integrations.GetCloudServiceConnection(job.db, insource.Source(), insource, job.appconfig, job.lstream); err == nil {
+					cloudConnections = append(cloudConnections, connection)
+				} else {
+					job.lstream.Send(log.Error("error while establishing connection", err))
+					break
+				}
 			}
-		}
 
-		if err == nil {
-			job.decommissionCloudAssets(cloudConnections)
+			if err == nil {
+				job.decommissionCloudAssets(cloudConnections)
+			}
+		} else {
+			job.lstream.Send(log.Errorf(err, "error while building payload"))
 		}
+	} else {
+		err = fmt.Errorf("failed validation")
+		job.lstream.Send(log.Errorf(err, "input validation failed"))
 	}
 
 	return err
@@ -73,9 +98,25 @@ func (job *CloudDecommissionJob) decommissionCloudAssets(cloudConnections []inte
 		}
 
 		if err == nil {
+
 			// Can use those to find which devices are missing
 			var historyOfDevices []domain.Device
-			if historyOfDevices, err = job.db.GetDevicesByCloudSourceID(job.insources[0].SourceID(), job.config.OrganizationID()); err == nil {
+			if len(job.Payload.OnlyCheckIPs) == 0 {
+				// no IPs specified, so we check the entire cloud inventory
+				historyOfDevices, err = job.db.GetDevicesByCloudSourceID(job.insources[0].SourceID(), job.config.OrganizationID())
+			} else {
+				historyOfDevices = make([]domain.Device, 0)
+				for _, ip := range job.Payload.OnlyCheckIPs {
+					var device domain.Device
+					if device, err = job.db.GetDeviceByCloudSourceIDAndIP(ip, job.insources[0].SourceID(), job.config.OrganizationID()); err == nil && device != nil {
+						historyOfDevices = append(historyOfDevices, device)
+					} else {
+						job.lstream.Send(log.Warningf(err, "could not load device for IP and Cloud sources [%s|%s]", ip, job.insources[0].SourceID()))
+					}
+				}
+			}
+
+			if err == nil {
 				deviceIDToDecommissionedDevice := job.findDecommissionedDevices(historyOfDevices, allIPs)
 				job.markDevicesAsDecommissionedInDatabase(deviceIDToDecommissionedDevice)
 
@@ -103,7 +144,6 @@ func (job *CloudDecommissionJob) decommissionCloudAssets(cloudConnections []inte
 				} else {
 					job.lstream.Send(log.Errorf(err, "error while loading organization info for [%v]", job.config.OrganizationID()))
 				}
-
 			} else {
 				job.lstream.Send(log.Errorf(err, "error while grabbing history of devices"))
 			}
@@ -124,7 +164,7 @@ func (job *CloudDecommissionJob) getTicketsForDecommCheck(assetGroups []domain.A
 		if vulnSource := sourceIDToSource[assetGroup.ScannerSourceID()]; vulnSource != nil {
 
 			var groupTickets <-chan domain.Ticket
-			if groupTickets, err = ticketingEngine.GetOpenTicketsByGroupID(vulnSource.Source(), orgInfo.Code(), strconv.Itoa(assetGroup.GroupID())); err == nil {
+			if groupTickets, err = ticketingEngine.GetOpenTicketsByGroupID(vulnSource.Source(), orgInfo.Code(), assetGroup.GroupID()); err == nil {
 
 				wg.Add(1)
 				go func(groupTickets <-chan domain.Ticket) {
