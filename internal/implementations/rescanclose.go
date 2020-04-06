@@ -103,83 +103,78 @@ func (job *ScanCloseJob) Process(ctx context.Context, id string, appconfig domai
 	return err
 }
 
-type useCloudDecommissionJob struct {
-	UseCloudDecommissionJob bool `json:"use_cloud_decommission_job"`
-}
-
 func (job *ScanCloseJob) processScanDetections(engine integrations.TicketingEngine, vscanner integrations.Vscanner, tickets []domain.Ticket, scan domain.ScanSummary) {
 	var err error
 	var payload []byte
 	if payload, err = scanClosePayloadToScanPayload(scan.ScanClosePayload()); err == nil {
-		var parseScanPayload = &useCloudDecommissionJob{}
-		if err = json.Unmarshal(payload, parseScanPayload); err == nil {
-			var detections <-chan domain.Detection
-			var deadHostIPToProof <-chan domain.KeyValue
-			if detections, deadHostIPToProof, err = vscanner.ScanResults(job.ctx, payload); err == nil {
+		var detections <-chan domain.Detection
+		var deadHostIPToProof <-chan domain.KeyValue
+		if detections, deadHostIPToProof, err = vscanner.ScanResults(job.ctx, payload); err == nil {
 
-				ipsForCloudDecommissionScan := func() <-chan string {
-					var ipsForCloudDecommissionScan = make(chan string)
+			ipsForCloudDecommissionScan := func() <-chan string {
+				var ipsForCloudDecommissionScan = make(chan string)
 
-					go func() {
-						defer close(ipsForCloudDecommissionScan)
+				go func() {
+					defer close(ipsForCloudDecommissionScan)
 
-						var wg sync.WaitGroup
-						deviceIDToVulnIDToDetection, deadHostIPToProofMap := job.mapDetectionsAndDeadHosts(detections, deadHostIPToProof)
-						for _, ticket := range tickets {
-							wg.Add(1)
-							go func(ticket domain.Ticket) {
-								defer handleRoutinePanic(job.lstream)
-								defer wg.Done()
+					var wg sync.WaitGroup
+					deviceIDToVulnIDToDetection, deadHostIPToProofMap := job.mapDetectionsAndDeadHosts(detections, deadHostIPToProof)
+					for _, ticket := range tickets {
+						wg.Add(1)
+						go func(ticket domain.Ticket) {
+							defer handleRoutinePanic(job.lstream)
+							defer wg.Done()
 
-								if sord(ticket.Status()) != engine.GetStatusMap(domain.StatusClosedRemediated) { // TODO: Ensure this is correct
-									job.modifyJiraTicketAccordingToVulnerabilityStatus(
-										engine,
-										&lastCheckedTicket{ticket},
-										scan,
-										deadHostIPToProofMap,
-										deviceIDToVulnIDToDetection,
-										ipsForCloudDecommissionScan,
-										parseScanPayload.UseCloudDecommissionJob,
-									)
-								}
-							}(ticket)
-						}
-						wg.Wait()
-					}()
-
-					return ipsForCloudDecommissionScan
+							if sord(ticket.Status()) != engine.GetStatusMap(domain.StatusClosedRemediated) { // TODO: Ensure this is correct
+								job.modifyJiraTicketAccordingToVulnerabilityStatus(
+									engine,
+									&lastCheckedTicket{ticket},
+									scan,
+									deadHostIPToProofMap,
+									deviceIDToVulnIDToDetection,
+									ipsForCloudDecommissionScan,
+								)
+							}
+						}(ticket)
+					}
+					wg.Wait()
 				}()
 
-				var seen = make(map[string]bool)
-				var uniques = make([]string, 0)
+				return ipsForCloudDecommissionScan
+			}()
 
-				func() {
-					for {
-						select {
-						case <-job.ctx.Done():
-							return
-						case ip, ok := <-ipsForCloudDecommissionScan:
-							if ok {
-								if !seen[ip] {
-									seen[ip] = true
-									uniques = append(uniques, ip)
-								}
-							} else {
-								return
+			var seen = make(map[string]bool)
+			var uniques = make([]string, 0)
+
+			func() {
+				for {
+					select {
+					case <-job.ctx.Done():
+						return
+					case ip, ok := <-ipsForCloudDecommissionScan:
+						if ok {
+							if !seen[ip] {
+								seen[ip] = true
+								uniques = append(uniques, ip)
 							}
+						} else {
+							return
 						}
 					}
-				}()
-
-				if parseScanPayload.UseCloudDecommissionJob && len(uniques) > 0 {
-					job.lstream.Send(log.Infof("Creating CloudDecommissionJob for [%s]", strings.Join(uniques, ",")))
-					job.createCloudDecommissionJob(uniques)
 				}
-			} else {
-				job.lstream.Send(log.Errorf(err, "error while gathering scan information"))
+			}()
+
+			if len(uniques) > 0 {
+				// unique IPs that were found without detections. The channel that populates this slice is only populated during scheduled scans
+
+				// this block of code executes a cloud decommission scan, as scheduled scans are assumed to only run against cloud agents
+				// instead of doing traditional decommission scans against cloud agents, we use a CloudDecommissionJob to check the live cloud inventory
+				// for active IPs, and close out the tickets for the IPs that don't show in the live asset inventory
+				job.lstream.Send(log.Infof("Creating CloudDecommissionJob for [%s]", strings.Join(uniques, ",")))
+				job.createCloudDecommissionJob(uniques)
 			}
 		} else {
-			job.lstream.Send(log.Errorf(err, "error while parsing scan payload"))
+			job.lstream.Send(log.Errorf(err, "error while gathering scan information"))
 		}
 	} else {
 		job.lstream.Send(log.Errorf(err, "error while pulling scan information from scan close payload"))
@@ -310,7 +305,7 @@ func (l *lastFoundTicket) AlertDate() *time.Time {
 }
 
 // transitions the status of the JIRA ticket if necessary
-func (job *ScanCloseJob) modifyJiraTicketAccordingToVulnerabilityStatus(engine integrations.TicketingEngine, ticket domain.Ticket, scan domain.ScanSummary, deadHostIPToProofMap map[string]string, deviceIDToVulnIDToDetection map[string]map[string]domain.Detection, ipsForCloudDecommissionScan chan<- string, useCloudDecommissionJob bool) {
+func (job *ScanCloseJob) modifyJiraTicketAccordingToVulnerabilityStatus(engine integrations.TicketingEngine, ticket domain.Ticket, scan domain.ScanSummary, deadHostIPToProofMap map[string]string, deviceIDToVulnIDToDetection map[string]map[string]domain.Detection, ipsForCloudDecommissionScan chan<- string) {
 	var detectionsFoundForDevice = deviceIDToVulnIDToDetection[ticket.DeviceID()] != nil
 	var deviceReportedAsDead = len(deadHostIPToProofMap[sord(ticket.IPAddress())]) > 0 && len(sord(ticket.IPAddress())) > 0
 
@@ -354,7 +349,7 @@ func (job *ScanCloseJob) modifyJiraTicketAccordingToVulnerabilityStatus(engine i
 		default:
 			job.lstream.Send(log.Critical(fmt.Sprintf("Unrecognized scan type [%s]", job.Payload.Type), nil))
 		}
-	} else if useCloudDecommissionJob {
+	} else if scheduledScan {
 		// The useCloudDecommissionJob boolean comes from the payload of the scheduled scan, so if you didn't explicitly set the field
 		// in the payload of your ScanSummary JobConfig, don't worry about this block as it won't execute
 
