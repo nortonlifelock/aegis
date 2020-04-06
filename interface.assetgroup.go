@@ -4,7 +4,7 @@ import "time"
 
 // AssetGroup defines the interface
 type AssetGroup interface {
-	GroupID() int
+	GroupID() string
 	ScannerSourceID() string
 	CloudSourceID() *string
 	LastTicketing() *time.Time
