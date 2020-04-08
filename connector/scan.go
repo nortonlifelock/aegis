@@ -7,6 +7,7 @@ import (
 	"github.com/nortonlifelock/log"
 	"github.com/nortonlifelock/qualys"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 )
@@ -33,6 +34,21 @@ func intArrayToStringArray(intIn []int) (stringOut []string) {
 	}
 
 	return stringOut
+}
+
+func cleanIPList(ipList string) (ips []string) {
+	ips = make([]string, 0)
+
+	ipList = strings.Replace(ipList, " ", "", -1)
+	split := strings.Split(ipList, ",")
+
+	for _, ip := range split {
+		if len(ip) > 0 {
+			ips = append(ips, ip)
+		}
+	}
+
+	return ips
 }
 
 func (session *QsSession) createVulnerabilityScanForGroup(ctx context.Context, out chan<- domain.Scan, bundle *scanBundle) (err error) {

@@ -186,7 +186,7 @@ func (session *QsSession) ScanResults(ctx context.Context, payload []byte) (<-ch
 					var scan qualys.ScanQualys
 					scan, err = session.apiSession.GetScanByReference(scanInfo.ScanID)
 					if err == nil {
-						ipList := strings.Replace(scan.Target, ", ", ",", -1)
+						ipList := cleanIPList(scan.Target)
 
 						// Use the IPs to grab the host detections
 						var output *qualys.QHostListDetectionOutput
