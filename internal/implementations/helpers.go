@@ -80,9 +80,9 @@ func validInputs(ctx context.Context, id string, appConfig domain.Config, db dom
 }
 
 func getPermitThread(simultaneousCount int) (permit chan bool) {
-	var permitThread = make(chan bool, simultaneousCount)
+	permit = make(chan bool, simultaneousCount)
 	for i := 0; i < simultaneousCount; i++ {
-		permitThread <- true
+		permit <- true
 	}
 
 	return permit
