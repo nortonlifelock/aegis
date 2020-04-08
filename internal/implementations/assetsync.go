@@ -327,7 +327,7 @@ func (job *AssetSyncJob) enterAssetInformationInDB(asset domain.Device, osTypeID
 
 			var deviceInDB domain.Device
 			// first try to find the device in the database using the source asset id
-			if deviceInDB, err = job.db.GetDeviceByAssetOrgID(sord(asset.SourceID()), job.config.OrganizationID()); err == nil { // TODO include org id parameter
+			if deviceInDB, err = job.db.GetDeviceByAssetOrgID(sord(asset.SourceID()), job.config.OrganizationID()); err == nil {
 				if deviceInDB == nil {
 
 					if len(sord(asset.InstanceID())) > 0 {
@@ -341,9 +341,7 @@ func (job *AssetSyncJob) enterAssetInformationInDB(asset domain.Device, osTypeID
 				}
 
 				if err == nil {
-					if deviceInDB == nil {
-
-						// TODO currently this procedure just sets IsVirtual to false - how do I find that value?
+					if deviceInDB == nil || (len(sord(deviceInDB.SourceID())) > 0 && sord(deviceInDB.SourceID()) != sord(asset.SourceID())) {
 						_, _, err = job.db.CreateDevice(
 							sord(asset.SourceID()),
 							job.insources.SourceID(),
@@ -361,21 +359,17 @@ func (job *AssetSyncJob) enterAssetInformationInDB(asset domain.Device, osTypeID
 						} else {
 							err = fmt.Errorf(fmt.Sprintf("[-] Error while creating device [%s] - %s", sord(asset.SourceID()), err.Error()))
 						}
-
-					} else {
-
+					} else if len(sord(deviceInDB.SourceID())) == 0 && len(sord(asset.SourceID())) > 0 {
 						// this block of code is for when cloud sync job finds the asset before the ASJ does, as the CSJ doesn't set the asset id
 						// we also update the os type id because the ASJ will have a more accurate os return
-						if len(sord(deviceInDB.SourceID())) == 0 && len(sord(asset.SourceID())) > 0 {
-							_, _, err = job.db.UpdateAssetIDOsTypeIDOfDevice(deviceInDB.ID(), sord(asset.SourceID()), job.insources.SourceID(), groupID, asset.OS(), asset.HostName(), osTypeID, job.config.OrganizationID())
-							if err == nil {
-								job.lstream.Send(log.Infof("Updated device info for asset [%v]", sord(asset.SourceID())))
-							} else {
-								err = fmt.Errorf(fmt.Sprintf("could not update the asset id for device with ip [%s] - %s", ip, err.Error()))
-							}
+						_, _, err = job.db.UpdateAssetIDOsTypeIDOfDevice(deviceInDB.ID(), sord(asset.SourceID()), job.insources.SourceID(), groupID, asset.OS(), asset.HostName(), osTypeID, job.config.OrganizationID())
+						if err == nil {
+							job.lstream.Send(log.Infof("Updated device info for asset [%v]", sord(asset.SourceID())))
 						} else {
-							job.lstream.Send(log.Debugf("DB entry for device [%v] exists, skipping...", sord(asset.SourceID())))
+							err = fmt.Errorf(fmt.Sprintf("could not update the asset id for device with ip [%s] - %s", ip, err.Error()))
 						}
+					} else {
+						job.lstream.Send(log.Debugf("DB entry for device [%v] exists, skipping...", sord(asset.SourceID())))
 					}
 				} else {
 					job.lstream.Send(log.Errorf(err, "error while loading device from database"))
