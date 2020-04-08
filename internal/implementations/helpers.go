@@ -78,3 +78,12 @@ func validInputs(ctx context.Context, id string, appConfig domain.Config, db dom
 
 	return ctx, id, appConfig, db, lstream, payload, jobConfig, firstSourceIn, firstSourceOut, valid
 }
+
+func getPermitThread(simultaneousCount int) (permit chan bool) {
+	var permitThread = make(chan bool, simultaneousCount)
+	for i := 0; i < simultaneousCount; i++ {
+		permitThread <- true
+	}
+
+	return permit
+}

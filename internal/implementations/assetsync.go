@@ -174,11 +174,7 @@ func (job *AssetSyncJob) processGroup(vscanner integrations.Vscanner, groupIDs [
 		devIDToDetections := job.fanInDetections(detectionChan)
 		job.lstream.Send(log.Infof("Finished loading detections for %d devices", len(devIDToDetections)))
 
-		const simultaneousCount = 10
-		var permitThread = make(chan bool, simultaneousCount)
-		for i := 0; i < simultaneousCount; i++ {
-			permitThread <- true
-		}
+		var permitThread = getPermitThread(10)
 
 		var wg sync.WaitGroup
 		for deviceID, detections := range devIDToDetections {
@@ -428,7 +424,19 @@ func (job *AssetSyncJob) processAssetDetections(deviceInDb domain.Device, assetI
 
 	if err == nil {
 		if vulnInfo != nil {
-			job.createOrUpdateDetection(deviceInDb, vulnInfo, detectionFromScanner, assetID, decomIgnoreID)
+			createOrUpdateDetection(
+				job.db,
+				job.lstream,
+				job.detectionStatuses,
+				deviceInDb,
+				vulnInfo,
+				detectionFromScanner,
+				assetID,
+				decomIgnoreID,
+				job.config.OrganizationID(),
+				job.insources.SourceID(),
+				job.getExceptionID,
+			)
 		} else {
 			job.lstream.Send(log.Error("could not find vulnerability in database", fmt.Errorf("[%s] does not have an entry in the database", vulnID)))
 		}
@@ -440,20 +448,16 @@ func (job *AssetSyncJob) processAssetDetections(deviceInDb domain.Device, assetI
 	return err
 }
 
-func (job *AssetSyncJob) getExceptionID(assetID string, deviceInDb domain.Device, port string, vulnInfo domain.VulnerabilityInfo, decomIgnoreID string) (exceptionID string) {
-	if len(decomIgnoreID) == 0 {
-		if job.deviceIDToVulnIDToException[assetID] != nil {
-			if job.deviceIDToVulnIDToException[assetID][fmt.Sprintf("%s;%s", vulnInfo.SourceVulnID(), port)] != nil {
+func (job *AssetSyncJob) getExceptionID(assetID string, deviceInDb domain.Device, port string, vulnInfo domain.VulnerabilityInfo, detectionFromScanner domain.Detection) (exceptionID string) {
+	if job.deviceIDToVulnIDToException[assetID] != nil {
+		if job.deviceIDToVulnIDToException[assetID][fmt.Sprintf("%s;%s", vulnInfo.SourceVulnID(), port)] != nil {
 
-				var possibleMatch = job.deviceIDToVulnIDToException[assetID][fmt.Sprintf("%s;%s", vulnInfo.SourceVulnID(), port)]
+			var possibleMatch = job.deviceIDToVulnIDToException[assetID][fmt.Sprintf("%s;%s", vulnInfo.SourceVulnID(), port)]
 
-				if possibleMatch.TypeID() != domain.Exception || possibleMatch.DueDate().After(time.Now()) { // only want to skip exceptions that have passed their due dates
-					exceptionID = job.deviceIDToVulnIDToException[assetID][fmt.Sprintf("%s;%s", vulnInfo.SourceVulnID(), port)].ID()
-				}
+			if possibleMatch.TypeID() != domain.Exception || possibleMatch.DueDate().After(time.Now()) { // only want to skip exceptions that have passed their due dates
+				exceptionID = job.deviceIDToVulnIDToException[assetID][fmt.Sprintf("%s;%s", vulnInfo.SourceVulnID(), port)].ID()
 			}
 		}
-	} else {
-		exceptionID = decomIgnoreID
 	}
 
 	if len(exceptionID) == 0 {
@@ -471,23 +475,26 @@ func (job *AssetSyncJob) getExceptionID(assetID string, deviceInDb domain.Device
 }
 
 // This method creates a detection entry if one does not exist, and updates the entry if one does
-func (job *AssetSyncJob) createOrUpdateDetection(deviceInDb domain.Device, vulnInfo domain.VulnerabilityInfo, detectionFromScanner domain.Detection, assetID string, decomIgnoreID string) {
+func createOrUpdateDetection(db domain.DatabaseConnection, lstream log.Logger, detectionStatuses []domain.DetectionStatus, deviceInDb domain.Device, vulnInfo domain.VulnerabilityInfo, detectionFromScanner domain.Detection, assetID string, decomIgnoreID string, orgID string, sourceID string, getExceptionID func(string, domain.Device, string, domain.VulnerabilityInfo, domain.Detection) string) {
 	var err error
 
 	var detectionInDB domain.DetectionInfo
-	detectionInDB, err = job.db.GetDetectionInfo(sord(deviceInDb.SourceID()), vulnInfo.ID(), detectionFromScanner.Port(), detectionFromScanner.Protocol())
+	detectionInDB, err = db.GetDetectionInfo(sord(deviceInDb.SourceID()), vulnInfo.ID(), detectionFromScanner.Port(), detectionFromScanner.Protocol())
 	if err == nil {
 		var detectionStatus domain.DetectionStatus
-		if detectionStatus = job.getDetectionStatus(detectionFromScanner.Status()); detectionStatus != nil {
+		if detectionStatus = getDetectionStatus(detectionStatuses, detectionFromScanner.Status()); detectionStatus != nil {
 
 			var port string
 			if detectionFromScanner.Port() > 0 || len(detectionFromScanner.Protocol()) > 0 {
 				port = fmt.Sprintf("%d %s", detectionFromScanner.Port(), detectionFromScanner.Protocol())
 			}
-			var exceptionID = job.getExceptionID(assetID, deviceInDb, port, vulnInfo, decomIgnoreID)
+			var exceptionID = decomIgnoreID
+			if len(exceptionID) == 0 {
+				exceptionID = getExceptionID(assetID, deviceInDb, port, vulnInfo, detectionFromScanner)
+			}
 
 			if detectionInDB == nil {
-				job.createDetection(detectionFromScanner, exceptionID, deviceInDb, vulnInfo, assetID, detectionStatus.ID())
+				createDetection(db, lstream, orgID, sourceID, detectionFromScanner, exceptionID, deviceInDb, vulnInfo, assetID, detectionStatus.ID())
 			} else {
 
 				var canSkipUpdate bool
@@ -503,7 +510,7 @@ func (job *AssetSyncJob) createOrUpdateDetection(deviceInDb domain.Device, vulnI
 				}
 
 				if !canSkipUpdate {
-					_, _, err = job.db.UpdateDetection(
+					_, _, err = db.UpdateDetection(
 						sord(deviceInDb.SourceID()),
 						vulnInfo.ID(),
 						detectionFromScanner.Port(),
@@ -517,32 +524,32 @@ func (job *AssetSyncJob) createOrUpdateDetection(deviceInDb domain.Device, vulnI
 					)
 
 					if err == nil {
-						job.lstream.Send(log.Infof("Updated detection for device/vuln [%v|%v]", assetID, vulnInfo.ID()))
+						lstream.Send(log.Infof("Updated detection for device/vuln [%v|%v]", assetID, vulnInfo.ID()))
 					} else {
-						job.lstream.Send(log.Errorf(err, "Error while updating detection for device/vuln [%v|%v]", assetID, vulnInfo.ID()))
+						lstream.Send(log.Errorf(err, "Error while updating detection for device/vuln [%v|%v]", assetID, vulnInfo.ID()))
 					}
 				} else {
-					job.lstream.Send(log.Infof("Skipping detection update for device/vuln [%v|%v] [%v after %v]", assetID, vulnInfo.ID(), detectionInDB.Updated(), *detectionFromScanner.LastUpdated()))
+					lstream.Send(log.Infof("Skipping detection update for device/vuln [%v|%v] [%v after %v]", assetID, vulnInfo.ID(), detectionInDB.Updated(), *detectionFromScanner.LastUpdated()))
 				}
 			}
 		} else {
-			job.lstream.Send(log.Errorf(err, "could not find detection status with name [%s]", detectionFromScanner.Status()))
+			lstream.Send(log.Errorf(err, "could not find detection status with name [%s]", detectionFromScanner.Status()))
 		}
 	} else {
-		job.lstream.Send(log.Debugf("Detection already exists for device/vuln [%v|%v]", assetID, vulnInfo.ID()))
+		lstream.Send(log.Debugf("Detection already exists for device/vuln [%v|%v]", assetID, vulnInfo.ID()))
 	}
 }
 
 // This method creates the detection entry in the database
-func (job *AssetSyncJob) createDetection(vuln domain.Detection, exceptionID string, deviceInDb domain.Device, vulnInfo domain.VulnerabilityInfo, assetID string, detectionStatusID int) {
+func createDetection(db domain.DatabaseConnection, lstream log.Logger, orgID string, sourceID string, vuln domain.Detection, exceptionID string, deviceInDb domain.Device, vulnInfo domain.VulnerabilityInfo, assetID string, detectionStatusID int) {
 	var err error
 
 	var detected *time.Time
 	if detected, err = vuln.Detected(); err == nil {
 		if detected != nil {
-			_, _, err = job.db.CreateDetection(
-				job.config.OrganizationID(),
-				job.insources.SourceID(),
+			_, _, err = db.CreateDetection(
+				orgID,
+				sourceID,
 				sord(deviceInDb.SourceID()),
 				vulnInfo.ID(),
 				exceptionID,
@@ -566,14 +573,14 @@ func (job *AssetSyncJob) createDetection(vuln domain.Detection, exceptionID stri
 	}
 
 	if err == nil {
-		job.lstream.Send(log.Infof("Created detection for device/vuln [%v|%v]", assetID, vulnInfo.ID()))
+		lstream.Send(log.Infof("Created detection for device/vuln [%v|%v]", assetID, vulnInfo.ID()))
 	} else {
-		job.lstream.Send(log.Errorf(err, "Error while creating detection for device/vuln [%v|%v]", assetID, vulnInfo.ID()))
+		lstream.Send(log.Errorf(err, "Error while creating detection for device/vuln [%v|%v]", assetID, vulnInfo.ID()))
 	}
 }
 
-func (job *AssetSyncJob) getDetectionStatus(status string) (detectionStatus domain.DetectionStatus) {
-	for _, potentialMatch := range job.detectionStatuses {
+func getDetectionStatus(detectionStatuses []domain.DetectionStatus, status string) (detectionStatus domain.DetectionStatus) {
+	for _, potentialMatch := range detectionStatuses {
 		if strings.ToLower(status) == strings.ToLower(potentialMatch.Status()) {
 			detectionStatus = potentialMatch
 			break

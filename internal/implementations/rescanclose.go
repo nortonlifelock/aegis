@@ -125,16 +125,14 @@ func (job *ScanCloseJob) processScanDetections(engine integrations.TicketingEngi
 							defer handleRoutinePanic(job.lstream)
 							defer wg.Done()
 
-							if sord(ticket.Status()) != engine.GetStatusMap(domain.StatusClosedRemediated) { // TODO: Ensure this is correct
-								job.modifyJiraTicketAccordingToVulnerabilityStatus(
-									engine,
-									&lastCheckedTicket{ticket},
-									scan,
-									deadHostIPToProofMap,
-									deviceIDToVulnIDToDetection,
-									ipsForCloudDecommissionScan,
-								)
-							}
+							job.modifyJiraTicketAccordingToVulnerabilityStatus(
+								engine,
+								&lastCheckedTicket{ticket},
+								scan,
+								deadHostIPToProofMap,
+								deviceIDToVulnIDToDetection,
+								ipsForCloudDecommissionScan,
+							)
 						}(ticket)
 					}
 					wg.Wait()
@@ -179,6 +177,96 @@ func (job *ScanCloseJob) processScanDetections(engine integrations.TicketingEngi
 	} else {
 		job.lstream.Send(log.Errorf(err, "error while pulling scan information from scan close payload"))
 	}
+}
+
+func (job *ScanCloseJob) updateDetectionInformationInDB(deviceIDToVulnIDToDetection map[string]map[string]domain.Detection) {
+	var vulnCache sync.Map
+	var wg sync.WaitGroup
+
+	var permitThread = getPermitThread(10)
+
+	if detectionStatuses, err := job.db.GetDetectionStatuses(); err == nil {
+		for deviceID, vulnIDToDetection := range deviceIDToVulnIDToDetection {
+
+			if device, err := job.db.GetDeviceByAssetOrgID(deviceID, job.config.OrganizationID()); err == nil {
+
+				var decommIgnoreID string
+				if decommIgnore, err := job.db.HasDecommissioned(deviceID, job.insource.SourceID(), job.config.OrganizationID()); err == nil {
+					if decommIgnore != nil {
+						decommIgnoreID = decommIgnore.ID()
+					}
+				}
+
+				for vulnID, detection := range vulnIDToDetection {
+
+					var vulnInfo domain.VulnerabilityInfo
+					if vulnInfoInterface, ok := vulnCache.Load(vulnID); ok {
+						if vulnInfo, ok = vulnInfoInterface.(domain.VulnerabilityInfo); !ok {
+							job.lstream.Send(log.Errorf(fmt.Errorf("cache error while loading vulnerability info"), "cache error"))
+						}
+					} else {
+						vulnInfo, err = job.db.GetVulnInfoBySourceVulnID(vulnID)
+						if err == nil && vulnInfo != nil {
+							vulnCache.Store(vulnID, vulnInfo)
+						} else {
+							job.lstream.Send(log.Errorf(fmt.Errorf("cache error while loading vulnerability info"), "cache error during db transaction"))
+						}
+					}
+
+					if device != nil && vulnInfo != nil && detection != nil {
+						select {
+						case <-job.ctx.Done():
+							return
+						case <-permitThread:
+						}
+
+						wg.Add(1)
+						go func(deviceID string, device domain.Device, vulnID string, vulnInfo domain.VulnerabilityInfo, detection domain.Detection, decommIgnoreID string) {
+							defer handleRoutinePanic(job.lstream)
+							defer wg.Done()
+							defer func() {
+								permitThread <- true
+							}()
+
+							createOrUpdateDetection(
+								job.db, job.lstream,
+								detectionStatuses,
+								device,
+								vulnInfo,
+								detection,
+								deviceID,
+								decommIgnoreID,
+								job.config.OrganizationID(),
+								job.insource.SourceID(),
+								job.getExceptionID,
+							)
+						}(deviceID, device, vulnID, vulnInfo, detection, decommIgnoreID)
+					} else {
+						job.lstream.Send(log.Errorf(err, "failed to load device|vuln|detection [%v|%v|%v]", device, vulnInfo, detection))
+					}
+				}
+			} else {
+				job.lstream.Send(log.Errorf(err, "error while loading device information from db - could not update detection information in db"))
+			}
+		}
+	} else {
+		job.lstream.Send(log.Errorf(err, "error while loading detection statuses - could not update detections in db"))
+	}
+
+	wg.Wait()
+}
+
+func (job *ScanCloseJob) getExceptionID(assetID string, deviceInDb domain.Device, port string, vulnInfo domain.VulnerabilityInfo, detectionFromScanner domain.Detection) (exceptionID string) {
+	if ignore, err := job.db.HasIgnore(job.insource.SourceID(), vulnInfo.SourceID(), assetID, job.config.OrganizationID(), port, tord1970(detectionFromScanner.LastFound())); err == nil {
+		if ignore != nil {
+			exceptionID = ignore.ID()
+		}
+		// TODO global exception support?
+	} else {
+		job.lstream.Send(log.Errorf(err, "error while loading ignore entry for [%s|%s]", assetID, vulnInfo.SourceID()))
+	}
+
+	return exceptionID
 }
 
 func (job *ScanCloseJob) createCloudDecommissionJob(ips []string) {
@@ -366,7 +454,7 @@ func (job *ScanCloseJob) modifyJiraTicketAccordingToVulnerabilityStatus(engine i
 		}
 	} else {
 		job.lstream.Send(log.Errorf(err, "scan [%s] did not seem to cover the device %v - scanner did not report any data for device", job.Payload.ScanID, ticket.DeviceID()))
-		err = engine.Transition(ticket, engine.GetStatusMap(domain.StatusScanError), fmt.Sprintf("scan [%s] did not cover the device %v. Please make sure this asset is still in-scope and associated with an asset group. If this asset is out of scope, please move this ticket to NOTAVRR status or alert the vulnerability management team.", job.Payload.ScanID, ticket.DeviceID()), sord(ticket.AssignedTo()))
+		err = engine.Transition(ticket, engine.GetStatusMap(domain.StatusScanError), fmt.Sprintf("scan [%s] did not cover the device %v. Please make sure this asset is still in-	scope and associated with an asset group. If this asset is out of scope, please move this ticket to NOTAVRR status or alert the vulnerability management team.", job.Payload.ScanID, ticket.DeviceID()), sord(ticket.AssignedTo()))
 		if err != nil {
 			job.lstream.Send(log.Errorf(err, "error while adding comment to ticket [%s]", ticket.Title()))
 		}
