@@ -341,7 +341,11 @@ func (job *AssetSyncJob) enterAssetInformationInDB(asset domain.Device, osTypeID
 				}
 
 				if err == nil {
-					if deviceInDB == nil || (len(sord(deviceInDB.SourceID())) > 0 && sord(deviceInDB.SourceID()) != sord(asset.SourceID())) {
+
+					deviceIsAlsoBeingTrackedUnderDifferentAssetID := len(sord(deviceInDB.SourceID())) > 0 && sord(deviceInDB.SourceID()) != sord(asset.SourceID())
+					deviceFoundByCloudSyncJobFirst := len(sord(deviceInDB.SourceID())) == 0 && len(sord(asset.SourceID())) > 0
+
+					if deviceInDB == nil || deviceIsAlsoBeingTrackedUnderDifferentAssetID {
 						_, _, err = job.db.CreateDevice(
 							sord(asset.SourceID()),
 							job.insources.SourceID(),
@@ -359,7 +363,7 @@ func (job *AssetSyncJob) enterAssetInformationInDB(asset domain.Device, osTypeID
 						} else {
 							err = fmt.Errorf(fmt.Sprintf("[-] Error while creating device [%s] - %s", sord(asset.SourceID()), err.Error()))
 						}
-					} else if len(sord(deviceInDB.SourceID())) == 0 && len(sord(asset.SourceID())) > 0 {
+					} else if deviceFoundByCloudSyncJobFirst {
 						// this block of code is for when cloud sync job finds the asset before the ASJ does, as the CSJ doesn't set the asset id
 						// we also update the os type id because the ASJ will have a more accurate os return
 						_, _, err = job.db.UpdateAssetIDOsTypeIDOfDevice(deviceInDB.ID(), sord(asset.SourceID()), job.insources.SourceID(), groupID, asset.OS(), asset.HostName(), osTypeID, job.config.OrganizationID())
