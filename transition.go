@@ -151,8 +151,6 @@ func executeTransition(transition workflowTransition, assignTo string, connector
 				if err == nil {
 					tpayload.fields = nil
 					tpayload.FieldsInterface = updateBlockWithCustomFieldNames
-					body, _ := json.Marshal(tpayload)
-					fmt.Println(string(body))
 				} else {
 					err = fmt.Errorf("error while building transition payload - %s", err.Error())
 				}
