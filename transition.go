@@ -159,6 +159,9 @@ func executeTransition(transition workflowTransition, assignTo string, connector
 			} else {
 				err = fmt.Errorf("error while building transition payload - %s", err.Error())
 			}
+		} else {
+			tpayload.FieldsInterface = tpayload.fields
+			tpayload.fields = nil
 		}
 
 		if err == nil {
