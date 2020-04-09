@@ -161,7 +161,6 @@ func executeTransition(transition workflowTransition, assignTo string, connector
 			}
 		} else {
 			tpayload.FieldsInterface = tpayload.fields
-			tpayload.fields = nil
 		}
 
 		if err == nil {
