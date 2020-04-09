@@ -1,6 +1,7 @@
 package jira
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/nortonlifelock/domain"
 	"github.com/trivago/tgo/tcontainer"
@@ -125,7 +126,23 @@ func executeTransition(transition workflowTransition, assignTo string, connector
 			}
 		}
 
-		_, err = connector.client.Issue.DoTransitionWithPayload(ticket.Title(), tpayload)
+		var oldToNewFieldName = make(map[string]string)
+		oldToNewFieldName["reopen_reason"] = connector.GetFieldMap(backendReopenReason).getCreateID()
+		oldToNewFieldName["resolution_date"] = connector.GetFieldMap(backendResolutionDate).getCreateID()
+
+		var customFieldUpdateBlockBytes []byte
+		var updateBlockWithCustomFieldNames interface{}
+		customFieldUpdateBlockBytes, err = replaceJSONKey(oldToNewFieldName, tpayload.Fields)
+		if err == nil {
+			err = json.Unmarshal(customFieldUpdateBlockBytes, &updateBlockWithCustomFieldNames)
+			if err == nil {
+				_, err = connector.client.Issue.DoTransitionWithPayload(ticket.Title(), updateBlockWithCustomFieldNames)
+			} else {
+				err = fmt.Errorf("error while building transition payload - %s", err.Error())
+			}
+		} else {
+			err = fmt.Errorf("error while building transition payload - %s", err.Error())
+		}
 	} else {
 		err = fmt.Errorf("error while finding the assignee location - %s", err.Error())
 	}

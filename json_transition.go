@@ -31,8 +31,8 @@ type createTransitionPayload struct {
 
 // FieldStruct is used in createTransitionPayload and must be exported in order to be marshaled
 type FieldStruct struct {
-	ReopenReason   string    `json:"customfield_11360,omitempty"`
-	ResolutionDate string    `json:"customfield_11364,omitempty"`
+	ReopenReason   string    `json:"reopen_reason,omitempty"`
+	ResolutionDate string    `json:"resolution_date,omitempty"`
 	Assignee       *Assignee `json:"assignee,omitempty"`
 }
 
