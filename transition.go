@@ -138,7 +138,7 @@ func executeTransition(transition workflowTransition, assignTo string, connector
 			if err == nil {
 				tpayload.Fields = nil
 				tpayload.FieldsInterface = updateBlockWithCustomFieldNames
-				_, err = connector.client.Issue.DoTransitionWithPayload(ticket.Title(), updateBlockWithCustomFieldNames)
+				_, err = connector.client.Issue.DoTransitionWithPayload(ticket.Title(), tpayload)
 			} else {
 				err = fmt.Errorf("error while building transition payload - %s", err.Error())
 			}
