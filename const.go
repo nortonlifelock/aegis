@@ -15,6 +15,7 @@ var MappableFields = []string{
 	backendScanDate,
 	backendAssignmentGroup,
 	backendResolutionDate,
+	backendReopenReason,
 	backendOperatingSystem,
 	backendVulnerability,
 	backendCVSS,
@@ -77,6 +78,7 @@ const (
 	backendScanDate         = "Scan/Alert Date"
 	backendAssignmentGroup  = "Assignment Group"
 	backendResolutionDate   = "Resolution Date"
+	backendReopenReason     = "Reopen Reason"
 	backendOperatingSystem  = "Operating System"
 	backendVulnerability    = "Vulnerablility" // typo is present in JIRA and intentional
 	backendCVSS             = "cvss_score"
