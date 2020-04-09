@@ -129,6 +129,7 @@ func executeTransition(transition workflowTransition, assignTo string, connector
 		var oldToNewFieldName = make(map[string]string)
 		oldToNewFieldName["reopen_reason"] = connector.GetFieldMap(backendReopenReason).getCreateID()
 		oldToNewFieldName["resolution_date"] = connector.GetFieldMap(backendResolutionDate).getCreateID()
+		oldToNewFieldName["assignee"] = "assignee"
 
 		var customFieldUpdateBlockBytes []byte
 		var updateBlockWithCustomFieldNames interface{}
@@ -138,6 +139,10 @@ func executeTransition(transition workflowTransition, assignTo string, connector
 			if err == nil {
 				tpayload.Fields = nil
 				tpayload.FieldsInterface = updateBlockWithCustomFieldNames
+
+				body, _ := json.Marshal(tpayload)
+				fmt.Println(string(body))
+
 				_, err = connector.client.Issue.DoTransitionWithPayload(ticket.Title(), tpayload)
 			} else {
 				err = fmt.Errorf("error while building transition payload - %s", err.Error())
