@@ -317,7 +317,7 @@ func (job *ScanCloseJob) createCloudDecommissionJob(ips []string) {
 			job.lstream.Send(log.Errorf(err, "wanted to create a cloud decommission scan for [%s], but it did not have the cloud source ID set", job.Payload.Group))
 		}
 	} else {
-		job.lstream.Send(log.Errorf(err, "error while loading asset group information for [%s]", job.Payload.Group))
+		job.lstream.Send(log.Errorf(err, "error while loading asset group information for [org|group|source] [%s|%s|%s]", job.config.OrganizationID(), job.Payload.Group, job.insource.SourceID()))
 	}
 }
 
