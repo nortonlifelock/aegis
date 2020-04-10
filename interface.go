@@ -9,9 +9,9 @@ type DatabaseConnection interface {
 	GetDeviceByAssetOrgID(_AssetID string, OrgID string) (Device, error)
 	GetDeviceByIP(_IP string, _OrgID string) (Device, error)
 	//GetDeviceByIPMACAndRegion(_IP string, _MAC string, _Region string, _OrgID string) (Device, error)
-	GetDeviceByCloudSourceIDAndIP(_IP string, _CloudSourceID string, _OrgID string) (Device, error)
+	GetDeviceByCloudSourceIDAndIP(_IP string, _CloudSourceID string, _OrgID string) ([]Device, error)
 	GetDeviceByScannerSourceID(_IP string, _GroupID string, _OrgID string) (Device, error)
-	GetDeviceByInstanceID(_InstanceID string, _OrgID string) (Device, error)
+	GetDeviceByInstanceID(_InstanceID string, _OrgID string) ([]Device, error)
 	GetDevicesBySourceID(_SourceID string, _OrgID string) ([]Device, error)
 	GetDevicesByCloudSourceID(_CloudSourceID string, _OrgID string) ([]Device, error)
 
