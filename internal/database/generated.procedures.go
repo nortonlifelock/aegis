@@ -1546,6 +1546,59 @@ func (conn *dbconn) GetAssetGroupsByCloudSource(inOrgID string, inCloudSourceID 
 	return retAssetGroup, err
 }
 
+// GetAssetGroupsForOrg executes the stored procedure GetAssetGroupsForOrg against the database and returns the read results
+func (conn *dbconn) GetAssetGroupsForOrg(inOrgID string) ([]domain.AssetGroup, error) {
+	var err error
+	var retAssetGroup = make([]domain.AssetGroup, 0)
+
+	conn.Read(&connection.Procedure{
+		Proc:       "GetAssetGroupsForOrg",
+		Parameters: []interface{}{inOrgID},
+		Callback: func(results interface{}, dberr error) {
+			err = dberr
+
+			if err == nil {
+
+				err = conn.getRows(results,
+					func(rows *sql.Rows) (err error) {
+						if err = rows.Err(); err == nil {
+
+							var myGroupID string
+							var myScannerSourceID string
+							var myCloudSourceID *string
+							var myScannerSourceConfigID *string
+							var myLastTicketing *time.Time
+
+							if err = rows.Scan(
+
+								&myGroupID,
+								&myScannerSourceID,
+								&myCloudSourceID,
+								&myScannerSourceConfigID,
+								&myLastTicketing,
+							); err == nil {
+
+								newAssetGroup := &dal.AssetGroup{
+									GroupIDvar:               myGroupID,
+									ScannerSourceIDvar:       myScannerSourceID,
+									CloudSourceIDvar:         myCloudSourceID,
+									ScannerSourceConfigIDvar: myScannerSourceConfigID,
+									LastTicketingvar:         myLastTicketing,
+								}
+
+								retAssetGroup = append(retAssetGroup, newAssetGroup)
+							}
+						}
+
+						return err
+					})
+			}
+		},
+	})
+
+	return retAssetGroup, err
+}
+
 // GetAssignmentGroupByIP executes the stored procedure GetAssignmentGroupByIP against the database and returns the read results
 func (conn *dbconn) GetAssignmentGroupByIP(_SourceID string, _OrganizationID string, _IP string) ([]domain.AssignmentGroup, error) {
 	var err error
