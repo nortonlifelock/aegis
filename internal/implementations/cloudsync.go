@@ -102,13 +102,15 @@ func (job *CloudSyncJob) processTagsForDB(connection integrations.CloudServiceCo
 
 		for ip, keyToValue := range ipToKeyToValue {
 
-			var device domain.Device
-			// this method creates an entry in the database for the device if one does not exist
-			device, err = job.createOrUpdateDevice(ip, keyToValue)
+			// a cloud IP may be attached to more than one device in the DB (can happen if a scanner duplicates a device in a different asset group)
+			var devices []domain.Device
+			// createOrUpdateDevice creates an entry in the database for the device if one does not exist
+			devices, err = job.createOrUpdateDevice(ip, keyToValue)
 			if err == nil {
-				// add the tags returned from the cloud service provider to the database
-				job.createOrUpdateTagsForDevice(keyToValue, tagKeyToDbID, device, ip)
-
+				for _, device := range devices {
+					// add the tags returned from the cloud service provider to the database
+					job.createOrUpdateTagsForDevice(keyToValue, tagKeyToDbID, device, ip)
+				}
 			} else {
 				job.lstream.Send(log.Error("error while creating/updating device", err))
 			}
@@ -132,7 +134,7 @@ func (job *CloudSyncJob) createOrUpdateTagsForDevice(keyToValue map[string]strin
 
 					_, _, err = job.db.CreateTag(device.ID(), tagKeyDbID, tagValue)
 					if err == nil {
-						job.lstream.Send(log.Infof("Created tag [%s|%s] for device [%v]", tagKey, tagValue, device.SourceID()))
+						job.lstream.Send(log.Infof("Created tag [%s|%s] for device [%v]", tagKey, tagValue, sord(device.SourceID())))
 					} else {
 						job.lstream.Send(log.Errorf(err, "error while creating tag for device [%v]", sord(device.SourceID())))
 					}
@@ -201,20 +203,10 @@ func (job *CloudSyncJob) createTagKeyDbEntriesAndIDMap(connection integrations.C
 // TODO how should we correlate cloud devices to scanner devices?
 // The device for the IP will already exist if the asset sync job found it first. If the asset sync job did not find it first, this method will create
 // an entry in the database
-func (job *CloudSyncJob) createOrUpdateDevice(ip domain.CloudIP, keyToValue map[string]string) (device domain.Device, err error) {
-	// GetDeviceByCloudSourceIDAndIP uses the AssetGroup mapping (links cloud subscriptions to vulnerability asset groups) to identify
-	device, err = job.db.GetDeviceByCloudSourceIDAndIP(ip.IP(), job.insources[0].SourceID(), job.config.OrganizationID())
-	if err == nil {
+func (job *CloudSyncJob) createOrUpdateDevice(ip domain.CloudIP, keyToValue map[string]string) (devices []domain.Device, err error) {
+	if devices, err = job.getDevicesForIP(ip, keyToValue); err == nil && len(devices) > 0 {
 
-		if device == nil {
-			device, err = job.db.GetDeviceByInstanceID(ip.InstanceID(), job.config.OrganizationID())
-			if device == nil && err == nil {
-				job.lstream.Send(log.Criticalf(err, "device with IP [%s] for org [%s] was not found in database by Cloud Sync Job", ip.IP(), job.config.OrganizationID()))
-				device, err = job.createAndReturnDevice(ip, keyToValue)
-			}
-		}
-
-		if err == nil && device != nil {
+		for _, device := range devices {
 			// device already exists but the instance id isn't set
 			// (likely occurred because asset was created by asset sync job)
 			if len(sord(device.InstanceID())) == 0 && len(keyToValue[instanceID]) > 0 {
@@ -237,12 +229,47 @@ func (job *CloudSyncJob) createOrUpdateDevice(ip domain.CloudIP, keyToValue map[
 				err = fmt.Errorf("error while updating state information for device [%s] - %s", device.ID(), err.Error())
 			}
 		}
-
-	} else {
-		err = fmt.Errorf("error while gathering device [%s] from the database - [%s]", ip.IP(), err.Error())
 	}
 
-	return device, err
+	return devices, err
+}
+
+func (job *CloudSyncJob) getDevicesForIP(ip domain.CloudIP, keyToValue map[string]string) (devices []domain.Device, err error) {
+	devices = make([]domain.Device, 0)
+
+	// GetDeviceByCloudSourceIDAndIP uses the AssetGroup mapping (links cloud subscriptions to vulnerability asset groups) to identify
+	var devicesByCloudSource, devicesByInstanceID []domain.Device
+
+	devicesByCloudSource, err = job.db.GetDeviceByCloudSourceIDAndIP(ip.IP(), job.insources[0].SourceID(), job.config.OrganizationID())
+	if err == nil {
+		devicesByInstanceID, err = job.db.GetDeviceByInstanceID(ip.InstanceID(), job.config.OrganizationID())
+	}
+
+	if err == nil {
+		var seen = make(map[string]bool)
+		for _, device := range devicesByCloudSource {
+			if !seen[device.ID()] {
+				seen[device.ID()] = true
+				devices = append(devices, device)
+			}
+		}
+
+		for _, device := range devicesByInstanceID {
+			if !seen[device.ID()] {
+				seen[device.ID()] = true
+				devices = append(devices, device)
+			}
+		}
+
+		if len(devices) == 0 {
+			job.lstream.Send(log.Criticalf(err, "device with IP [%s] for org [%s] was not found in database by Cloud Sync Job", ip.IP(), job.config.OrganizationID()))
+			var newDevice domain.Device
+			newDevice, err = job.createAndReturnDevice(ip, keyToValue)
+			devices = append(devices, newDevice)
+		}
+	}
+
+	return devices, err
 }
 
 func (job *CloudSyncJob) createAndReturnDevice(ip domain.CloudIP, keyToValue map[string]string) (device domain.Device, err error) {
@@ -258,9 +285,14 @@ func (job *CloudSyncJob) createAndReturnDevice(ip domain.CloudIP, keyToValue map
 
 			_, _, err = job.db.CreateAssetWithIPInstanceID(ip.State(), ip.IP(), ip.MAC(), job.insources[0].SourceID(), keyToValue[instanceID], ip.Region(), job.config.OrganizationID(), OS, osType.ID())
 			if err == nil {
-				device, err = job.db.GetDeviceByInstanceID(ip.InstanceID(), job.config.OrganizationID())
-				if err == nil && device == nil {
-					err = fmt.Errorf("could not find recently created device for [%s] in database", ip.IP())
+				var devices []domain.Device
+				devices, err = job.db.GetDeviceByInstanceID(ip.InstanceID(), job.config.OrganizationID())
+				if err == nil {
+					if len(devices) > 0 {
+						device = devices[0]
+					} else {
+						err = fmt.Errorf("could not find recently created device for [%s] in database", ip.IP())
+					}
 				}
 			} else {
 				err = fmt.Errorf("error while creating asset for ip [%s] - %s", ip.IP(), err.Error())

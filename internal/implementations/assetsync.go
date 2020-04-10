@@ -331,7 +331,11 @@ func (job *AssetSyncJob) enterAssetInformationInDB(asset domain.Device, osTypeID
 				if deviceInDB == nil {
 
 					if len(sord(asset.InstanceID())) > 0 {
-						deviceInDB, err = job.db.GetDeviceByInstanceID(sord(asset.InstanceID()), job.config.OrganizationID())
+						var devicesByInstanceID []domain.Device
+						devicesByInstanceID, err = job.db.GetDeviceByInstanceID(sord(asset.InstanceID()), job.config.OrganizationID())
+						if len(devicesByInstanceID) > 0 {
+							deviceInDB = devicesByInstanceID[0]
+						}
 					}
 
 					// second we try to find the device in the database using the IP

@@ -2703,9 +2703,9 @@ func (conn *dbconn) GetDeviceInfoByAssetOrgID(inAssetID string, inOrgID string) 
 }
 
 // GetDeviceInfoByCloudSourceIDAndIP executes the stored procedure GetDeviceInfoByCloudSourceIDAndIP against the database and returns the read results
-func (conn *dbconn) GetDeviceInfoByCloudSourceIDAndIP(_IP string, _CloudSourceID string, _OrgID string) (domain.DeviceInfo, error) {
+func (conn *dbconn) GetDeviceInfoByCloudSourceIDAndIP(_IP string, _CloudSourceID string, _OrgID string) ([]domain.DeviceInfo, error) {
 	var err error
-	var retDeviceInfo domain.DeviceInfo
+	var retDeviceInfo = make([]domain.DeviceInfo, 0)
 
 	conn.Read(&connection.Procedure{
 		Proc:       "GetDeviceInfoByCloudSourceIDAndIP",
@@ -2757,7 +2757,7 @@ func (conn *dbconn) GetDeviceInfoByCloudSourceIDAndIP(_IP string, _CloudSourceID
 									ScannerSourceIDvar: &myScannerSourceID,
 								}
 
-								retDeviceInfo = newDeviceInfo
+								retDeviceInfo = append(retDeviceInfo, newDeviceInfo)
 							}
 						}
 
@@ -2957,9 +2957,9 @@ func (conn *dbconn) GetDeviceInfoByIPMACAndRegion(_IP string, _MAC string, _Regi
 }
 
 // GetDeviceInfoByInstanceID executes the stored procedure GetDeviceInfoByInstanceID against the database and returns the read results
-func (conn *dbconn) GetDeviceInfoByInstanceID(_InstanceID string, _OrgID string) (domain.DeviceInfo, error) {
+func (conn *dbconn) GetDeviceInfoByInstanceID(_InstanceID string, _OrgID string) ([]domain.DeviceInfo, error) {
 	var err error
-	var retDeviceInfo domain.DeviceInfo
+	var retDeviceInfo = make([]domain.DeviceInfo, 0)
 
 	conn.Read(&connection.Procedure{
 		Proc:       "GetDeviceInfoByInstanceID",
@@ -3005,7 +3005,7 @@ func (conn *dbconn) GetDeviceInfoByInstanceID(_InstanceID string, _OrgID string)
 									InstanceIDvar: myInstanceID,
 								}
 
-								retDeviceInfo = newDeviceInfo
+								retDeviceInfo = append(retDeviceInfo, newDeviceInfo)
 							}
 						}
 

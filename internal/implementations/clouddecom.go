@@ -107,9 +107,9 @@ func (job *CloudDecommissionJob) decommissionCloudAssets(cloudConnections []inte
 			} else {
 				historyOfDevices = make([]domain.Device, 0)
 				for _, ip := range job.Payload.OnlyCheckIPs {
-					var device domain.Device
-					if device, err = job.db.GetDeviceByCloudSourceIDAndIP(ip, job.insources[0].SourceID(), job.config.OrganizationID()); err == nil && device != nil {
-						historyOfDevices = append(historyOfDevices, device)
+					var devices []domain.Device
+					if devices, err = job.db.GetDeviceByCloudSourceIDAndIP(ip, job.insources[0].SourceID(), job.config.OrganizationID()); err == nil && devices != nil {
+						historyOfDevices = append(historyOfDevices, devices...)
 					} else {
 						job.lstream.Send(log.Warningf(err, "could not load device for IP and Cloud sources [%s|%s]", ip, job.insources[0].SourceID()))
 					}

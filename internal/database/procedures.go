@@ -38,19 +38,24 @@ func (conn *dbconn) GetDeviceByIP(_IP string, _OrgID string) (domain.Device, err
 	return device, err
 }
 
-func (conn *dbconn) GetDeviceByInstanceID(_InstanceID string, _OrgID string) (domain.Device, error) {
-	var device domain.Device
-	info, err := conn.GetDeviceInfoByInstanceID(_InstanceID, _OrgID)
+func (conn *dbconn) GetDeviceByInstanceID(_InstanceID string, _OrgID string) ([]domain.Device, error) {
+	var devices = make([]domain.Device, 0)
+
+	var infos []domain.DeviceInfo
+	var err error
+	infos, err = conn.GetDeviceInfoByInstanceID(_InstanceID, _OrgID)
 	if err == nil {
-		if info != nil {
-			device = &dal.Device{
-				Conn: conn,
-				Info: info,
+		for _, info := range infos {
+			if info != nil {
+				devices = append(devices, &dal.Device{
+					Conn: conn,
+					Info: info,
+				})
 			}
 		}
 	}
 
-	return device, err
+	return devices, err
 }
 
 func (conn *dbconn) GetDeviceByScannerSourceID(_IP string, _GroupID string, _OrgID string) (domain.Device, error) {
@@ -68,19 +73,24 @@ func (conn *dbconn) GetDeviceByScannerSourceID(_IP string, _GroupID string, _Org
 	return device, err
 }
 
-func (conn *dbconn) GetDeviceByCloudSourceIDAndIP(_IP string, _CloudSourceID string, _OrgID string) (domain.Device, error) {
-	var device domain.Device
-	info, err := conn.GetDeviceInfoByCloudSourceIDAndIP(_IP, _CloudSourceID, _OrgID)
+func (conn *dbconn) GetDeviceByCloudSourceIDAndIP(_IP string, _CloudSourceID string, _OrgID string) ([]domain.Device, error) {
+	var devices = make([]domain.Device, 0)
+
+	var infos []domain.DeviceInfo
+	var err error
+	infos, err = conn.GetDeviceInfoByCloudSourceIDAndIP(_IP, _CloudSourceID, _OrgID)
 	if err == nil {
-		if info != nil {
-			device = &dal.Device{
-				Conn: conn,
-				Info: info,
+		for _, info := range infos {
+			if info != nil {
+				devices = append(devices, &dal.Device{
+					Conn: conn,
+					Info: info,
+				})
 			}
 		}
 	}
 
-	return device, err
+	return devices, err
 }
 
 func (conn *dbconn) GetDevicesBySourceID(_SourceID string, _OrgID string) ([]domain.Device, error) {

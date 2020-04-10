@@ -1,5 +1,5 @@
 /*
-  RETURN DeviceInfo SINGLE
+  RETURN DeviceInfo
   ID              VARCHAR(36)  NOT
   SourceID        VARCHAR(36)  NULL
   OS              VARCHAR(36)  NOT
