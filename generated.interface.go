@@ -60,6 +60,7 @@ type GeneratedDatabaseConnection interface {
 	GetAssetGroupForOrg(inScannerSourceConfigID string, inOrgID string) ([]AssetGroup, error)
 	GetAssetGroupForOrgNoScanner(inOrgID string, inGroupID string) (AssetGroup, error)
 	GetAssetGroupsByCloudSource(inOrgID string, inCloudSourceID string) ([]AssetGroup, error)
+	GetAssetGroupsForOrg(inOrgID string) ([]AssetGroup, error)
 	GetAssignmentGroupByIP(_SourceID string, _OrganizationID string, _IP string) ([]AssignmentGroup, error)
 	GetAssignmentGroupByOrgIP(_OrganizationID string, _IP string) ([]AssignmentGroup, error)
 	GetAssignmentRulesByOrg(_OrganizationID string) ([]AssignmentRules, error)
