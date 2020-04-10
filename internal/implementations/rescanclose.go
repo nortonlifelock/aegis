@@ -270,7 +270,7 @@ func (job *ScanCloseJob) getExceptionID(assetID string, deviceInDb domain.Device
 }
 
 func (job *ScanCloseJob) createCloudDecommissionJob(ips []string) {
-	if assetGroup, err := job.db.GetAssetGroup(job.config.OrganizationID(), job.Payload.Group, job.insource.SourceID()); err == nil {
+	if assetGroup, err := job.db.GetAssetGroup(job.config.OrganizationID(), job.Payload.Group, job.insource.SourceID()); err == nil && assetGroup != nil {
 		if len(sord(assetGroup.CloudSourceID())) > 0 {
 			if scs, err := job.db.GetSourceConfigBySourceID(job.config.OrganizationID(), sord(assetGroup.CloudSourceID())); err == nil && len(scs) > 0 {
 				var cloudSourceConfig = scs[0]
