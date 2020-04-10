@@ -345,9 +345,11 @@ func (job *AssetSyncJob) enterAssetInformationInDB(asset domain.Device, osTypeID
 				}
 
 				if err == nil {
-
-					deviceIsAlsoBeingTrackedUnderDifferentAssetID := len(sord(deviceInDB.SourceID())) > 0 && sord(deviceInDB.SourceID()) != sord(asset.SourceID())
-					deviceFoundByCloudSyncJobFirst := len(sord(deviceInDB.SourceID())) == 0 && len(sord(asset.SourceID())) > 0
+					var deviceIsAlsoBeingTrackedUnderDifferentAssetID, deviceFoundByCloudSyncJobFirst bool
+					if deviceInDB != nil {
+						deviceIsAlsoBeingTrackedUnderDifferentAssetID = len(sord(deviceInDB.SourceID())) > 0 && sord(deviceInDB.SourceID()) != sord(asset.SourceID())
+						deviceFoundByCloudSyncJobFirst = len(sord(deviceInDB.SourceID())) == 0 && len(sord(asset.SourceID())) > 0
+					}
 
 					if deviceInDB == nil || deviceIsAlsoBeingTrackedUnderDifferentAssetID {
 						_, _, err = job.db.CreateDevice(
