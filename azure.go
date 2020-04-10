@@ -483,8 +483,6 @@ func (connection *ConnectionAzure) loadBalancerTags(subscriptionID string) (ipTo
 									instanceID := *lb.Name
 									// TODO should we share the const?
 									ipToKeyToValue[*ipsInfo.PrivateIPAddress][awsclient.InstanceID] = instanceID
-
-									fmt.Println("lb", *ipsInfo.PrivateIPAddress, instanceID)
 								}
 
 								for key, value := range lb.Tags {
