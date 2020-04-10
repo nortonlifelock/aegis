@@ -477,13 +477,14 @@ func (connection *ConnectionAzure) loadBalancerTags(subscriptionID string) (ipTo
 							if ipsInfo.PrivateIPAddress != nil {
 								if ipToKeyToValue[*ipsInfo.PrivateIPAddress] == nil {
 									ipToKeyToValue[*ipsInfo.PrivateIPAddress] = make(map[string]string)
-									fmt.Println("lb", *ipsInfo.PrivateIPAddress)
 								}
 
 								if lb.Name != nil {
 									instanceID := *lb.Name
 									// TODO should we share the const?
 									ipToKeyToValue[*ipsInfo.PrivateIPAddress][awsclient.InstanceID] = instanceID
+
+									fmt.Println("lb", *ipsInfo.PrivateIPAddress, instanceID)
 								}
 
 								for key, value := range lb.Tags {
