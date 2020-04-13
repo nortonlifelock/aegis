@@ -39,4 +39,4 @@ SELECT
     JC.LastJobStart
 FROM JobConfig JC
 WHERE JC.OrganizationId = _OrgID
-  AND JC.JobId = _JobID AND (JC.DataInSourceConfigID LIKE '%' + _SourceConfigID + '%' OR JC.DataOutSourceConfigID LIKE '%' + _SourceConfigID + '%');
+  AND JC.JobId = _JobID AND (JC.DataInSourceConfigID LIKE CONCAT('%', _SourceConfigID, '%') OR JC.DataOutSourceConfigID LIKE CONCAT('%', _SourceConfigID, '%'));
