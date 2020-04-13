@@ -274,9 +274,6 @@ func (job *ScanCloseJob) createCloudDecommissionJob(ips []string) {
 		if len(sord(assetGroup.CloudSourceID())) > 0 {
 			if scs, err := job.db.GetSourceConfigBySourceID(job.config.OrganizationID(), sord(assetGroup.CloudSourceID())); err == nil && len(scs) > 0 {
 				var cloudSourceConfig = scs[0]
-				if len(scs) > 1 {
-					job.lstream.Send(log.Warningf(err, "more than one source config returned for [%s|%s] - defaulting to the first returned", sord(assetGroup.CloudSourceID()), job.config.OrganizationID()))
-				}
 
 				if jobRegistration, err := job.db.GetJobsByStruct(cloudDecomJob); err == nil && jobRegistration != nil {
 					if jobConfig, err := job.db.GetJobConfigByOrgIDAndJobIDWithSC(job.config.OrganizationID(), jobRegistration.ID(), cloudSourceConfig.ID()); err == nil && len(jobConfig) > 0 {
@@ -301,6 +298,12 @@ func (job *ScanCloseJob) createCloudDecommissionJob(ips []string) {
 								"",
 								job.id,
 							)
+
+							if err == nil {
+								job.lstream.Send(log.Infof("queued a cloud decommission scan for ips [%v]", ips))
+							} else {
+								job.lstream.Send(log.Errorf(err, "error while queueing cloud decommission scan for ips [%v]", ips))
+							}
 						} else {
 							job.lstream.Send(log.Errorf(err, "error while creating payload for CloudDecommissionJob"))
 						}
