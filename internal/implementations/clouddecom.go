@@ -343,6 +343,8 @@ func (job *CloudDecommissionJob) findDecommissionedDevices(historyOfDevices []do
 	for _, IP := range allIPs {
 		if len(IP.InstanceID()) > 0 {
 			cloudInstanceIDToDevice[IP.InstanceID()] = IP
+		} else {
+			job.lstream.Send(log.Warningf(nil, "cloud service did not return an instance ID for [%s]", IP.IP()))
 		}
 	}
 
