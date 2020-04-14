@@ -353,20 +353,18 @@ func (job *CloudDecommissionJob) findDecommissionedDevices(historyOfDevices []do
 	var deviceIDToDecommDevice = make(map[string]domain.Device, 0)
 	for _, device := range historyOfDevices {
 
-		// the db device is not in the cloud inventory
-		if cloudInstanceIDToDevice[sord(device.InstanceID())] == nil {
+		// the asset sync job (meaning a vulnerability scanner) has also found the device
+		if device.SourceID() != nil {
+			// the db device is not in the cloud inventory
+			if cloudInstanceIDToDevice[sord(device.InstanceID())] == nil {
+				deviceIDToDecommDevice[sord(device.SourceID())] = device
+			} else {
+				var matchedCloudDevice = cloudInstanceIDToDevice[sord(device.InstanceID())]
 
-			// the asset sync job (meaning a vulnerability scanner) has also found the device
-			if device.SourceID() != nil {
-				deviceIDToDecommDevice[device.ID()] = device
-			}
-		} else {
-
-			var matchedCloudDevice = cloudInstanceIDToDevice[sord(device.InstanceID())]
-
-			// the cloud service reported the device as decommissioned
-			if matchedCloudDevice.State() == domain.DeviceDecommed {
-				deviceIDToDecommDevice[device.ID()] = device
+				// the cloud service reported the device as decommissioned
+				if matchedCloudDevice.State() == domain.DeviceDecommed {
+					deviceIDToDecommDevice[sord(device.SourceID())] = device
+				}
 			}
 		}
 	}
