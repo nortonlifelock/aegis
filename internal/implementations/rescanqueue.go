@@ -312,7 +312,8 @@ func (job *RescanQueueJob) cleanTickets(tickets <-chan domain.Ticket) (<-chan do
 
 			for {
 				if ticket, ok := <-tickets; ok {
-					if !tickMap[ticket.Title()] {
+					// don't want to queue rescans for tag tracked tickets as they are handled by scheduled scans
+					if !tickMap[ticket.Title()] && !strings.Contains(ticket.GroupID(), "tag-") {
 						cleanedTickets <- ticket
 					}
 				} else {
