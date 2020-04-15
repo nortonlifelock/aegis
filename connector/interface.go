@@ -190,7 +190,7 @@ func (session *QsSession) ScanResults(ctx context.Context, payload []byte) (<-ch
 
 						// Use the IPs to grab the host detections
 						var output *qualys.QHostListDetectionOutput
-						output, err = session.apiSession.GetHostSpecificDetections(ipList, session.payload.KernelFilter)
+						output, err = session.apiSession.GetHostSpecificDetections(ipList, []string{scanInfo.AssetGroupID}, session.payload.KernelFilter)
 						if err == nil {
 
 							var deadHostIPToProof map[string]string

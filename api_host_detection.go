@@ -84,7 +84,7 @@ func (session *Session) GetHostDetections(groups []string, kernelFilterFlag int)
 // 2 only include kernel related vulnerabilities that are not exploitable (found on non-running kernels)
 // 3 only include kernel related vulnerabilities that are exploitable (found on running kernels)
 // 4 only include kernel related vulnerabilities
-func (session *Session) GetHostSpecificDetections(ip []string, kernelFilterFlag int) (output *QHostListDetectionOutput, err error) {
+func (session *Session) GetHostSpecificDetections(ip []string, groups []string, kernelFilterFlag int) (output *QHostListDetectionOutput, err error) {
 
 	if ip != nil && len(ip) > 0 {
 
@@ -102,6 +102,7 @@ func (session *Session) GetHostSpecificDetections(ip []string, kernelFilterFlag 
 
 		// Concatenate the IP addresses together in a comma separated list of values
 		fields["ips"] = strings.Join(ip, ",")
+		fields["ag_ids"] = strings.Join(groups, ",")
 
 		output = &QHostListDetectionOutput{}
 
