@@ -119,27 +119,33 @@ func (job *ScanCloseJob) processScanDetections(engine integrations.TicketingEngi
 
 					var wg sync.WaitGroup
 					deviceIDToVulnIDToDetection, deadHostIPToProofMap := job.mapDetectionsAndDeadHosts(detections, deadHostIPToProof)
-					for _, ticket := range tickets {
-						wg.Add(1)
-						go func(ticket domain.Ticket) {
-							defer handleRoutinePanic(job.lstream)
-							defer wg.Done()
 
-							job.modifyJiraTicketAccordingToVulnerabilityStatus(
-								engine,
-								&lastCheckedTicket{ticket},
-								scan,
-								deadHostIPToProofMap,
-								deviceIDToVulnIDToDetection,
-								ipsForCloudDecommissionScan,
-							)
-						}(ticket)
+					if len(deviceIDToVulnIDToDetection) > 0 {
+						for _, ticket := range tickets {
+							wg.Add(1)
+							go func(ticket domain.Ticket) {
+								defer handleRoutinePanic(job.lstream)
+								defer wg.Done()
+
+								job.modifyJiraTicketAccordingToVulnerabilityStatus(
+									engine,
+									&lastCheckedTicket{ticket},
+									scan,
+									deadHostIPToProofMap,
+									deviceIDToVulnIDToDetection,
+									ipsForCloudDecommissionScan,
+								)
+							}(ticket)
+						}
+						wg.Wait()
+
+						job.lstream.Send(log.Infof("Updating detection information in database"))
+						job.updateDetectionInformationInDB(deviceIDToVulnIDToDetection)
+						job.lstream.Send(log.Infof("Finished updating detection information in database"))
+					} else {
+						job.lstream.Send(log.Criticalf(err, "NO detections returned from the API, could not process scan results"))
 					}
-					wg.Wait()
 
-					job.lstream.Send(log.Infof("Updating detection information in database"))
-					job.updateDetectionInformationInDB(deviceIDToVulnIDToDetection)
-					job.lstream.Send(log.Infof("Finished updating detection information in database"))
 				}()
 
 				return ipsForCloudDecommissionScan
