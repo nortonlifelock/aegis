@@ -201,7 +201,9 @@ func (job *ScanCloseJob) updateDetectionInformationInDB(deviceIDToVulnIDToDetect
 					}
 				}
 
-				for vulnID, detection := range vulnIDToDetection {
+				for vulnIDAndPort, detection := range vulnIDToDetection {
+
+					vulnID := strings.Split(vulnIDAndPort, domain.VulnPathConcatenator)[0]
 
 					var vulnInfo domain.VulnerabilityInfo
 					if vulnInfoInterface, ok := vulnCache.Load(vulnID); ok {
@@ -225,7 +227,7 @@ func (job *ScanCloseJob) updateDetectionInformationInDB(deviceIDToVulnIDToDetect
 						}
 
 						wg.Add(1)
-						go func(deviceID string, device domain.Device, vulnID string, vulnInfo domain.VulnerabilityInfo, detection domain.Detection, decommIgnoreID string) {
+						go func(deviceID string, device domain.Device, vulnInfo domain.VulnerabilityInfo, detection domain.Detection, decommIgnoreID string) {
 							defer handleRoutinePanic(job.lstream)
 							defer wg.Done()
 							defer func() {
@@ -246,7 +248,7 @@ func (job *ScanCloseJob) updateDetectionInformationInDB(deviceIDToVulnIDToDetect
 							)
 
 							job.lstream.Send(log.Infof("Updated DB detection information for [%s|%s]", deviceID, vulnInfo.SourceID()))
-						}(deviceID, device, vulnID, vulnInfo, detection, decommIgnoreID)
+						}(deviceID, device, vulnInfo, detection, decommIgnoreID)
 					} else {
 						job.lstream.Send(log.Errorf(err, "failed to load device|vuln|detection [%v|%v|%v]", device, vulnInfo, detection))
 					}
