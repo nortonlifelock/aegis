@@ -136,6 +136,10 @@ func (job *ScanCloseJob) processScanDetections(engine integrations.TicketingEngi
 						}(ticket)
 					}
 					wg.Wait()
+
+					job.lstream.Send(log.Infof("Updating detection information in database"))
+					job.updateDetectionInformationInDB(deviceIDToVulnIDToDetection)
+					job.lstream.Send(log.Infof("Finished updating detection information in database"))
 				}()
 
 				return ipsForCloudDecommissionScan
@@ -240,6 +244,8 @@ func (job *ScanCloseJob) updateDetectionInformationInDB(deviceIDToVulnIDToDetect
 								job.insource.SourceID(),
 								job.getExceptionID,
 							)
+
+							job.lstream.Send(log.Infof("Updated DB detection information for [%s|%s]", deviceID, vulnInfo.SourceID()))
 						}(deviceID, device, vulnID, vulnInfo, detection, decommIgnoreID)
 					} else {
 						job.lstream.Send(log.Errorf(err, "failed to load device|vuln|detection [%v|%v|%v]", device, vulnInfo, detection))
