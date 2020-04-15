@@ -213,7 +213,7 @@ func (job *ScanCloseJob) updateDetectionInformationInDB(deviceIDToVulnIDToDetect
 						if err == nil && vulnInfo != nil {
 							vulnCache.Store(vulnID, vulnInfo)
 						} else {
-							job.lstream.Send(log.Errorf(fmt.Errorf("cache error while loading vulnerability info"), "cache error during db transaction"))
+							job.lstream.Send(log.Errorf(err, "cache error during db transaction for [%s]", vulnID))
 						}
 					}
 
@@ -426,7 +426,7 @@ func (job *ScanCloseJob) modifyJiraTicketAccordingToVulnerabilityStatus(engine i
 				lastFound: *detection.LastFound(),
 			}
 
-			_, _, err := engine.UpdateTicket(ticket, "Updating LastFound field to [%s]", detection.LastFound().String())
+			_, _, err := engine.UpdateTicket(ticket, fmt.Sprintf("Updating LastFound field to [%s]", detection.LastFound().String()))
 			if err != nil {
 				job.lstream.Send(log.Errorf(err, "error while setting last found date of %s to [%s]", ticket.Title(), detection.LastFound().String()))
 			}
