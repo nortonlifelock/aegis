@@ -250,7 +250,18 @@ func (job *ScanCloseJob) updateDetectionInformationInDB(deviceIDToVulnIDToDetect
 							job.lstream.Send(log.Infof("Updated DB detection information for [%s|%s]", deviceID, vulnInfo.SourceID()))
 						}(deviceID, device, vulnInfo, detection, decommIgnoreID)
 					} else {
-						job.lstream.Send(log.Errorf(err, "failed to load device|vuln|detection [%v|%v|%v]", device, vulnInfo, detection))
+						var missingReason = make([]string, 0)
+						if device == nil {
+							missingReason = append(missingReason, fmt.Sprintf("failed to load device"))
+						}
+						if vulnInfo == nil {
+							missingReason = append(missingReason, fmt.Sprintf("failed to load vulnerability info"))
+						}
+						if detection == nil {
+							missingReason = append(missingReason, fmt.Sprintf("failed to load detection"))
+						}
+
+						job.lstream.Send(log.Errorf(err, "failed to load device|vuln|detection [%v|%v|%v] - [%s]", deviceID, vulnID, detection, strings.Join(missingReason, ",")))
 					}
 				}
 			} else {
