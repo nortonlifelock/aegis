@@ -426,7 +426,7 @@ func (job *ScanCloseJob) modifyJiraTicketAccordingToVulnerabilityStatus(engine i
 				lastFound: *detection.LastFound(),
 			}
 
-			_, _, err := engine.UpdateTicket(ticket, "")
+			_, _, err := engine.UpdateTicket(ticket, "Updating LastFound field to [%s]", detection.LastFound().String())
 			if err != nil {
 				job.lstream.Send(log.Errorf(err, "error while setting last found date of %s to [%s]", ticket.Title(), detection.LastFound().String()))
 			}
