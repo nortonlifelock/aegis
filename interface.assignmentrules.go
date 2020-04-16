@@ -5,6 +5,7 @@ type AssignmentRules interface {
 	Assignee() *string
 	OrganizationID() string
 	VulnTitleRegex() *string
+	HostnameRegex() *string
 	TagKeyID() *int
 	TagKeyRegex() *string
 	Priority() int
