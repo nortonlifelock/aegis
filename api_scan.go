@@ -129,7 +129,7 @@ func (session *Session) GetScheduledScan(scanTitle string) (scan *ScanQualys, er
 	var fields = make(map[string]string)
 	fields["action"] = "list"
 	fields["type"] = "Scheduled"
-	fields["state"] = "Running,Paused,Queued,Loading,Finished" // TODO remove finished after testing
+	fields["state"] = "Running,Paused,Queued,Loading"
 
 	if err = session.post(session.Config.Address()+qsVMScan, fields, &output); err == nil {
 
