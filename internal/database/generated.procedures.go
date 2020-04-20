@@ -1731,7 +1731,9 @@ func (conn *dbconn) GetAssignmentRulesByOrg(_OrganizationID string) ([]domain.As
 							var myAssignmentGroup *string
 							var myAssignee *string
 							var myOrganizationID string
+							var myGroupID *string
 							var myVulnTitleRegex *string
+							var myHostnameRegex *string
 							var myTagKeyID *int
 							var myTagKeyRegex *string
 							var myPriority int
@@ -1741,7 +1743,9 @@ func (conn *dbconn) GetAssignmentRulesByOrg(_OrganizationID string) ([]domain.As
 								&myAssignmentGroup,
 								&myAssignee,
 								&myOrganizationID,
+								&myGroupID,
 								&myVulnTitleRegex,
+								&myHostnameRegex,
 								&myTagKeyID,
 								&myTagKeyRegex,
 								&myPriority,
@@ -1751,7 +1755,9 @@ func (conn *dbconn) GetAssignmentRulesByOrg(_OrganizationID string) ([]domain.As
 									AssignmentGroupvar: myAssignmentGroup,
 									Assigneevar:        myAssignee,
 									OrganizationIDvar:  myOrganizationID,
+									GroupIDvar:         myGroupID,
 									VulnTitleRegexvar:  myVulnTitleRegex,
+									HostnameRegexvar:   myHostnameRegex,
 									TagKeyIDvar:        myTagKeyID,
 									TagKeyRegexvar:     myTagKeyRegex,
 									Priorityvar:        myPriority,

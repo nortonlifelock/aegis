@@ -18,6 +18,8 @@ import (
 type AssignmentRules struct {
 	Assigneevar        *string
 	AssignmentGroupvar *string
+	GroupIDvar         *string
+	HostnameRegexvar   *string
 	OrganizationIDvar  string
 	Priorityvar        int
 	TagKeyIDvar        *int
@@ -34,6 +36,8 @@ func (myAssignmentRules AssignmentRules) MarshalJSON() ([]byte, error) {
 	return json.Marshal(map[string]interface{}{
 		"Assignee":        myAssignmentRules.Assigneevar,
 		"AssignmentGroup": myAssignmentRules.AssignmentGroupvar,
+		"GroupID":         myAssignmentRules.GroupIDvar,
+		"HostnameRegex":   myAssignmentRules.HostnameRegexvar,
 		"OrganizationID":  myAssignmentRules.OrganizationIDvar,
 		"Priority":        myAssignmentRules.Priorityvar,
 		"TagKeyID":        myAssignmentRules.TagKeyIDvar,
@@ -50,6 +54,16 @@ func (myAssignmentRules *AssignmentRules) Assignee() (param *string) {
 // AssignmentGroup returns the AssignmentGroup parameter from the AssignmentRules struct
 func (myAssignmentRules *AssignmentRules) AssignmentGroup() (param *string) {
 	return myAssignmentRules.AssignmentGroupvar
+}
+
+// GroupID returns the GroupID parameter from the AssignmentRules struct
+func (myAssignmentRules *AssignmentRules) GroupID() (param *string) {
+	return myAssignmentRules.GroupIDvar
+}
+
+// HostnameRegex returns the HostnameRegex parameter from the AssignmentRules struct
+func (myAssignmentRules *AssignmentRules) HostnameRegex() (param *string) {
+	return myAssignmentRules.HostnameRegexvar
 }
 
 // OrganizationID returns the OrganizationID parameter from the AssignmentRules struct
@@ -85,6 +99,16 @@ func (myAssignmentRules *AssignmentRules) SetAssignee(val string) {
 // SetAssignmentGroup sets the AssignmentGroup parameter from the AssignmentRules struct
 func (myAssignmentRules *AssignmentRules) SetAssignmentGroup(val string) {
 	myAssignmentRules.AssignmentGroupvar = &val
+}
+
+// SetGroupID sets the GroupID parameter from the AssignmentRules struct
+func (myAssignmentRules *AssignmentRules) SetGroupID(val string) {
+	myAssignmentRules.GroupIDvar = &val
+}
+
+// SetHostnameRegex sets the HostnameRegex parameter from the AssignmentRules struct
+func (myAssignmentRules *AssignmentRules) SetHostnameRegex(val string) {
+	myAssignmentRules.HostnameRegexvar = &val
 }
 
 // SetOrganizationID sets the OrganizationID parameter from the AssignmentRules struct

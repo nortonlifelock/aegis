@@ -1,0 +1,2 @@
+ALTER TABLE AssignmentRules ADD COLUMN HostnameRegex VARCHAR(300) NULL AFTER VulnTitleRegex;
+ALTER TABLE AssignmentRules ADD COLUMN GroupID VARCHAR(300) NULL AFTER OrganizationID;

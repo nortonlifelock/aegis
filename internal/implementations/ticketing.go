@@ -1162,8 +1162,16 @@ func (job *TicketingJob) getAssignmentInformation(tagsForDevice []domain.Tag, pa
 	for _, rule := range job.assignmentRules {
 		var match = true
 
-		if rule.vulnTitleRegex != nil {
+		if rule.AssignmentRules.GroupID() != nil {
+			match = sord(rule.AssignmentRules.GroupID()) == sord(payload.device.GroupID())
+		}
+
+		if match && rule.vulnTitleRegex != nil {
 			match = rule.vulnTitleRegex.MatchString(payload.vuln.Name())
+		}
+
+		if match && rule.hostnameRegex != nil {
+			match = rule.hostnameRegex.MatchString(payload.device.HostName())
 		}
 
 		if match && rule.tagKey != nil {
@@ -1209,6 +1217,7 @@ func (job *TicketingJob) getAssignmentInformation(tagsForDevice []domain.Tag, pa
 type assignmentRule struct {
 	domain.AssignmentRules
 	vulnTitleRegex *regexp.Regexp
+	hostnameRegex  *regexp.Regexp
 	tagKeyRegex    *regexp.Regexp
 	tagKey         domain.TagKey
 }
@@ -1230,6 +1239,16 @@ func (job *TicketingJob) loadAssignmentRules() (assignmentRules []assignmentRule
 					currentRule.vulnTitleRegex = regex
 				} else {
 					err = fmt.Errorf("error while compiling vuln title regex [%s] - %s", sord(rule.VulnTitleRegex()), err.Error())
+					break
+				}
+			}
+
+			if rule.HostnameRegex() != nil {
+				var regex *regexp.Regexp
+				if regex, err = regexp.Compile(sord(rule.HostnameRegex())); err == nil {
+					currentRule.hostnameRegex = regex
+				} else {
+					err = fmt.Errorf("error while compiling hostname regex [%s] - %s", sord(rule.HostnameRegex()), err.Error())
 					break
 				}
 			}

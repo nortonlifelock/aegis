@@ -14,7 +14,7 @@ require (
 	github.com/nortonlifelock/connection v1.0.1-0.20200116160344-4d492cf1f581
 	github.com/nortonlifelock/crypto v1.0.1-0.20200213175907-562e87a94143
 	github.com/nortonlifelock/database v1.0.1-0.20200131202803-7ada08c09229
-	github.com/nortonlifelock/domain v1.0.1-0.20200410203002-4c49b2cdb012
+	github.com/nortonlifelock/domain v1.0.1-0.20200416212544-d108e6d2de8e
 	github.com/nortonlifelock/dome9 v1.0.0
 	github.com/nortonlifelock/files v1.0.1-0.20200127165427-5178f1323f54
 	github.com/nortonlifelock/jira v1.0.1-0.20200403180453-cedceb0fd642
@@ -22,7 +22,7 @@ require (
 	github.com/nortonlifelock/job v1.0.1-0.20200127165455-ca80a64d226c
 	github.com/nortonlifelock/log v1.0.1-0.20200129171320-c4a4dd839ed8
 	github.com/nortonlifelock/nexpose v1.0.1-0.20200403175421-0b54d87a4c7f
-	github.com/nortonlifelock/qualys v1.0.1-0.20200415190307-67fc3b86ceaa
+	github.com/nortonlifelock/qualys v1.0.1-0.20200420172046-df35cde683e2
 	github.com/nortonlifelock/scaffold v1.0.1-0.20200128220520-41da8a42d6d5
 	github.com/pkg/errors v0.9.1
 	github.com/rs/cors v1.7.0
