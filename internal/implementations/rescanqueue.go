@@ -333,7 +333,7 @@ func (job *RescanQueueJob) cleanTickets(tickets <-chan domain.Ticket) (<-chan do
 					if !tickMap[ticket.Title()] && !skipRescanQueue {
 						cleanedTickets <- ticket
 					} else if skipRescanQueue {
-						job.lstream.Send(log.Debugf("skipping queuing of [%s] as group [%s] in the AssetGroup table is marked to skip the RSQ"))
+						job.lstream.Send(log.Debugf("skipping queuing of [%s] as group [%s] in the AssetGroup table is marked to skip the RSQ", ticket.Title(), ticket.GroupID()))
 					}
 				} else {
 					break
