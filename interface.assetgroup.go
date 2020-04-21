@@ -8,4 +8,5 @@ type AssetGroup interface {
 	ScannerSourceID() string
 	CloudSourceID() *string
 	LastTicketing() *time.Time
+	RescanQueueSkip() bool
 }
