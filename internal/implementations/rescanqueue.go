@@ -303,6 +303,16 @@ func (job *RescanQueueJob) cleanTickets(tickets <-chan domain.Ticket) (<-chan do
 	var err error
 	cleanedTickets := make(chan domain.Ticket)
 
+	var groupIDToGroup = make(map[string]domain.AssetGroup)
+	var assetGroups []domain.AssetGroup
+	if assetGroups, err = job.db.GetAssetGroupsForOrg(job.config.OrganizationID()); err == nil {
+		for _, assetGroup := range assetGroups {
+			groupIDToGroup[assetGroup.GroupID()] = assetGroup
+		}
+	} else {
+		err = fmt.Errorf("error while getting asset groups for org [%s]", job.config.OrganizationID())
+	}
+
 	var tickMap map[string]bool
 	if tickMap, err = job.loadRescans(); err == nil {
 
@@ -312,9 +322,18 @@ func (job *RescanQueueJob) cleanTickets(tickets <-chan domain.Ticket) (<-chan do
 
 			for {
 				if ticket, ok := <-tickets; ok {
-					// don't want to queue rescans for tag tracked tickets as they are handled by scheduled scans
-					if !tickMap[ticket.Title()] && !strings.Contains(ticket.GroupID(), "tag-") {
+
+					var skipRescanQueue bool
+					if len(ticket.GroupID()) > 0 {
+						if groupIDToGroup[ticket.GroupID()] != nil {
+							skipRescanQueue = groupIDToGroup[ticket.GroupID()].RescanQueueSkip()
+						}
+					}
+
+					if !tickMap[ticket.Title()] && !skipRescanQueue {
 						cleanedTickets <- ticket
+					} else if skipRescanQueue {
+						job.lstream.Send(log.Debugf("skipping queuing of [%s] as group [%s] in the AssetGroup table is marked to skip the RSQ"))
 					}
 				} else {
 					break

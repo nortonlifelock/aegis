@@ -21,6 +21,7 @@ type AssetGroup struct {
 	GroupIDvar               string
 	LastTicketingvar         *time.Time
 	OrganizationIDvar        string
+	RescanQueueSkipvar       bool
 	ScannerSourceConfigIDvar *string
 	ScannerSourceIDvar       string
 }
@@ -36,6 +37,7 @@ func (myAssetGroup AssetGroup) MarshalJSON() ([]byte, error) {
 		"GroupID":               myAssetGroup.GroupIDvar,
 		"LastTicketing":         myAssetGroup.LastTicketingvar,
 		"OrganizationID":        myAssetGroup.OrganizationIDvar,
+		"RescanQueueSkip":       myAssetGroup.RescanQueueSkipvar,
 		"ScannerSourceConfigID": myAssetGroup.ScannerSourceConfigIDvar,
 		"ScannerSourceID":       myAssetGroup.ScannerSourceIDvar,
 	})
@@ -59,6 +61,11 @@ func (myAssetGroup *AssetGroup) LastTicketing() (param *time.Time) {
 // OrganizationID returns the OrganizationID parameter from the AssetGroup struct
 func (myAssetGroup *AssetGroup) OrganizationID() (param string) {
 	return myAssetGroup.OrganizationIDvar
+}
+
+// RescanQueueSkip returns the RescanQueueSkip parameter from the AssetGroup struct
+func (myAssetGroup *AssetGroup) RescanQueueSkip() (param bool) {
+	return myAssetGroup.RescanQueueSkipvar
 }
 
 // ScannerSourceConfigID returns the ScannerSourceConfigID parameter from the AssetGroup struct

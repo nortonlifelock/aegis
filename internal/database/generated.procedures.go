@@ -1358,23 +1358,33 @@ func (conn *dbconn) GetAssetGroup(inOrgID string, _GroupID string, _ScannerConfi
 						if err = rows.Err(); err == nil {
 
 							var myGroupID string
+							var myOrganizationID string
+							var myScannerSourceConfigID *string
 							var myScannerSourceID string
 							var myCloudSourceID *string
-							var myScannerSourceConfigID *string
+							var myLastTicketing *time.Time
+							var myRescanQueueSkip []uint8
 
 							if err = rows.Scan(
 
 								&myGroupID,
+								&myOrganizationID,
+								&myScannerSourceConfigID,
 								&myScannerSourceID,
 								&myCloudSourceID,
-								&myScannerSourceConfigID,
+								&myLastTicketing,
+								&myRescanQueueSkip,
 							); err == nil {
 
 								newAssetGroup := &dal.AssetGroup{
 									GroupIDvar:               myGroupID,
+									OrganizationIDvar:        myOrganizationID,
+									ScannerSourceConfigIDvar: myScannerSourceConfigID,
 									ScannerSourceIDvar:       myScannerSourceID,
 									CloudSourceIDvar:         myCloudSourceID,
-									ScannerSourceConfigIDvar: myScannerSourceConfigID,
+									LastTicketingvar:         myLastTicketing,
+									RescanQueueSkipvar:       myRescanQueueSkip[0] > 0 && myRescanQueueSkip[0] != 48, // converts uint8 to bool (48 is ASCII code for 0, which is reserved for false)
+
 								}
 
 								retAssetGroup = newAssetGroup
@@ -1408,23 +1418,33 @@ func (conn *dbconn) GetAssetGroupForOrg(inScannerSourceConfigID string, inOrgID 
 						if err = rows.Err(); err == nil {
 
 							var myGroupID string
+							var myOrganizationID string
+							var myScannerSourceConfigID *string
 							var myScannerSourceID string
 							var myCloudSourceID *string
-							var myScannerSourceConfigID *string
+							var myLastTicketing *time.Time
+							var myRescanQueueSkip []uint8
 
 							if err = rows.Scan(
 
 								&myGroupID,
+								&myOrganizationID,
+								&myScannerSourceConfigID,
 								&myScannerSourceID,
 								&myCloudSourceID,
-								&myScannerSourceConfigID,
+								&myLastTicketing,
+								&myRescanQueueSkip,
 							); err == nil {
 
 								newAssetGroup := &dal.AssetGroup{
 									GroupIDvar:               myGroupID,
+									OrganizationIDvar:        myOrganizationID,
+									ScannerSourceConfigIDvar: myScannerSourceConfigID,
 									ScannerSourceIDvar:       myScannerSourceID,
 									CloudSourceIDvar:         myCloudSourceID,
-									ScannerSourceConfigIDvar: myScannerSourceConfigID,
+									LastTicketingvar:         myLastTicketing,
+									RescanQueueSkipvar:       myRescanQueueSkip[0] > 0 && myRescanQueueSkip[0] != 48, // converts uint8 to bool (48 is ASCII code for 0, which is reserved for false)
+
 								}
 
 								retAssetGroup = append(retAssetGroup, newAssetGroup)
@@ -1458,26 +1478,33 @@ func (conn *dbconn) GetAssetGroupForOrgNoScanner(inOrgID string, inGroupID strin
 						if err = rows.Err(); err == nil {
 
 							var myGroupID string
+							var myOrganizationID string
+							var myScannerSourceConfigID *string
 							var myScannerSourceID string
 							var myCloudSourceID *string
-							var myScannerSourceConfigID *string
 							var myLastTicketing *time.Time
+							var myRescanQueueSkip []uint8
 
 							if err = rows.Scan(
 
 								&myGroupID,
+								&myOrganizationID,
+								&myScannerSourceConfigID,
 								&myScannerSourceID,
 								&myCloudSourceID,
-								&myScannerSourceConfigID,
 								&myLastTicketing,
+								&myRescanQueueSkip,
 							); err == nil {
 
 								newAssetGroup := &dal.AssetGroup{
 									GroupIDvar:               myGroupID,
+									OrganizationIDvar:        myOrganizationID,
+									ScannerSourceConfigIDvar: myScannerSourceConfigID,
 									ScannerSourceIDvar:       myScannerSourceID,
 									CloudSourceIDvar:         myCloudSourceID,
-									ScannerSourceConfigIDvar: myScannerSourceConfigID,
 									LastTicketingvar:         myLastTicketing,
+									RescanQueueSkipvar:       myRescanQueueSkip[0] > 0 && myRescanQueueSkip[0] != 48, // converts uint8 to bool (48 is ASCII code for 0, which is reserved for false)
+
 								}
 
 								retAssetGroup = newAssetGroup
@@ -1512,25 +1539,32 @@ func (conn *dbconn) GetAssetGroupsByCloudSource(inOrgID string, inCloudSourceID 
 
 							var myGroupID string
 							var myOrganizationID string
+							var myScannerSourceConfigID *string
 							var myScannerSourceID string
 							var myCloudSourceID *string
-							var myScannerSourceConfigID *string
+							var myLastTicketing *time.Time
+							var myRescanQueueSkip []uint8
 
 							if err = rows.Scan(
 
 								&myGroupID,
 								&myOrganizationID,
+								&myScannerSourceConfigID,
 								&myScannerSourceID,
 								&myCloudSourceID,
-								&myScannerSourceConfigID,
+								&myLastTicketing,
+								&myRescanQueueSkip,
 							); err == nil {
 
 								newAssetGroup := &dal.AssetGroup{
 									GroupIDvar:               myGroupID,
 									OrganizationIDvar:        myOrganizationID,
+									ScannerSourceConfigIDvar: myScannerSourceConfigID,
 									ScannerSourceIDvar:       myScannerSourceID,
 									CloudSourceIDvar:         myCloudSourceID,
-									ScannerSourceConfigIDvar: myScannerSourceConfigID,
+									LastTicketingvar:         myLastTicketing,
+									RescanQueueSkipvar:       myRescanQueueSkip[0] > 0 && myRescanQueueSkip[0] != 48, // converts uint8 to bool (48 is ASCII code for 0, which is reserved for false)
+
 								}
 
 								retAssetGroup = append(retAssetGroup, newAssetGroup)
@@ -1564,26 +1598,33 @@ func (conn *dbconn) GetAssetGroupsForOrg(inOrgID string) ([]domain.AssetGroup, e
 						if err = rows.Err(); err == nil {
 
 							var myGroupID string
+							var myOrganizationID string
+							var myScannerSourceConfigID *string
 							var myScannerSourceID string
 							var myCloudSourceID *string
-							var myScannerSourceConfigID *string
 							var myLastTicketing *time.Time
+							var myRescanQueueSkip []uint8
 
 							if err = rows.Scan(
 
 								&myGroupID,
+								&myOrganizationID,
+								&myScannerSourceConfigID,
 								&myScannerSourceID,
 								&myCloudSourceID,
-								&myScannerSourceConfigID,
 								&myLastTicketing,
+								&myRescanQueueSkip,
 							); err == nil {
 
 								newAssetGroup := &dal.AssetGroup{
 									GroupIDvar:               myGroupID,
+									OrganizationIDvar:        myOrganizationID,
+									ScannerSourceConfigIDvar: myScannerSourceConfigID,
 									ScannerSourceIDvar:       myScannerSourceID,
 									CloudSourceIDvar:         myCloudSourceID,
-									ScannerSourceConfigIDvar: myScannerSourceConfigID,
 									LastTicketingvar:         myLastTicketing,
+									RescanQueueSkipvar:       myRescanQueueSkip[0] > 0 && myRescanQueueSkip[0] != 48, // converts uint8 to bool (48 is ASCII code for 0, which is reserved for false)
+
 								}
 
 								retAssetGroup = append(retAssetGroup, newAssetGroup)
