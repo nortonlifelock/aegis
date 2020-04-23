@@ -33,7 +33,7 @@ type Ticket interface {
 	OperatingSystem() (param *string)
 	OrgCode() (param *string)
 	OrganizationID() (param string)
-	Patchable() (param *bool)
+	Patchable() (param *string)
 	Priority() (param *string)
 	Project() (param *string)
 	ReportedBy() (param *string)
