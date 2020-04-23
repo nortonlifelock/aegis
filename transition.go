@@ -101,47 +101,69 @@ func executeTransition(transition workflowTransition, assignTo string, connector
 
 		tpayload := createTransitionPayload{
 			Transition:  payload,
-			Fields:      fields,
+			fields:      fields,
 			UpdateBlock: Update{Comment: []UpdateObjects{{AddBody{Comment}}}},
 		}
 
 		if strings.Index(strings.ToLower(transition.Name), "reopen") >= 0 {
-			if tpayload.Fields == nil {
-				tpayload.Fields = &FieldStruct{}
+			if tpayload.fields == nil {
+				tpayload.fields = &FieldStruct{}
 			}
-			tpayload.Fields.ReopenReason = Comment
+			tpayload.fields.ReopenReason = Comment
 		}
 
 		resDate, found := payload.Unknowns.Value(connector.GetFieldMap(backendResolutionDate).getCreateID())
 		if found && resolutionDateRequired {
 			if timeVal, ok := resDate.(time.Time); ok {
 
-				if tpayload.Fields == nil {
-					tpayload.Fields = &FieldStruct{}
+				if tpayload.fields == nil {
+					tpayload.fields = &FieldStruct{}
 				}
 
 				if !timeVal.IsZero() {
-					tpayload.Fields.ResolutionDate = timeVal.UTC().Format("2006-01-02T15:04:05.000+0000")
+					tpayload.fields.ResolutionDate = timeVal.UTC().Format("2006-01-02T15:04:05.000+0000")
 				}
 			}
 		}
 
 		var oldToNewFieldName = make(map[string]string)
-		oldToNewFieldName["reopen_reason"] = connector.GetFieldMap(backendReopenReason).getCreateID()
-		oldToNewFieldName["resolution_date"] = connector.GetFieldMap(backendResolutionDate).getCreateID()
+		if tpayload.fields != nil {
+			if len(tpayload.fields.ReopenReason) > 0 {
+				oldToNewFieldName["reopen_reason"] = connector.GetFieldMap(backendReopenReason).getCreateID()
+			}
 
-		var customFieldUpdateBlockBytes []byte
-		var updateBlockWithCustomFieldNames interface{}
-		customFieldUpdateBlockBytes, err = replaceJSONKey(oldToNewFieldName, tpayload.Fields)
-		if err == nil {
-			err = json.Unmarshal(customFieldUpdateBlockBytes, &updateBlockWithCustomFieldNames)
+			if len(tpayload.fields.ResolutionDate) > 0 {
+				oldToNewFieldName["resolution_date"] = connector.GetFieldMap(backendResolutionDate).getCreateID()
+			}
+
+			if tpayload.fields.Assignee != nil {
+				oldToNewFieldName["assignee"] = "assignee"
+			}
+		}
+
+		if len(oldToNewFieldName) > 0 {
+			var customFieldUpdateBlockBytes []byte
+			var updateBlockWithCustomFieldNames interface{}
+			customFieldUpdateBlockBytes, err = replaceJSONKey(oldToNewFieldName, tpayload.fields)
 			if err == nil {
-				_, err = connector.client.Issue.DoTransitionWithPayload(ticket.Title(), updateBlockWithCustomFieldNames)
+				err = json.Unmarshal(customFieldUpdateBlockBytes, &updateBlockWithCustomFieldNames)
+				if err == nil {
+					tpayload.fields = nil
+					tpayload.FieldsInterface = updateBlockWithCustomFieldNames
+				} else {
+					err = fmt.Errorf("error while building transition payload - %s", err.Error())
+				}
 			} else {
 				err = fmt.Errorf("error while building transition payload - %s", err.Error())
 			}
 		} else {
-			err = fmt.Errorf("error while building transition payload - %s", err.Error())
+			// there were no fields that needed renaming, so instead of building a map to rename the custom fields of the tpayload.fields object, we can
+			// just pass tpayload.fields right away
+			tpayload.FieldsInterface = tpayload.fields
+		}
+
+		if err == nil {
+			_, err = connector.client.Issue.DoTransitionWithPayload(ticket.Title(), tpayload)
 		}
 	} else {
 		err = fmt.Errorf("error while finding the assignee location - %s", err.Error())

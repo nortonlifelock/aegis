@@ -21,6 +21,7 @@ var MappableFields = []string{
 	backendCVSS,
 	backendVulnerabilityID,
 	backendGroupID,
+	backendPatchable,
 	backendDeviceID,
 	backendScanID,
 	backendOrg,
@@ -85,6 +86,7 @@ const (
 	backendVulnerabilityID  = "VulnerabilityID"
 	backendGroupID          = "GroupID"
 	backendDeviceID         = "DeviceID"
+	backendPatchable        = "Patchable"
 	backendScanID           = "ScanID"
 	backendOrg              = "Org"
 	backendAutomationID     = "AutomationID"

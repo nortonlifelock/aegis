@@ -24,9 +24,10 @@ type TransitionField struct {
 
 // this payload is required to transition the status of a JIRA ticket
 type createTransitionPayload struct {
-	Transition  TransitionPayload `json:"transition" structs:"transition"`
-	Fields      *FieldStruct      `json:"fields,omitempty"`
-	UpdateBlock Update            `json:"update,omitempty"`
+	Transition      TransitionPayload `json:"transition" structs:"transition"`
+	fields          *FieldStruct
+	FieldsInterface interface{} `json:"fields,omitempty"`
+	UpdateBlock     Update      `json:"update,omitempty"`
 }
 
 // FieldStruct is used in createTransitionPayload and must be exported in order to be marshaled
