@@ -94,9 +94,7 @@ func (session *Session) GetHostSpecificDetections(ip []string, groups []string, 
 		// TODO: Correct this so that there can be more than 10000 results and we recurse over them
 		fields["truncation_limit"] = "0"   // 0 means no limit
 		fields["show_reopened_info"] = "1" // Show the additional information related to vulnerabilities that have been Reopened in Qualys
-		//if !includeFixed {
-		//	fields["status"] = "New,Active,Re-Opened" // Exclude "Fixed" vulnerabilities from the results
-		//}
+		fields["status"] = "New,Active,Re-Opened,Fixed"
 		fields["arf_kernel_filter"] = strconv.Itoa(kernelFilterFlag)
 		fields["status"] = "New,Active,Re-Opened,Fixed" // If this parameter is not passed to the API, by default, the output contains detections with New, Active or Re-Opened <STATUS> only
 
