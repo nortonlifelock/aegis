@@ -347,6 +347,7 @@ func (job *AssetSyncJob) enterAssetInformationInDB(asset domain.Device, osTypeID
 				if err == nil {
 					var deviceIsAlsoBeingTrackedUnderDifferentAssetID, deviceFoundByCloudSyncJobFirst bool
 					if deviceInDB != nil {
+						// the device appearing under a different asset ID could be a purged asset that was rediscovered after still being online, for example
 						deviceIsAlsoBeingTrackedUnderDifferentAssetID = len(sord(deviceInDB.SourceID())) > 0 && sord(deviceInDB.SourceID()) != sord(asset.SourceID())
 						deviceFoundByCloudSyncJobFirst = len(sord(deviceInDB.SourceID())) == 0 && len(sord(asset.SourceID())) > 0
 					}

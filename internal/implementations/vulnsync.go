@@ -177,69 +177,51 @@ func (job *VulnSyncJob) processNewVulnerability(ctx context.Context, currentVuln
 }
 
 func (job *VulnSyncJob) updateVulnerability(vulnInDB domain.VulnerabilityInfo, currentVuln domain.Vulnerability, solution string) (err error) {
-	var cvss3Pointer = currentVuln.CVSS3()
+	cvss3Pointer := currentVuln.CVSS3()
+	var cvss3Score = float32(-1) // if the cvss3 score is not updated, it will have a nil value stored in the database
 	if cvss3Pointer != nil {
-		_, _, err = job.db.UpdateVulnByID(
-			vulnInDB.ID(),
-			currentVuln.SourceID(),
-			currentVuln.Name(),
-			job.insource.SourceID(),
-			currentVuln.CVSS2(),
-			*cvss3Pointer,
-			currentVuln.Description(),
-			sord(currentVuln.Threat()),
-			solution,
-			currentVuln.Software(),
-			currentVuln.DetectionInformation(),
-		)
-	} else {
-		_, _, err = job.db.UpdateVulnByIDNoCVSS3(
-			vulnInDB.ID(),
-			currentVuln.SourceID(),
-			currentVuln.Name(),
-			job.insource.SourceID(),
-			currentVuln.CVSS2(),
-			currentVuln.Description(),
-			sord(currentVuln.Threat()),
-			solution,
-			currentVuln.Software(),
-			currentVuln.DetectionInformation(),
-		)
+		cvss3Score = *cvss3Pointer
 	}
+
+	_, _, err = job.db.UpdateVulnByID(
+		vulnInDB.ID(),
+		currentVuln.SourceID(),
+		currentVuln.Name(),
+		job.insource.SourceID(),
+		currentVuln.CVSS2(),
+		cvss3Score,
+		currentVuln.Description(),
+		sord(currentVuln.Threat()),
+		solution,
+		currentVuln.Software(),
+		sord(currentVuln.Patchable()),
+		currentVuln.DetectionInformation(),
+	)
 
 	return err
 }
 
 func (job *VulnSyncJob) createVulnerability(currentVuln domain.Vulnerability, solution string) (err error) {
 	cvss3Pointer := currentVuln.CVSS3()
-
+	var cvss3Score = float32(-1) // if the cvss3 score is not updated, it will have a nil value stored in the database
 	if cvss3Pointer != nil {
-		// Create the vulnerability if it hasn't been created yet
-		_, _, err = job.db.CreateVulnInfo(
-			currentVuln.SourceID(),
-			currentVuln.Name(),
-			job.insource.SourceID(),
-			currentVuln.CVSS2(),
-			*cvss3Pointer,
-			currentVuln.Description(),
-			sord(currentVuln.Threat()),
-			solution,
-			currentVuln.Software(),
-			currentVuln.DetectionInformation(),
-		)
-	} else {
-		_, _, err = job.db.CreateVulnInfoNoCVSS3(
-			currentVuln.SourceID(),
-			currentVuln.Name(),
-			job.insource.SourceID(),
-			currentVuln.CVSS2(),
-			currentVuln.Description(),
-			sord(currentVuln.Threat()),
-			solution,
-			currentVuln.Software(),
-			currentVuln.DetectionInformation(),
-		)
+		cvss3Score = *cvss3Pointer
 	}
+
+	// Create the vulnerability if it hasn't been created yet
+	_, _, err = job.db.CreateVulnInfo(
+		currentVuln.SourceID(),
+		currentVuln.Name(),
+		job.insource.SourceID(),
+		currentVuln.CVSS2(),
+		cvss3Score,
+		currentVuln.Description(),
+		sord(currentVuln.Threat()),
+		solution,
+		currentVuln.Software(),
+		sord(currentVuln.Patchable()),
+		currentVuln.DetectionInformation(),
+	)
 
 	return err
 }

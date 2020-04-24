@@ -1,0 +1,2 @@
+ALTER TABLE VulnerabilityInfo MODIFY COLUMN Patchable VARCHAR(30) NULL;
+ALTER TABLE VulnerabilityInfoAudit MODIFY COLUMN Patchable VARCHAR(30) NULL;

@@ -43,5 +43,6 @@
   OrgCode             NVARCHAR(25)            NULL
   OSDetailed          NVARCHAR(255)           NULL
   VendorReferences    TEXT                    NULL
+  Patchable           VARCHAR(30)             NULL
 */
 #BEGIN#

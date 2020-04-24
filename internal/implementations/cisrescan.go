@@ -626,6 +626,10 @@ func (wrapper *FindingWrapper) OrganizationID() (param string) {
 	return
 }
 
+func (wrapper *FindingWrapper) Patchable() (param *string) {
+	return nil
+}
+
 // Priority returns the Priority of the ticket
 func (wrapper *FindingWrapper) Priority() (param *string) {
 	val := wrapper.Finding.Priority()
