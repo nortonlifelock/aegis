@@ -76,7 +76,7 @@ func (connector *ConnectorJira) mapDalTicketToJiraIssue(ticket domain.Ticket) (j
 		}
 
 		if len(sord(ticket.Patchable())) > 0 {
-			setJIField(connector, ji, backendPatchable, []string{sord(ticket.Patchable())})
+			setJIField(connector, ji, backendPatchable, sord(ticket.Patchable()))
 		}
 
 		// group ID may not be necessary for vulnerability remediators, but it is useful for tracking CIS tickets by the cloud account
