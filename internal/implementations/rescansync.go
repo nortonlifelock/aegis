@@ -114,8 +114,13 @@ func (job *ScanSyncJob) processSyncedScan(scan domain.Scan, correspondingScanSum
 		// Save the updated scan summary
 		if _, _, err = job.db.SaveScanSummary(scan.ID(), status); err == nil {
 
+			const threeDays = time.Hour * 24 * 3
+			scanStart := correspondingScanSummary.CreatedDate()
+
 			if strings.ToLower(status) == strings.ToLower(domain.ScanFINISHED) {
 				job.createScanCloseJob(scan, correspondingScanSummary, baseJob)
+			} else if !scanStart.IsZero() && time.Since(scanStart) > threeDays {
+				job.lstream.Send(log.Warningf(err, "scan [%s] has been running for several days (since [%s])", scan.ID(), correspondingScanSummary.CreatedDate().String()))
 			}
 
 		} else {
