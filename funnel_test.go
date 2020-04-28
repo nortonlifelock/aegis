@@ -3,12 +3,10 @@ package funnel
 import (
 	"context"
 	"net/http"
-	"sync"
 	"testing"
 	"time"
 
-	"github.com/benjivesterby/validator"
-	"github.com/pkg/errors"
+	"github.com/devnw/validator"
 )
 
 func TestFunnel_Do(t *testing.T) {
@@ -247,10 +245,10 @@ func TestFunnel_Do(t *testing.T) {
 
 	for _, test := range tests {
 
-		func() {
+		t.Run(test.name, func(t *testing.T) {
 			defer func() {
 				if panicMessage := recover(); panicMessage != nil {
-					t.Error(errors.Errorf("test [%s] had a panic", test.name))
+					t.Errorf("test [%s] had a panic", test.name)
 				}
 			}()
 
@@ -269,27 +267,26 @@ func TestFunnel_Do(t *testing.T) {
 
 				var resp *http.Response
 				if resp, err = client.Do(test.request); err == nil {
-					if resp != nil {
-					} else {
+					if resp == nil {
 						if err = test.success.correct(true, false); err != nil {
-							t.Error(errors.Errorf("[%s] failed; %s", test.name, err.Error()))
+							t.Errorf("[%s] failed; %s", test.name, err.Error())
 						}
 					}
 				} else {
 
 					if test.client.retries > 0 && test.client.retries != test.client.attempts && !test.success.error {
-						t.Error(errors.Errorf("[%s] failed; number of attempts doesn't match the expected retries [%v:%v]", test.name, test.client.attempts, test.client.retries))
+						t.Errorf("[%s] failed; number of attempts doesn't match the expected retries [%v:%v]", test.name, test.client.attempts, test.client.retries)
 					} else if err = test.success.correct(true, false); err != nil {
-						t.Error(errors.Errorf("[%s] failed; %s", test.name, err.Error()))
+						t.Errorf("[%s] failed; %s", test.name, err.Error())
 					}
 				}
 
 			} else {
 				if err = test.success.correct(true, false); err != nil {
-					t.Error(errors.Errorf("[%s] failed; %s", test.name, err.Error()))
+					t.Errorf("[%s] failed; %s", test.name, err.Error())
 				}
 			}
-		}()
+		})
 	}
 }
 
@@ -335,11 +332,10 @@ func TestFunnel_DoBadClient(t *testing.T) {
 	}
 
 	for _, test := range tests {
-
-		func() {
+		t.Run(test.name, func(t *testing.T) {
 			defer func() {
 				if panicMessage := recover(); panicMessage != nil {
-					t.Error(errors.Errorf("test [%s] had a panic", test.name))
+					t.Errorf("test [%s] had a panic", test.name)
 				}
 			}()
 
@@ -353,23 +349,23 @@ func TestFunnel_DoBadClient(t *testing.T) {
 					if resp != nil {
 					} else {
 						if err = test.success.correct(true, false); err != nil {
-							t.Error(errors.Errorf("[%s] failed; %s", test.name, err.Error()))
+							t.Errorf("[%s] failed; %s", test.name, err.Error())
 						}
 					}
 				} else {
 
 					if test.client.retries > 0 && test.client.retries != test.client.attempts && !test.success.error {
-						t.Error(errors.Errorf("[%s] failed; number of attempts doesn't match the expected retries [%v:%v]", test.name, test.client.attempts, test.client.retries))
+						t.Errorf("[%s] failed; number of attempts doesn't match the expected retries [%v:%v]", test.name, test.client.attempts, test.client.retries)
 					} else if err = test.success.correct(true, false); err != nil {
-						t.Error(errors.Errorf("[%s] failed; %s", test.name, err.Error()))
+						t.Errorf("[%s] failed; %s", test.name, err.Error())
 					}
 				}
 			} else {
 				if err = test.success.correct(true, false); err != nil {
-					t.Error(errors.Errorf("[%s] failed; %s", test.name, err.Error()))
+					t.Errorf("[%s] failed; %s", test.name, err.Error())
 				}
 			}
-		}()
+		})
 	}
 }
 
@@ -400,10 +396,10 @@ func TestFunnel_Do_Direct(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		func() {
+		t.Run(test.name, func(t *testing.T) {
 			defer func() {
 				if panicMessage := recover(); panicMessage != nil {
-					t.Error(errors.Errorf("test [%s] had a panic", test.name))
+					t.Errorf("test [%s] had a panic", test.name)
 				}
 			}()
 
@@ -414,13 +410,13 @@ func TestFunnel_Do_Direct(t *testing.T) {
 				if resp != nil {
 				} else {
 					if err = test.success.correct(true, false); err != nil {
-						t.Error(errors.Errorf("[%s] failed; %s", test.name, err.Error()))
+						t.Errorf("[%s] failed; %s", test.name, err.Error())
 					}
 				}
 			} else if err = test.success.correct(true, false); err != nil {
-				t.Error(errors.Errorf("[%s] failed; %s", test.name, err.Error()))
+				t.Errorf("[%s] failed; %s", test.name, err.Error())
 			}
-		}()
+		})
 	}
 }
 
@@ -553,165 +549,18 @@ func TestFunnel_Validate(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		func() {
+		t.Run(test.name, func(t *testing.T) {
 			defer func() {
 				if panicMessage := recover(); panicMessage != nil {
-					t.Error(errors.Errorf("test [%s] had a panic", test.name))
+					t.Errorf("test [%s] had a panic", test.name)
 				}
 			}()
 
 			var err error
 
-			if err = test.success.correct(!validator.IsValid(test.fun), false); err != nil {
-				t.Error(errors.Errorf("[%s] failed; %s", test.name, err.Error()))
+			if err = test.success.correct(!validator.Valid(test.fun), false); err != nil {
+				t.Errorf("[%s] failed; %s", test.name, err.Error())
 			}
-		}()
+		})
 	}
-}
-
-func makeRequests(numreqs int, concurrency int, delay time.Duration, requestDelay time.Duration, b *testing.B) {
-
-	if client, err := New(context.Background(),
-		&httpclient{requestDelay, 1, http.StatusOK, 0, 0, 0, 1, &testlogger{}, false},
-		&testlogger{},
-		delay,
-		0,
-		concurrency,
-	); err == nil {
-		for n := 0; n < b.N; n++ {
-			wg := sync.WaitGroup{}
-			for rs := 0; rs < numreqs; rs++ {
-				wg.Add(1)
-				go func() {
-					defer wg.Done()
-					client.Do(newReq(http.MethodGet, "fakeurl"))
-				}()
-			}
-			wg.Wait()
-		}
-	}
-}
-
-func BenchmarkRequests_C1_10_MilliReqWait(b *testing.B) {
-	makeRequests(10, 1, 0, time.Millisecond, b)
-}
-
-func BenchmarkRequests_C2_10_MilliReqWait(b *testing.B) {
-	makeRequests(10, 2, 0, time.Millisecond, b)
-}
-
-func BenchmarkRequests_C3_10_MilliReqWait(b *testing.B) {
-	makeRequests(10, 3, 0, time.Millisecond, b)
-}
-
-func BenchmarkRequests_C4_10_MilliReqWait(b *testing.B) {
-	makeRequests(10, 4, 0, time.Millisecond, b)
-}
-
-func BenchmarkRequests_C5_10_MilliReqWait(b *testing.B) {
-	makeRequests(10, 5, 0, time.Millisecond, b)
-}
-
-func BenchmarkRequests_C6_10_MilliReqWait(b *testing.B) {
-	makeRequests(10, 6, 0, time.Millisecond, b)
-}
-
-func BenchmarkRequests_C7_10_MilliReqWait(b *testing.B) {
-	makeRequests(10, 7, 0, time.Millisecond, b)
-}
-
-func BenchmarkRequests_C8_10_MilliReqWait(b *testing.B) {
-	makeRequests(10, 8, 0, time.Millisecond, b)
-}
-
-func BenchmarkRequests_C9_10_MilliReqWait(b *testing.B) {
-	makeRequests(10, 9, 0, time.Millisecond, b)
-}
-
-func BenchmarkRequests_C10_10_MilliReqWait(b *testing.B) {
-	makeRequests(10, 10, 0, time.Millisecond, b)
-}
-
-func BenchmarkRequests_C1_1(b *testing.B) {
-	makeRequests(1, 1, 0, 0, b)
-}
-
-func BenchmarkRequests_C1_10(b *testing.B) {
-	makeRequests(10, 1, 0, 0, b)
-}
-
-func BenchmarkRequests_C1_100(b *testing.B) {
-	makeRequests(100, 1, 0, 0, b)
-}
-
-func BenchmarkRequests_C1_1000(b *testing.B) {
-	makeRequests(1000, 1, 0, 0, b)
-}
-
-func BenchmarkRequests_C1_10000(b *testing.B) {
-	makeRequests(10000, 1, 0, 0, b)
-}
-
-func BenchmarkRequests_C2_10(b *testing.B) {
-	makeRequests(10, 2, 0, 0, b)
-}
-
-func BenchmarkRequests_C2_50(b *testing.B) {
-	makeRequests(50, 2, 0, 0, b)
-}
-
-func BenchmarkRequests_C2_100(b *testing.B) {
-	makeRequests(100, 2, 0, 0, b)
-}
-
-func BenchmarkRequests_C2_1000(b *testing.B) {
-	makeRequests(1000, 2, 0, 0, b)
-}
-
-func BenchmarkRequests_C10_10(b *testing.B) {
-	makeRequests(10, 10, 0, 0, b)
-}
-
-func BenchmarkRequests_C10_50(b *testing.B) {
-	makeRequests(50, 10, 0, 0, b)
-}
-
-func BenchmarkRequests_C10_100(b *testing.B) {
-	makeRequests(100, 10, 0, 0, b)
-}
-
-func BenchmarkRequests_C10_1000(b *testing.B) {
-	makeRequests(1000, 10, 0, 0, b)
-}
-
-func BenchmarkRequests_C10_10_Nano(b *testing.B) {
-	makeRequests(10, 10, time.Nanosecond, 0, b)
-}
-
-func BenchmarkRequests_C10_50_Nano(b *testing.B) {
-	makeRequests(50, 10, time.Nanosecond, 0, b)
-}
-
-func BenchmarkRequests_C10_100_Nano(b *testing.B) {
-	makeRequests(100, 10, time.Nanosecond, 0, b)
-}
-
-func BenchmarkRequests_C10_1000_Nano(b *testing.B) {
-	makeRequests(1000, 10, time.Nanosecond, 0, b)
-}
-
-func BenchmarkRequests_C10_10_Milli(b *testing.B) {
-	makeRequests(10, 10, time.Millisecond, 0, b)
-}
-
-func BenchmarkRequests_C10_50_Milli(b *testing.B) {
-	makeRequests(50, 10, time.Millisecond, 0, b)
-}
-
-func BenchmarkRequests_C10_100_Milli(b *testing.B) {
-	makeRequests(100, 10, time.Millisecond, 0, b)
-}
-
-func BenchmarkRequests_C10_1000_Milli(b *testing.B) {
-	makeRequests(1000, 10, time.Millisecond, 0, b)
 }

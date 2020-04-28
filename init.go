@@ -2,7 +2,7 @@ package funnel
 
 import (
 	"context"
-	"github.com/benjivesterby/validator"
+	"github.com/devnw/validator"
 	"github.com/nortonlifelock/log"
 	"github.com/pkg/errors"
 	"net/http"
@@ -60,7 +60,7 @@ func New(ctx context.Context, client Client, lstream log.Logger, delay time.Dura
 				// Setup requests channel
 				f.requests = f.receive()
 
-				if !validator.IsValid(f) {
+				if !validator.Valid(f) {
 					err = errors.New("funnel is not valid after initialization")
 				}
 			} else {

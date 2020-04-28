@@ -165,12 +165,17 @@ func (f *funnel) handleRequest(req requestWrapper, requests chan requestWrapper)
 		req.response <- responseWrapper{resp, err}
 	} else {
 		if resp != nil {
-			defer resp.Body.Close()
 
 			if resp.StatusCode != http.StatusNotFound {
 
-				body, _ := ioutil.ReadAll(resp.Body)
-				f.lstream.Send(log.Warningf(nil, "code: %v - response body: [%s] - retrying: %s", resp.StatusCode, string(body), req.request.URL))
+				if resp.Body != nil {
+					defer func() {
+						_ = resp.Body.Close()
+					}()
+
+					body, _ := ioutil.ReadAll(resp.Body)
+					f.lstream.Send(log.Warningf(nil, "code: %v - response body: [%s] - retrying: %s", resp.StatusCode, string(body), req.request.URL))
+				}
 
 				// Send the request back on the channel
 				go func() {
@@ -199,9 +204,14 @@ func (f *funnel) handleFailedRequest(resp *http.Response) (err error) {
 	if resp != nil && resp.StatusCode >= 300 {
 		err = errors.Errorf("retries exceeded for request | code: %v", resp.StatusCode)
 
-		defer resp.Body.Close()
-		if body, readErr := ioutil.ReadAll(resp.Body); readErr == nil {
-			err = fmt.Errorf("%v - %v", err.Error(), string(body))
+		if resp.Body != nil {
+			defer func() {
+				_ = resp.Body.Close()
+			}()
+
+			if body, readErr := ioutil.ReadAll(resp.Body); readErr == nil {
+				err = fmt.Errorf("%v - %v", err.Error(), string(body))
+			}
 		}
 	}
 	return err
