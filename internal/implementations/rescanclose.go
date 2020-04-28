@@ -252,8 +252,6 @@ func (job *ScanCloseJob) updateDetectionInformationInDB(deviceIDToVulnIDToDetect
 								job.insource.SourceID(),
 								job.getExceptionID,
 							)
-
-							job.lstream.Send(log.Infof("Updated DB detection information for [%s|%s]", deviceID, vulnInfo.SourceID()))
 						}(deviceID, device, vulnInfo, detection, decommIgnoreID)
 					} else {
 						var missingReason = make([]string, 0)
@@ -281,17 +279,11 @@ func (job *ScanCloseJob) updateDetectionInformationInDB(deviceIDToVulnIDToDetect
 	wg.Wait()
 }
 
-func (job *ScanCloseJob) getExceptionID(assetID string, deviceInDb domain.Device, port string, vulnInfo domain.VulnerabilityInfo, detectionFromScanner domain.Detection) (exceptionID string) {
-	if ignore, err := job.db.HasIgnore(job.insource.SourceID(), vulnInfo.SourceID(), assetID, job.config.OrganizationID(), port, tord1970(detectionFromScanner.LastFound())); err == nil {
-		if ignore != nil {
-			exceptionID = ignore.ID()
-		}
-		// TODO global exception support?
-	} else {
-		job.lstream.Send(log.Errorf(err, "error while loading ignore entry for [%s|%s]", assetID, vulnInfo.SourceID()))
-	}
+func (job *ScanCloseJob) getExceptionID(assetID string, deviceInDb domain.Device, port string, vulnInfo domain.VulnerabilityInfo, detectionFromScanner domain.Detection) (exceptionID string, dontUpdateExceptionID bool) {
+	// for the sake of efficiency the rescan close doesn't need to check for exceptions - the asset sync can take care of that
+	dontUpdateExceptionID = true
 
-	return exceptionID
+	return exceptionID, dontUpdateExceptionID
 }
 
 func (job *ScanCloseJob) createCloudDecommissionJob(ips []string) {

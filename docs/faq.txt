@@ -1,0 +1,50 @@
+FAQ
+
+Q) How are jobs started?
+A) The JobHistory table is checked periodically for an entry with a StatusID of 1. If one is found, a job is created. There are several ways for a JobHistory entry to be created
+1) Several jobs (RescanQueueJob/ExceptionJob) are marked as AutoStart by default. All job configurations are controlled in the JobConfig table. The AutoStart functionality can be enabled/disabled by changing the AutoStart field in this table. If a JobConfig has its AutoStart field marked as 1, a JobHistory entry will be created with the job configuration every time Aegis starts.
+2) The JobSchedule table holds JobConfig IDs, as well as the days/times that the job should be scheduled for. Once that time/day arrives, a job history entry will be created for the job configuration
+3) A JobHistory can be created by hand using a SQL entry. This can be done with the following SQL command
+
+INSERT INTO `VM`.`JobHistory` (`JobId`, `ConfigID`, `StatusId`, `Priority`, `Payload`)
+                VALUES
+(
+                (select ID from Job where Struct = 'TicketingJob'),
+                (select ID from JobConfig where JobID = (select ID from Job where Struct = 'TicketingJob' LIMIT 1) LIMIT 1),
+                '1',
+                '0',
+                (select Payload from JobConfig where JobID = (select ID from Job where Struct = 'TicketingJob') LIMIT 1)
+);
+
+If you have more than one Organization, or more than one JobConfig entry for a single job, you'll have to specify which exact JobConfig you're using.
+
+Q) How are tickets created?
+A) Aegis saves your vulnerability detection information in its database during the AssetSyncJob (the Detection table). The Detection table is used by the TicketingJob to create the tickets. There is no use running an AssetSyncJob on a schedule for Nexpose, as Nexpose doesn't tell you when the detection was updated, so you can't only process recently updated detections. I recommend you run an AssetSyncJob right before you do your monthly ticketing. The way you run an AssetSyncJob is exactly the same you create a TicketingJob – you just replace the string "TicketingJob" with "AssetSyncJob". For Qualys, I recommend you create a JobSchedule to run AssetSyncs daily, as it tells you when the detection was last updated, so stale detections can be skipped
+
+Q) What if a device goes offline? How does Aegis handle its tickets?
+A) If you mark a ticket as Resolved-Decommissioned, Aegis should kickoff a Decommission scan against the assets. Once the scan finishes, Aegis will mark down all devices that were discovered to be offline (in the Ignore table) to prevent the asset from being ticketed again
+
+Q) My JIRA/Nexpose/Qualys instance is getting hit too hard. How can I make Aegis make API calls less frequently?
+A) The rate at which API requests are made against an API, as well as the amount of concurrent API requests that are allowed to be made against an API are controlled in the SourceConfig entry in the database corresponding to the API connection (all API connection information is stored in the SourceConfig table)
+If you execute the following SQL query
+select AuthInfo from SourceConfig where Source = 'JIRA';
+
+You'll see this column has two fields: Delay and Concurrency. The Delay field is a number in nanoseconds that controls how long is waited between API calls. The Concurrency field is a number that controls the amount of concurrent API requests are allowed
+
+
+Q) What is the purpose of printing the goroutine count in the JobRunner? Ex: Job Runner: Sleeping for 60 seconds - [1250 goroutines]
+A) This is a count of goroutines that the entire Aegis system uses, and is not reflective of the amount of workers. The baseline should hover at around 1200, and this log is used to detect goroutine leakage. If this baseline number ever starts to steadily increase as Aegis is allowed to run over time, there's a goroutine leak.
+
+Q) Why do certain jobs restart after finishing?
+A) Most AutoStart jobs are ALSO marked Continuous in the same JobConfig table. If the Continuous field is marked, the job will wait for an amount of seconds depending on the WaitInSeconds field in the JobConfig before executing again
+
+Q) How do I change the frequency that these Continuous jobs execute?
+A) The default time between job runs for continuous jobs are 60 seconds. If you'd like to change it, you can modify the WaitInSeconds field in the JobConfig table. You can use the following command
+UPDATE JobConfig Set WaitInSeconds = 120 where ID = (select ConfigID from JobHistory where ID = 'PUT JOB ID HERE');
+
+Q) How do I cancel a job?
+A) You can cancel a job by setting its status to -1. For example, the following SQL query could be used
+Update JobHistory where ID = 'PUT JOB ID HERE' set StatusID = -1;
+You can find a job ID by looking at any log from the job, for example, in the following log
+2020-04-21 17:18:30 | [INFO] [TicketingJob:NORTON:AAAAAAA-AAAA-AAAA-AAAA-AAAAAAAAAA] - Ticket created for vulnerability
+The JobHistory ID for the job that produced this log would be AAAAAAA-AAAA-AAAA-AAAA-AAAAAAAAA
