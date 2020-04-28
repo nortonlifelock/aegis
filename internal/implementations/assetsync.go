@@ -453,7 +453,9 @@ func (job *AssetSyncJob) processAssetDetections(deviceInDb domain.Device, assetI
 	return err
 }
 
-func (job *AssetSyncJob) getExceptionID(assetID string, deviceInDb domain.Device, port string, vulnInfo domain.VulnerabilityInfo, detectionFromScanner domain.Detection) (exceptionID string) {
+func (job *AssetSyncJob) getExceptionID(assetID string, deviceInDb domain.Device, port string, vulnInfo domain.VulnerabilityInfo, detectionFromScanner domain.Detection) (exceptionID string, dontUpdateExceptionID bool) {
+	dontUpdateExceptionID = false // default value, but explicitly setting as to not imply it was unintentional. the asset sync should update the exception ID
+
 	if job.deviceIDToVulnIDToException[assetID] != nil {
 		if job.deviceIDToVulnIDToException[assetID][fmt.Sprintf("%s;%s", vulnInfo.SourceVulnID(), port)] != nil {
 
@@ -476,11 +478,11 @@ func (job *AssetSyncJob) getExceptionID(assetID string, deviceInDb domain.Device
 		}
 	}
 
-	return exceptionID
+	return exceptionID, dontUpdateExceptionID
 }
 
 // This method creates a detection entry if one does not exist, and updates the entry if one does
-func createOrUpdateDetection(db domain.DatabaseConnection, lstream log.Logger, detectionStatuses []domain.DetectionStatus, deviceInDb domain.Device, vulnInfo domain.VulnerabilityInfo, detectionFromScanner domain.Detection, assetID string, decomIgnoreID string, orgID string, sourceID string, getExceptionID func(string, domain.Device, string, domain.VulnerabilityInfo, domain.Detection) string) {
+func createOrUpdateDetection(db domain.DatabaseConnection, lstream log.Logger, detectionStatuses []domain.DetectionStatus, deviceInDb domain.Device, vulnInfo domain.VulnerabilityInfo, detectionFromScanner domain.Detection, assetID string, decomIgnoreID string, orgID string, sourceID string, getExceptionID func(string, domain.Device, string, domain.VulnerabilityInfo, domain.Detection) (string, bool)) {
 	var err error
 
 	var detectionInDB domain.DetectionInfo
@@ -494,13 +496,19 @@ func createOrUpdateDetection(db domain.DatabaseConnection, lstream log.Logger, d
 				port = fmt.Sprintf("%d %s", detectionFromScanner.Port(), detectionFromScanner.Protocol())
 			}
 			var exceptionID = decomIgnoreID
+			var dontUpdateExceptionID bool
 			if len(exceptionID) == 0 {
-				exceptionID = getExceptionID(assetID, deviceInDb, port, vulnInfo, detectionFromScanner)
+				exceptionID, dontUpdateExceptionID = getExceptionID(assetID, deviceInDb, port, vulnInfo, detectionFromScanner)
 			}
 
 			if detectionInDB == nil {
 				createDetection(db, lstream, orgID, sourceID, detectionFromScanner, exceptionID, deviceInDb, vulnInfo, assetID, detectionStatus.ID())
 			} else {
+				if len(exceptionID) == 0 && dontUpdateExceptionID {
+					// we set the exceptionID to the value already in the database
+					// this block hits when the caller didn't check for an Ignore entry while trying to update the detection data
+					exceptionID = sord(detectionInDB.IgnoreID())
+				}
 
 				var canSkipUpdate bool
 				if detectionFromScanner.LastUpdated() != nil && !detectionInDB.Updated().IsZero() && !detectionFromScanner.LastUpdated().IsZero() {
