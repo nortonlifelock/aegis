@@ -847,6 +847,10 @@ func (job *TicketingJob) payloadToTicket(payload *vulnerabilityPayload) (newtix 
 		var fullOSName = payload.device.OS()
 		var reportedBy = job.getCachedReportedBy()
 		var created = time.Now()
+		var patchable string
+		if len(sord(payload.vuln.Patchable())) > 0 {
+			patchable = sord(payload.vuln.Patchable())
+		}
 
 		newtix = &dal.Ticket{
 			DeviceIDvar:          sord(payload.device.SourceID()),
@@ -859,6 +863,7 @@ func (job *TicketingJob) payloadToTicket(payload *vulnerabilityPayload) (newtix 
 			Solutionvar:           &solution,
 			VulnerabilityTitlevar: &vulnerabilityTitle,
 			CVSSvar:               &cvss,
+			Patchablevar:          &patchable,
 
 			OSDetailedvar:      &fullOSName,
 			OperatingSystemvar: &operatingSystem,

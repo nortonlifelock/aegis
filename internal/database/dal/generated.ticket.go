@@ -44,6 +44,7 @@ type Ticket struct {
 	OperatingSystemvar    *string
 	OrgCodevar            *string
 	OrganizationIDvar     string
+	Patchablevar          *string
 	Priorityvar           *string
 	Projectvar            *string
 	ReportedByvar         *string
@@ -96,6 +97,7 @@ func (myTicket Ticket) MarshalJSON() ([]byte, error) {
 		"OperatingSystem":    myTicket.OperatingSystemvar,
 		"OrgCode":            myTicket.OrgCodevar,
 		"OrganizationID":     myTicket.OrganizationIDvar,
+		"Patchable":          myTicket.Patchablevar,
 		"Priority":           myTicket.Priorityvar,
 		"Project":            myTicket.Projectvar,
 		"ReportedBy":         myTicket.ReportedByvar,
@@ -248,6 +250,11 @@ func (myTicket *Ticket) OrgCode() (param *string) {
 // OrganizationID returns the OrganizationID parameter from the Ticket struct
 func (myTicket *Ticket) OrganizationID() (param string) {
 	return myTicket.OrganizationIDvar
+}
+
+// Patchable returns the Patchable parameter from the Ticket struct
+func (myTicket *Ticket) Patchable() (param *string) {
+	return myTicket.Patchablevar
 }
 
 // Priority returns the Priority parameter from the Ticket struct
@@ -413,6 +420,11 @@ func (myTicket *Ticket) SetOrgCode(val string) {
 // SetOrganizationID sets the OrganizationID parameter from the Ticket struct
 func (myTicket *Ticket) SetOrganizationID(val string) {
 	myTicket.OrganizationIDvar = val
+}
+
+// SetPatchable sets the Patchable parameter from the Ticket struct
+func (myTicket *Ticket) SetPatchable(val string) {
+	myTicket.Patchablevar = &val
 }
 
 // SetPriority sets the Priority parameter from the Ticket struct
