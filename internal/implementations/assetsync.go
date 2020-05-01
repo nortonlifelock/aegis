@@ -461,7 +461,7 @@ func (job *AssetSyncJob) getExceptionID(assetID string, deviceInDb domain.Device
 
 			var possibleMatch = job.deviceIDToVulnIDToException[assetID][fmt.Sprintf("%s;%s", vulnInfo.SourceVulnID(), port)]
 
-			if possibleMatch.TypeID() != domain.Exception || possibleMatch.DueDate().After(time.Now()) { // only want to skip exceptions that have passed their due dates
+			if possibleMatch.TypeID() != domain.Exception || tord1970(possibleMatch.DueDate()).After(time.Now()) { // only want to skip exceptions that have passed their due dates
 				exceptionID = job.deviceIDToVulnIDToException[assetID][fmt.Sprintf("%s;%s", vulnInfo.SourceVulnID(), port)].ID()
 			}
 		}
