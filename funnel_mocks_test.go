@@ -2,11 +2,12 @@ package funnel
 
 import (
 	"fmt"
-	"github.com/nortonlifelock/log"
-	"github.com/pkg/errors"
 	"net/http"
 	"strings"
 	"time"
+
+	"github.com/nortonlifelock/log"
+	"github.com/pkg/errors"
 )
 
 type httpclient struct {

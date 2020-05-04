@@ -1,7 +1,7 @@
 package funnel
 
 import (
-	"github.com/benjivesterby/validator"
+	"github.com/devnw/validator"
 	"github.com/pkg/errors"
 	"net/http"
 )
@@ -13,7 +13,7 @@ func (f *funnel) Do(request *http.Request) (response *http.Response, err error) 
 	if request != nil {
 
 		// Validate the funnel object and make sure it's properly functioning
-		if validator.IsValid(f) {
+		if validator.Valid(f) {
 
 			var responsechan = make(chan responseWrapper)
 
