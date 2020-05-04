@@ -12,7 +12,6 @@ import (
 type Cache struct {
 	data   sync.Map
 	ctxmap sync.Map
-	mutex  sync.Mutex
 }
 
 // Delete removes an entry from the cache using the entry key
@@ -78,10 +77,8 @@ func (c *Cache) ttl(ctx context.Context, key interface{}, ttl *time.Duration) {
 		if _, loaded := c.ctxmap.LoadOrStore(key, cancel); !loaded {
 
 			// Block on the context
-			select {
-			case <-ctx.Done():
-				c.data.Delete(key)
-			}
+			<-ctx.Done()
+			c.data.Delete(key)
 		}
 	}
 }
