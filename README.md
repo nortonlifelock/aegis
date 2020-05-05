@@ -176,7 +176,7 @@ aegis -config app.json -cpath "path to configuration file"
 ### Jobs involved:
 1. RescanQueueJob
 
-   Starts automatically and runs continuously. This job monitors JIRA and kicks off a RescanJob for tickets in particular statuses. There are four types of RSQ:
+   Starts automatically and runs continuously. This job monitors JIRA and kicks off a RescanJob for tickets in particular statuses. There are four types of RSQ (the type being controlled by the Payload in the JobHistory entry for the RSQ):
    1. Normal - looks tickets in a Resolved-Remediated status. These are for standard vulnerability rescans. Tickets are moved to Closed-Remediated once remediation has been confirmed by a scanner, or reopened if the scanner still detects the vulnerability.
    2. Decommission - looks for tickets in a Resolved-Decommission status. These are for confirming a device has been moved offline. These tickets are moved to Closed-Decommissioned once a scanner has confirmed they are a dead host, or reopened if the host is still alive.
    3. Passive - looks for tickets in an open, reopened, in-progress, resolved-exception status created within 20 days and due within 15 days
@@ -221,7 +221,7 @@ aegis -config app.json -cpath "path to configuration file"
     Pulls recently updated tickets from JIRA and keeps the DB information on the ticket fresh
 5. AssetSyncJob
 
-    Pulls detection information from Qualys/Nexpose API and stores it in db. Uses the vulnerability information information pulled and stored during the VulnSyncJob. Also stores device information in DB. Looks at Ignore table and attaches it to detection if appropriate. Global exceptions are also checked here. Detections created/updated here are what are processed during a ticketing run
+    Pulls detection information from Qualys/Nexpose API and stores it in db. Uses the vulnerability information pulled and stored during the VulnSyncJob. Also stores device information in DB. Looks at Ignore table and attaches it to detection if appropriate. Global exceptions are also checked here. Detections created/updated here are what are processed during a ticketing run
 
 ## Ticketing Process
 ### Jobs involved:

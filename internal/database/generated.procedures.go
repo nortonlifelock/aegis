@@ -740,40 +740,11 @@ func (conn *dbconn) CreateUserSession(_UserID string, _OrgID string, _SessionKey
 }
 
 // CreateVulnInfo executes the stored procedure CreateVulnInfo against the database
-func (conn *dbconn) CreateVulnInfo(_SourceVulnID string, _Title string, _SourceID string, _CVSSScore float32, _CVSS3Score float32, _Description string, _Threat string, _Solution string, _Software string, _Patchable string, _DetectionInformation string) (id int, affectedRows int, err error) {
+func (conn *dbconn) CreateVulnInfo(_SourceVulnID string, _Title string, _SourceID string, _CVSSScore float32, _CVSS3Score float32, _Description string, _Threat string, _Solution string, _Software string, _Patchable string, _Category string, _DetectionInformation string) (id int, affectedRows int, err error) {
 
 	conn.Exec(&connection.Procedure{
 		Proc:       "CreateVulnInfo",
-		Parameters: []interface{}{_SourceVulnID, _Title, _SourceID, _CVSSScore, _CVSS3Score, _Description, _Threat, _Solution, _Software, _Patchable, _DetectionInformation},
-		Callback: func(results interface{}, dberr error) {
-			err = dberr
-
-			if result, ok := results.(sql.Result); ok {
-				var idOut int64
-
-				// Get the id of the last inserted record
-				if idOut, err = result.LastInsertId(); err == nil {
-					id = int(idOut)
-				}
-
-				// Get the number of affected rows for the execution
-				if idOut, err = result.RowsAffected(); ok {
-					affectedRows = int(idOut)
-				}
-			}
-
-		},
-	})
-
-	return id, affectedRows, err
-}
-
-// CreateVulnInfoNoCVSS3 executes the stored procedure CreateVulnInfoNoCVSS3 against the database
-func (conn *dbconn) CreateVulnInfoNoCVSS3(_SourceVulnID string, _Title string, _SourceID string, _CVSSScore float32, _Description string, _Threat string, _Solution string, _Software string, _Patchable string, _DetectionInformation string) (id int, affectedRows int, err error) {
-
-	conn.Exec(&connection.Procedure{
-		Proc:       "CreateVulnInfoNoCVSS3",
-		Parameters: []interface{}{_SourceVulnID, _Title, _SourceID, _CVSSScore, _Description, _Threat, _Solution, _Software, _Patchable, _DetectionInformation},
+		Parameters: []interface{}{_SourceVulnID, _Title, _SourceID, _CVSSScore, _CVSS3Score, _Description, _Threat, _Solution, _Software, _Patchable, _Category, _DetectionInformation},
 		Callback: func(results interface{}, dberr error) {
 			err = dberr
 
@@ -1774,9 +1745,13 @@ func (conn *dbconn) GetAssignmentRulesByOrg(_OrganizationID string) ([]domain.As
 							var myOrganizationID string
 							var myGroupID *string
 							var myVulnTitleRegex *string
+							var myExcludeVulnTitleRegex *string
 							var myHostnameRegex *string
+							var myOSRegex *string
 							var myTagKeyID *int
 							var myTagKeyRegex *string
+							var myPortCSV *string
+							var myExcludePortCSV *string
 							var myPriority int
 
 							if err = rows.Scan(
@@ -1786,22 +1761,30 @@ func (conn *dbconn) GetAssignmentRulesByOrg(_OrganizationID string) ([]domain.As
 								&myOrganizationID,
 								&myGroupID,
 								&myVulnTitleRegex,
+								&myExcludeVulnTitleRegex,
 								&myHostnameRegex,
+								&myOSRegex,
 								&myTagKeyID,
 								&myTagKeyRegex,
+								&myPortCSV,
+								&myExcludePortCSV,
 								&myPriority,
 							); err == nil {
 
 								newAssignmentRules := &dal.AssignmentRules{
-									AssignmentGroupvar: myAssignmentGroup,
-									Assigneevar:        myAssignee,
-									OrganizationIDvar:  myOrganizationID,
-									GroupIDvar:         myGroupID,
-									VulnTitleRegexvar:  myVulnTitleRegex,
-									HostnameRegexvar:   myHostnameRegex,
-									TagKeyIDvar:        myTagKeyID,
-									TagKeyRegexvar:     myTagKeyRegex,
-									Priorityvar:        myPriority,
+									AssignmentGroupvar:       myAssignmentGroup,
+									Assigneevar:              myAssignee,
+									OrganizationIDvar:        myOrganizationID,
+									GroupIDvar:               myGroupID,
+									VulnTitleRegexvar:        myVulnTitleRegex,
+									ExcludeVulnTitleRegexvar: myExcludeVulnTitleRegex,
+									HostnameRegexvar:         myHostnameRegex,
+									OSRegexvar:               myOSRegex,
+									TagKeyIDvar:              myTagKeyID,
+									TagKeyRegexvar:           myTagKeyRegex,
+									PortCSVvar:               myPortCSV,
+									ExcludePortCSVvar:        myExcludePortCSV,
+									Priorityvar:              myPriority,
 								}
 
 								retAssignmentRules = append(retAssignmentRules, newAssignmentRules)
@@ -7306,6 +7289,7 @@ func (conn *dbconn) GetVulnInfoByID(_ID string) (domain.VulnerabilityInfo, error
 							var mySolution string
 							var myDetectionInformation *string
 							var myPatchable *string
+							var myCategory *string
 							var mySoftware *string
 							var myCreated *time.Time
 							var myUpdated *time.Time
@@ -7324,6 +7308,7 @@ func (conn *dbconn) GetVulnInfoByID(_ID string) (domain.VulnerabilityInfo, error
 								&mySolution,
 								&myDetectionInformation,
 								&myPatchable,
+								&myCategory,
 								&mySoftware,
 								&myCreated,
 								&myUpdated,
@@ -7342,6 +7327,7 @@ func (conn *dbconn) GetVulnInfoByID(_ID string) (domain.VulnerabilityInfo, error
 									Solutionvar:             mySolution,
 									DetectionInformationvar: myDetectionInformation,
 									Patchablevar:            myPatchable,
+									Categoryvar:             myCategory,
 									Softwarevar:             mySoftware,
 									Createdvar:              myCreated,
 									Updatedvar:              myUpdated,
@@ -7389,6 +7375,7 @@ func (conn *dbconn) GetVulnInfoBySource(_Source string) ([]domain.VulnerabilityI
 							var mySolution string
 							var myDetectionInformation *string
 							var myPatchable *string
+							var myCategory *string
 							var mySoftware *string
 							var myCreated *time.Time
 							var myUpdated *time.Time
@@ -7407,6 +7394,7 @@ func (conn *dbconn) GetVulnInfoBySource(_Source string) ([]domain.VulnerabilityI
 								&mySolution,
 								&myDetectionInformation,
 								&myPatchable,
+								&myCategory,
 								&mySoftware,
 								&myCreated,
 								&myUpdated,
@@ -7425,6 +7413,7 @@ func (conn *dbconn) GetVulnInfoBySource(_Source string) ([]domain.VulnerabilityI
 									Solutionvar:             mySolution,
 									DetectionInformationvar: myDetectionInformation,
 									Patchablevar:            myPatchable,
+									Categoryvar:             myCategory,
 									Softwarevar:             mySoftware,
 									Createdvar:              myCreated,
 									Updatedvar:              myUpdated,
@@ -7472,6 +7461,7 @@ func (conn *dbconn) GetVulnInfoBySourceID(_SourceID string) ([]domain.Vulnerabil
 							var mySolution string
 							var myDetectionInformation *string
 							var myPatchable *string
+							var myCategory *string
 							var mySoftware *string
 							var myCreated *time.Time
 							var myUpdated *time.Time
@@ -7490,6 +7480,7 @@ func (conn *dbconn) GetVulnInfoBySourceID(_SourceID string) ([]domain.Vulnerabil
 								&mySolution,
 								&myDetectionInformation,
 								&myPatchable,
+								&myCategory,
 								&mySoftware,
 								&myCreated,
 								&myUpdated,
@@ -7508,6 +7499,7 @@ func (conn *dbconn) GetVulnInfoBySourceID(_SourceID string) ([]domain.Vulnerabil
 									Solutionvar:             mySolution,
 									DetectionInformationvar: myDetectionInformation,
 									Patchablevar:            myPatchable,
+									Categoryvar:             myCategory,
 									Softwarevar:             mySoftware,
 									Createdvar:              myCreated,
 									Updatedvar:              myUpdated,
@@ -7555,6 +7547,7 @@ func (conn *dbconn) GetVulnInfoBySourceVulnID(_SourceVulnID string) (domain.Vuln
 							var mySolution string
 							var myDetectionInformation *string
 							var myPatchable *string
+							var myCategory *string
 							var mySoftware *string
 							var myCreated *time.Time
 							var myUpdated *time.Time
@@ -7573,6 +7566,7 @@ func (conn *dbconn) GetVulnInfoBySourceVulnID(_SourceVulnID string) (domain.Vuln
 								&mySolution,
 								&myDetectionInformation,
 								&myPatchable,
+								&myCategory,
 								&mySoftware,
 								&myCreated,
 								&myUpdated,
@@ -7591,6 +7585,7 @@ func (conn *dbconn) GetVulnInfoBySourceVulnID(_SourceVulnID string) (domain.Vuln
 									Solutionvar:             mySolution,
 									DetectionInformationvar: myDetectionInformation,
 									Patchablevar:            myPatchable,
+									Categoryvar:             myCategory,
 									Softwarevar:             mySoftware,
 									Createdvar:              myCreated,
 									Updatedvar:              myUpdated,
@@ -7638,6 +7633,7 @@ func (conn *dbconn) GetVulnInfoBySourceVulnIDSourceID(_SourceVulnID string, _Sou
 							var mySolution string
 							var myDetectionInformation *string
 							var myPatchable *string
+							var myCategory *string
 							var mySoftware *string
 							var myCreated *time.Time
 							var myUpdated *time.Time
@@ -7656,6 +7652,7 @@ func (conn *dbconn) GetVulnInfoBySourceVulnIDSourceID(_SourceVulnID string, _Sou
 								&mySolution,
 								&myDetectionInformation,
 								&myPatchable,
+								&myCategory,
 								&mySoftware,
 								&myCreated,
 								&myUpdated,
@@ -7674,6 +7671,7 @@ func (conn *dbconn) GetVulnInfoBySourceVulnIDSourceID(_SourceVulnID string, _Sou
 									Solutionvar:             mySolution,
 									DetectionInformationvar: myDetectionInformation,
 									Patchablevar:            myPatchable,
+									Categoryvar:             myCategory,
 									Softwarevar:             mySoftware,
 									Createdvar:              myCreated,
 									Updatedvar:              myUpdated,
@@ -8848,11 +8846,11 @@ func (conn *dbconn) UpdateUserByID(_ID string, _FirstName string, _LastName stri
 }
 
 // UpdateVulnByID executes the stored procedure UpdateVulnByID against the database
-func (conn *dbconn) UpdateVulnByID(_ID string, _SourceVulnID string, _Title string, _SourceID string, _CVSSScore float32, _CVSS3Score float32, _Description string, _Threat string, _Solution string, _Software string, _Patchable string, _DetectionInformation string) (id int, affectedRows int, err error) {
+func (conn *dbconn) UpdateVulnByID(_ID string, _SourceVulnID string, _Title string, _SourceID string, _CVSSScore float32, _CVSS3Score float32, _Description string, _Threat string, _Solution string, _Software string, _Patchable string, _Category string, _DetectionInformation string) (id int, affectedRows int, err error) {
 
 	conn.Exec(&connection.Procedure{
 		Proc:       "UpdateVulnByID",
-		Parameters: []interface{}{_ID, _SourceVulnID, _Title, _SourceID, _CVSSScore, _CVSS3Score, _Description, _Threat, _Solution, _Software, _Patchable, _DetectionInformation},
+		Parameters: []interface{}{_ID, _SourceVulnID, _Title, _SourceID, _CVSSScore, _CVSS3Score, _Description, _Threat, _Solution, _Software, _Patchable, _Category, _DetectionInformation},
 		Callback: func(results interface{}, dberr error) {
 			err = dberr
 
