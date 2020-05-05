@@ -194,7 +194,7 @@ func (session *QsSession) populateGroupVulnerabilityChecks(detections []domain.M
 		}
 
 		if !matchFound {
-			err = fmt.Errorf("could not find a group for %v", match.IP())
+			err = fmt.Errorf("could not find a group for %v - check to see if there is an online appliance for its expected group", match.IP())
 			break
 		}
 	}
