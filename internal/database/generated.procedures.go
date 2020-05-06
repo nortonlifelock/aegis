@@ -3491,6 +3491,7 @@ func (conn *dbconn) GetExceptionsByOrg(_OrgID string) ([]domain.Ignore, error) {
 						if err = rows.Err(); err == nil {
 
 							var myID string
+							var myTypeID int
 							var myOrganizationID string
 							var myVulnerabilityID string
 							var myDeviceID string
@@ -3500,6 +3501,7 @@ func (conn *dbconn) GetExceptionsByOrg(_OrgID string) ([]domain.Ignore, error) {
 							if err = rows.Scan(
 
 								&myID,
+								&myTypeID,
 								&myOrganizationID,
 								&myVulnerabilityID,
 								&myDeviceID,
@@ -3509,6 +3511,7 @@ func (conn *dbconn) GetExceptionsByOrg(_OrgID string) ([]domain.Ignore, error) {
 
 								newIgnore := &dal.Ignore{
 									IDvar:              myID,
+									TypeIDvar:          myTypeID,
 									OrganizationIDvar:  myOrganizationID,
 									VulnerabilityIDvar: myVulnerabilityID,
 									DeviceIDvar:        myDeviceID,

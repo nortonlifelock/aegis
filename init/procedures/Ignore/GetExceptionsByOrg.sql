@@ -1,6 +1,7 @@
 /*
   RETURN Ignore
   ID              NVARCHAR(36)          NOT
+  TypeID          INT                   NOT
   OrganizationID  NVARCHAR(36)          NOT
   VulnerabilityID NVARCHAR(36)          NOT
   DeviceID        NVARCHAR(36)          NOT
@@ -14,6 +15,7 @@ CREATE PROCEDURE `GetExceptionsByOrg` (_OrgID VARCHAR(36))
     #BEGIN#
 SELECT
     ID,
+    TypeID,
     OrganizationID,
     VulnerabilityID,
     DeviceID,
