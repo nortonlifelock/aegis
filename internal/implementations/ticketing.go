@@ -724,7 +724,7 @@ func (job *TicketingJob) calculateDueDate(durationInDays int) (dueDate time.Time
 
 	if job.Payload.MinDate != nil {
 		var minDate = job.Payload.MinDate.AddDate(0, 0, durationInDays)
-		if dueDate.Before(minDate) {
+		if dueDate.Before(minDate) { // the dueDate will only be before the minDate if the minDate is in the future
 			dueDate = minDate
 		}
 	}
@@ -1175,8 +1175,16 @@ func (job *TicketingJob) getAssignmentInformation(tagsForDevice []domain.Tag, pa
 			match = rule.vulnTitleRegex.MatchString(payload.vuln.Name())
 		}
 
+		if match && rule.excludeVulnTitleRegex != nil {
+			match = !rule.excludeVulnTitleRegex.MatchString(payload.vuln.Name())
+		}
+
 		if match && rule.hostnameRegex != nil {
 			match = rule.hostnameRegex.MatchString(payload.device.HostName())
+		}
+
+		if match && rule.osRegex != nil {
+			match = rule.osRegex.MatchString(payload.device.HostName())
 		}
 
 		if match && rule.tagKey != nil {
@@ -1192,6 +1200,28 @@ func (job *TicketingJob) getAssignmentInformation(tagsForDevice []domain.Tag, pa
 			if !found {
 				match = false
 			}
+		}
+
+		if match && len(rule.ports) > 0 {
+			var found bool
+			for _, port := range rule.ports {
+				if strconv.Itoa(payload.combo.Port()) == port {
+					found = true
+				}
+			}
+
+			match = found
+		}
+
+		if match && len(rule.excludePorts) > 0 {
+			var found bool
+			for _, port := range rule.excludePorts {
+				if strconv.Itoa(payload.combo.Port()) == port {
+					found = true
+				}
+			}
+
+			match = !found
 		}
 
 		if match {
@@ -1221,10 +1251,14 @@ func (job *TicketingJob) getAssignmentInformation(tagsForDevice []domain.Tag, pa
 
 type assignmentRule struct {
 	domain.AssignmentRules
-	vulnTitleRegex *regexp.Regexp
-	hostnameRegex  *regexp.Regexp
-	tagKeyRegex    *regexp.Regexp
-	tagKey         domain.TagKey
+	vulnTitleRegex        *regexp.Regexp
+	excludeVulnTitleRegex *regexp.Regexp
+	hostnameRegex         *regexp.Regexp
+	osRegex               *regexp.Regexp
+	tagKeyRegex           *regexp.Regexp
+	tagKey                domain.TagKey
+	ports                 []string
+	excludePorts          []string
 }
 
 func (job *TicketingJob) loadAssignmentRules() (assignmentRules []assignmentRule, err error) {
@@ -1248,12 +1282,32 @@ func (job *TicketingJob) loadAssignmentRules() (assignmentRules []assignmentRule
 				}
 			}
 
+			if rule.ExcludeVulnTitleRegex() != nil {
+				var regex *regexp.Regexp
+				if regex, err = regexp.Compile(sord(rule.ExcludeVulnTitleRegex())); err == nil {
+					currentRule.excludeVulnTitleRegex = regex
+				} else {
+					err = fmt.Errorf("error while compiling exclude vuln title regex [%s] - %s", sord(rule.ExcludeVulnTitleRegex()), err.Error())
+					break
+				}
+			}
+
 			if rule.HostnameRegex() != nil {
 				var regex *regexp.Regexp
 				if regex, err = regexp.Compile(sord(rule.HostnameRegex())); err == nil {
 					currentRule.hostnameRegex = regex
 				} else {
 					err = fmt.Errorf("error while compiling hostname regex [%s] - %s", sord(rule.HostnameRegex()), err.Error())
+					break
+				}
+			}
+
+			if rule.OSRegex() != nil {
+				var regex *regexp.Regexp
+				if regex, err = regexp.Compile(sord(rule.OSRegex())); err == nil {
+					currentRule.osRegex = regex
+				} else {
+					err = fmt.Errorf("error while compiling OS regex [%s] - %s", sord(rule.OSRegex()), err.Error())
 					break
 				}
 			}
@@ -1285,6 +1339,14 @@ func (job *TicketingJob) loadAssignmentRules() (assignmentRules []assignmentRule
 			if (rule.TagKeyID() != nil) != (rule.TagKeyRegex() != nil) { // != is equivalent to an xor operation, meaning if only one is set
 				err = fmt.Errorf("entry exists where both TagKeyID and TagKeyRegex are not nil (xor)")
 				break
+			}
+
+			if len(sord(rule.PortCSV())) > 0 {
+				currentRule.ports = strings.Split(sord(rule.PortCSV()), ",")
+			}
+
+			if len(sord(rule.ExcludePortCSV())) > 0 {
+				currentRule.excludePorts = strings.Split(sord(rule.ExcludePortCSV()), ",")
 			}
 
 			assignmentRules = append(assignmentRules, currentRule)

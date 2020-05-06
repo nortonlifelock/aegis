@@ -139,7 +139,7 @@ func (job *VulnSyncJob) clearSolutionChannel(ctx context.Context, solutionChan <
 
 func (job *VulnSyncJob) processOldVulnerability(ctx context.Context, vulnInDB domain.VulnerabilityInfo, currentVuln domain.Vulnerability, solution string) {
 	var err error
-	if (vulnInDB.Updated() == nil && currentVuln.Updated().After(tord(vulnInDB.Created()))) || (vulnInDB.Updated() != nil && currentVuln.Updated().After(tord(vulnInDB.Updated()))) {
+	if true || (vulnInDB.Updated() == nil && currentVuln.Updated().After(tord(vulnInDB.Created()))) || (vulnInDB.Updated() != nil && currentVuln.Updated().After(tord(vulnInDB.Updated()))) {
 
 		// The vulnerability is already in the database, we can create it's references right away
 		//if err = job.createVulnerabilityReferences(ctx, currentVuln, vulnInDB); err == nil {
@@ -150,9 +150,9 @@ func (job *VulnSyncJob) processOldVulnerability(ctx context.Context, vulnInDB do
 
 		// Update the information in the database
 		if err = job.updateVulnerability(vulnInDB, currentVuln, solution); err == nil {
-			job.lstream.Send(log.Infof("Updated vulnerability %v", currentVuln.ID()))
+			job.lstream.Send(log.Infof("Updated vulnerability %v", currentVuln.SourceID()))
 		} else {
-			job.lstream.Send(log.Errorf(err, "Error while updating vulnerability [%v]", currentVuln.ID()))
+			job.lstream.Send(log.Errorf(err, "Error while updating vulnerability [%v]", currentVuln.SourceID()))
 		}
 	} else {
 		job.lstream.Send(log.Debugf("Did not need to update %v as it has not been modified recently", currentVuln.SourceID()))
@@ -195,6 +195,7 @@ func (job *VulnSyncJob) updateVulnerability(vulnInDB domain.VulnerabilityInfo, c
 		solution,
 		currentVuln.Software(),
 		sord(currentVuln.Patchable()),
+		sord(currentVuln.Category()),
 		currentVuln.DetectionInformation(),
 	)
 
@@ -220,6 +221,7 @@ func (job *VulnSyncJob) createVulnerability(currentVuln domain.Vulnerability, so
 		solution,
 		currentVuln.Software(),
 		sord(currentVuln.Patchable()),
+		sord(currentVuln.Category()),
 		currentVuln.DetectionInformation(),
 	)
 

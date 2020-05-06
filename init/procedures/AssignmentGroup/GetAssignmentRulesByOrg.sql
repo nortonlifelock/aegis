@@ -1,14 +1,18 @@
 /*
     RETURN AssignmentRules
-    AssignmentGroup    VARCHAR(100) NULL
-    Assignee           VARCHAR(100) NULL
-    OrganizationID     VARCHAR(36)  NOT NULL
-    GroupID            VARCHAR(300) NULL
-    VulnTitleRegex     VARCHAR(100) NULL
-    HostnameRegex      VARCHAR(100) NULL
-    TagKeyID           INT          NULL
-    TagKeyRegex        VARCHAR(100) NULL
-    Priority           INT          NOT NULL
+    AssignmentGroup       VARCHAR(100) NULL
+    Assignee              VARCHAR(100) NULL
+    OrganizationID        VARCHAR(36)  NOT NULL
+    GroupID               VARCHAR(300) NULL
+    VulnTitleRegex        VARCHAR(100) NULL
+    ExcludeVulnTitleRegex VARCHAR(100) NULL
+    HostnameRegex         VARCHAR(100) NULL
+    OSRegex               VARCHAR(100) NULL
+    TagKeyID              INT          NULL
+    TagKeyRegex           VARCHAR(100) NULL
+    PortCSV               VARCHAR(100) NULL
+    ExcludePortCSV        VARCHAR(100) NULL
+    Priority              INT          NOT NULL
 */
 
 DROP PROCEDURE IF EXISTS `GetAssignmentRulesByOrg`;
@@ -21,9 +25,13 @@ SELECT
     OrganizationID,
     GroupID,
     VulnTitleRegex,
+    ExcludeVulnTitleRegex,
     HostnameRegex,
+    OSRegex,
     TagKeyID,
     TagKeyRegex,
+    PortCSV,
+    ExcludePortCSV,
     Priority
 FROM AssignmentRules A
     WHERE A.OrganizationID = _OrganizationID order by A.Priority DESC;
