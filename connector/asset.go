@@ -117,3 +117,7 @@ func (a *asset) InstanceID() *string {
 func (a *asset) GroupID() *string {
 	return nil
 }
+
+func (a *asset) TrackingMethod() *string {
+	return nil
+}
