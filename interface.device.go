@@ -24,4 +24,6 @@ type Device interface {
 
 	// GroupID identifies which asset group the device lies in (an identifier that originates from the scanner)
 	GroupID() *string
+
+	TrackingMethod() *string
 }
