@@ -25,4 +25,6 @@ type DeviceInfo interface {
 	InstanceID() *string
 
 	State() *string
+
+	TrackingMethod() *string
 }
