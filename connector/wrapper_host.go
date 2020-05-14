@@ -60,3 +60,7 @@ func (h *host) Vulnerabilities(ctx context.Context) (param <-chan domain.Detecti
 func (h *host) GroupID() *string {
 	return nil
 }
+
+func (h *host) TrackingMethod() *string {
+	return &h.h.TrackingMethod
+}
