@@ -347,8 +347,7 @@ func (i *ImageFinding) DBUpdatedDate() (param *time.Time) {
 }
 
 func (i *ImageFinding) Description() (param *string) {
-	val := fmt.Sprintf("%s on %s", i.finding.VulnerabilityID(), i.finding.ImageName())
-	return &val
+	return i.finding.Summary()
 }
 
 func (i *ImageFinding) DeviceID() (param string) {
@@ -449,7 +448,8 @@ func (i *ImageFinding) Status() (param *string) {
 }
 
 func (i *ImageFinding) Summary() (param *string) {
-	return i.finding.Summary()
+	val := fmt.Sprintf("%s on %s", i.finding.VulnerabilityID(), i.finding.ImageName())
+	return &val
 }
 
 func (i *ImageFinding) TicketType() (param *string) {

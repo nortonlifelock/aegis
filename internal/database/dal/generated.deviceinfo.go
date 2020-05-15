@@ -27,6 +27,7 @@ type DeviceInfo struct {
 	ScannerSourceIDvar *string
 	SourceIDvar        *string
 	Statevar           *string
+	TrackingMethodvar  *string
 }
 
 //**********************************************************
@@ -47,6 +48,7 @@ func (myDeviceInfo DeviceInfo) MarshalJSON() ([]byte, error) {
 		"ScannerSourceID": myDeviceInfo.ScannerSourceIDvar,
 		"SourceID":        myDeviceInfo.SourceIDvar,
 		"State":           myDeviceInfo.Statevar,
+		"TrackingMethod":  myDeviceInfo.TrackingMethodvar,
 	})
 }
 
@@ -105,6 +107,11 @@ func (myDeviceInfo *DeviceInfo) State() (param *string) {
 	return myDeviceInfo.Statevar
 }
 
+// TrackingMethod returns the TrackingMethod parameter from the DeviceInfo struct
+func (myDeviceInfo *DeviceInfo) TrackingMethod() (param *string) {
+	return myDeviceInfo.TrackingMethodvar
+}
+
 // SetGroupID sets the GroupID parameter from the DeviceInfo struct
 func (myDeviceInfo *DeviceInfo) SetGroupID(val string) {
 	myDeviceInfo.GroupIDvar = &val
@@ -158,4 +165,9 @@ func (myDeviceInfo *DeviceInfo) SetSourceID(val string) {
 // SetState sets the State parameter from the DeviceInfo struct
 func (myDeviceInfo *DeviceInfo) SetState(val string) {
 	myDeviceInfo.Statevar = &val
+}
+
+// SetTrackingMethod sets the TrackingMethod parameter from the DeviceInfo struct
+func (myDeviceInfo *DeviceInfo) SetTrackingMethod(val string) {
+	myDeviceInfo.TrackingMethodvar = &val
 }

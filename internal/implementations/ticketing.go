@@ -24,6 +24,11 @@ import (
 type TicketingPayload struct {
 	MinDate *time.Time `json:"mindate,omitempty"`
 	Groups  []string   `json:"groups,omitempty"`
+
+	// CorrelateByIPAndGroup controls how we check for duplicates
+	// If the field is not present, or holds a value of false, we check for duplicates based on the device ID
+	// If the field is present and holds a value of true, we check for duplicates based on the group ID and IP
+	CorrelateByIPAndGroup bool `json:"ip_correlation"`
 }
 
 // OrgPayload contains the SLA information for how long a vulnerability has to be remediated given the severity
@@ -211,7 +216,9 @@ func (job *TicketingJob) Process(ctx context.Context, id string, appconfig domai
 									job.lstream.Send(log.Debug("Scanner connection initialized."))
 
 									var groupsToRunTicketingAgainst = make([]string, 0)
+
 									if len(job.Payload.Groups) == 0 {
+										// if there are no groups specified in the ticketing payload, we ticket all the groups that belong to the organization
 										var assetGroups []domain.AssetGroup
 										if assetGroups, err = job.db.GetAssetGroupsForOrg(job.config.OrganizationID()); err == nil {
 											for _, assetGroup := range assetGroups {
@@ -246,7 +253,6 @@ func (job *TicketingJob) Process(ctx context.Context, id string, appconfig domai
 
 														job.processVulnerabilities(vscanner, pushDetectionsToChannel(job.ctx, detections))
 
-														// passing an empty group ID updates the last ticketing date of ALL groups
 														_, _, err = job.db.UpdateAssetGroupLastTicket(groupID, job.config.OrganizationID(), startTime)
 														if err != nil {
 															job.lstream.Send(log.Criticalf(err, "Error while updating the last ticketed date to %s", startTime.String()))

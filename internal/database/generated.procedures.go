@@ -189,11 +189,11 @@ func (conn *dbconn) CreateDetection(_OrgID string, _SourceID string, _DeviceID s
 }
 
 // CreateDevice executes the stored procedure CreateDevice against the database
-func (conn *dbconn) CreateDevice(_AssetID string, _SourceID string, _Ip string, _Hostname string, inInstanceID string, _MAC string, _GroupID string, _OrgID string, _OS string, _OSTypeID int) (id int, affectedRows int, err error) {
+func (conn *dbconn) CreateDevice(_AssetID string, _SourceID string, _Ip string, _Hostname string, inInstanceID string, _MAC string, _GroupID string, _OrgID string, _OS string, _OSTypeID int, inTrackingMethod string) (id int, affectedRows int, err error) {
 
 	conn.Exec(&connection.Procedure{
 		Proc:       "CreateDevice",
-		Parameters: []interface{}{_AssetID, _SourceID, _Ip, _Hostname, inInstanceID, _MAC, _GroupID, _OrgID, _OS, _OSTypeID},
+		Parameters: []interface{}{_AssetID, _SourceID, _Ip, _Hostname, inInstanceID, _MAC, _GroupID, _OrgID, _OS, _OSTypeID, inTrackingMethod},
 		Callback: func(results interface{}, dberr error) {
 			err = dberr
 
@@ -2746,6 +2746,7 @@ func (conn *dbconn) GetDeviceInfoByAssetOrgID(inAssetID string, inOrgID string) 
 							var myRegion *string
 							var myGroupID *string
 							var myInstanceID *string
+							var myTrackingMethod *string
 
 							if err = rows.Scan(
 
@@ -2758,18 +2759,20 @@ func (conn *dbconn) GetDeviceInfoByAssetOrgID(inAssetID string, inOrgID string) 
 								&myRegion,
 								&myGroupID,
 								&myInstanceID,
+								&myTrackingMethod,
 							); err == nil {
 
 								newDeviceInfo := &dal.DeviceInfo{
-									IDvar:         myID,
-									SourceIDvar:   mySourceID,
-									OSvar:         myOS,
-									MACvar:        myMAC,
-									IPvar:         myIP,
-									HostNamevar:   myHostName,
-									Regionvar:     myRegion,
-									GroupIDvar:    myGroupID,
-									InstanceIDvar: myInstanceID,
+									IDvar:             myID,
+									SourceIDvar:       mySourceID,
+									OSvar:             myOS,
+									MACvar:            myMAC,
+									IPvar:             myIP,
+									HostNamevar:       myHostName,
+									Regionvar:         myRegion,
+									GroupIDvar:        myGroupID,
+									InstanceIDvar:     myInstanceID,
+									TrackingMethodvar: myTrackingMethod,
 								}
 
 								retDeviceInfo = newDeviceInfo
@@ -2812,6 +2815,7 @@ func (conn *dbconn) GetDeviceInfoByCloudSourceIDAndIP(_IP string, _CloudSourceID
 							var myRegion *string
 							var myInstanceID *string
 							var myScannerSourceID string
+							var myTrackingMethod *string
 
 							if err = rows.Scan(
 
@@ -2825,6 +2829,7 @@ func (conn *dbconn) GetDeviceInfoByCloudSourceIDAndIP(_IP string, _CloudSourceID
 								&myRegion,
 								&myInstanceID,
 								&myScannerSourceID,
+								&myTrackingMethod,
 							); err == nil {
 
 								newDeviceInfo := &dal.DeviceInfo{
@@ -2838,6 +2843,7 @@ func (conn *dbconn) GetDeviceInfoByCloudSourceIDAndIP(_IP string, _CloudSourceID
 									Regionvar:          myRegion,
 									InstanceIDvar:      myInstanceID,
 									ScannerSourceIDvar: &myScannerSourceID,
+									TrackingMethodvar:  myTrackingMethod,
 								}
 
 								retDeviceInfo = append(retDeviceInfo, newDeviceInfo)
@@ -2878,6 +2884,7 @@ func (conn *dbconn) GetDeviceInfoByGroupIP(inIP string, inGroupID string, inOrgI
 							var myHostName string
 							var myRegion *string
 							var myInstanceID *string
+							var myTrackingMethod *string
 
 							if err = rows.Scan(
 
@@ -2889,17 +2896,19 @@ func (conn *dbconn) GetDeviceInfoByGroupIP(inIP string, inGroupID string, inOrgI
 								&myHostName,
 								&myRegion,
 								&myInstanceID,
+								&myTrackingMethod,
 							); err == nil {
 
 								newDeviceInfo := &dal.DeviceInfo{
-									IDvar:         myID,
-									SourceIDvar:   mySourceID,
-									OSvar:         myOS,
-									MACvar:        myMAC,
-									IPvar:         myIP,
-									HostNamevar:   myHostName,
-									Regionvar:     myRegion,
-									InstanceIDvar: myInstanceID,
+									IDvar:             myID,
+									SourceIDvar:       mySourceID,
+									OSvar:             myOS,
+									MACvar:            myMAC,
+									IPvar:             myIP,
+									HostNamevar:       myHostName,
+									Regionvar:         myRegion,
+									InstanceIDvar:     myInstanceID,
+									TrackingMethodvar: myTrackingMethod,
 								}
 
 								retDeviceInfo = newDeviceInfo
@@ -2940,6 +2949,7 @@ func (conn *dbconn) GetDeviceInfoByIP(_IP string, _OrgID string) (domain.DeviceI
 							var myHostName string
 							var myRegion *string
 							var myInstanceID *string
+							var myTrackingMethod *string
 
 							if err = rows.Scan(
 
@@ -2951,17 +2961,19 @@ func (conn *dbconn) GetDeviceInfoByIP(_IP string, _OrgID string) (domain.DeviceI
 								&myHostName,
 								&myRegion,
 								&myInstanceID,
+								&myTrackingMethod,
 							); err == nil {
 
 								newDeviceInfo := &dal.DeviceInfo{
-									IDvar:         myID,
-									SourceIDvar:   mySourceID,
-									OSvar:         myOS,
-									MACvar:        myMAC,
-									IPvar:         myIP,
-									HostNamevar:   myHostName,
-									Regionvar:     myRegion,
-									InstanceIDvar: myInstanceID,
+									IDvar:             myID,
+									SourceIDvar:       mySourceID,
+									OSvar:             myOS,
+									MACvar:            myMAC,
+									IPvar:             myIP,
+									HostNamevar:       myHostName,
+									Regionvar:         myRegion,
+									InstanceIDvar:     myInstanceID,
+									TrackingMethodvar: myTrackingMethod,
 								}
 
 								retDeviceInfo = newDeviceInfo
@@ -3002,6 +3014,7 @@ func (conn *dbconn) GetDeviceInfoByIPMACAndRegion(_IP string, _MAC string, _Regi
 							var myHostName string
 							var myRegion *string
 							var myInstanceID *string
+							var myTrackingMethod *string
 
 							if err = rows.Scan(
 
@@ -3013,17 +3026,19 @@ func (conn *dbconn) GetDeviceInfoByIPMACAndRegion(_IP string, _MAC string, _Regi
 								&myHostName,
 								&myRegion,
 								&myInstanceID,
+								&myTrackingMethod,
 							); err == nil {
 
 								newDeviceInfo := &dal.DeviceInfo{
-									IDvar:         myID,
-									SourceIDvar:   mySourceID,
-									OSvar:         myOS,
-									MACvar:        myMAC,
-									IPvar:         myIP,
-									HostNamevar:   myHostName,
-									Regionvar:     myRegion,
-									InstanceIDvar: myInstanceID,
+									IDvar:             myID,
+									SourceIDvar:       mySourceID,
+									OSvar:             myOS,
+									MACvar:            myMAC,
+									IPvar:             myIP,
+									HostNamevar:       myHostName,
+									Regionvar:         myRegion,
+									InstanceIDvar:     myInstanceID,
+									TrackingMethodvar: myTrackingMethod,
 								}
 
 								retDeviceInfo = newDeviceInfo
@@ -3064,6 +3079,7 @@ func (conn *dbconn) GetDeviceInfoByInstanceID(_InstanceID string, _OrgID string)
 							var myHostName string
 							var myRegion *string
 							var myInstanceID *string
+							var myTrackingMethod *string
 
 							if err = rows.Scan(
 
@@ -3075,17 +3091,19 @@ func (conn *dbconn) GetDeviceInfoByInstanceID(_InstanceID string, _OrgID string)
 								&myHostName,
 								&myRegion,
 								&myInstanceID,
+								&myTrackingMethod,
 							); err == nil {
 
 								newDeviceInfo := &dal.DeviceInfo{
-									IDvar:         myID,
-									SourceIDvar:   mySourceID,
-									OSvar:         myOS,
-									MACvar:        myMAC,
-									IPvar:         myIP,
-									HostNamevar:   myHostName,
-									Regionvar:     myRegion,
-									InstanceIDvar: myInstanceID,
+									IDvar:             myID,
+									SourceIDvar:       mySourceID,
+									OSvar:             myOS,
+									MACvar:            myMAC,
+									IPvar:             myIP,
+									HostNamevar:       myHostName,
+									Regionvar:         myRegion,
+									InstanceIDvar:     myInstanceID,
+									TrackingMethodvar: myTrackingMethod,
 								}
 
 								retDeviceInfo = append(retDeviceInfo, newDeviceInfo)
@@ -3128,6 +3146,7 @@ func (conn *dbconn) GetDeviceInfoByScannerSourceID(_IP string, _GroupID string, 
 							var myRegion *string
 							var myInstanceID *string
 							var myScannerSourceID *string
+							var myTrackingMethod *string
 
 							if err = rows.Scan(
 
@@ -3141,6 +3160,7 @@ func (conn *dbconn) GetDeviceInfoByScannerSourceID(_IP string, _GroupID string, 
 								&myRegion,
 								&myInstanceID,
 								&myScannerSourceID,
+								&myTrackingMethod,
 							); err == nil {
 
 								newDeviceInfo := &dal.DeviceInfo{
@@ -3154,6 +3174,7 @@ func (conn *dbconn) GetDeviceInfoByScannerSourceID(_IP string, _GroupID string, 
 									Regionvar:          myRegion,
 									InstanceIDvar:      myInstanceID,
 									ScannerSourceIDvar: myScannerSourceID,
+									TrackingMethodvar:  myTrackingMethod,
 								}
 
 								retDeviceInfo = newDeviceInfo
@@ -3196,6 +3217,7 @@ func (conn *dbconn) GetDevicesInfoByCloudSourceID(_CloudSourceID string, _OrgID 
 							var myRegion *string
 							var myInstanceID *string
 							var myScannerSourceID string
+							var myTrackingMethod *string
 
 							if err = rows.Scan(
 
@@ -3209,6 +3231,7 @@ func (conn *dbconn) GetDevicesInfoByCloudSourceID(_CloudSourceID string, _OrgID 
 								&myRegion,
 								&myInstanceID,
 								&myScannerSourceID,
+								&myTrackingMethod,
 							); err == nil {
 
 								newDeviceInfo := &dal.DeviceInfo{
@@ -3222,6 +3245,7 @@ func (conn *dbconn) GetDevicesInfoByCloudSourceID(_CloudSourceID string, _OrgID 
 									Regionvar:          myRegion,
 									InstanceIDvar:      myInstanceID,
 									ScannerSourceIDvar: &myScannerSourceID,
+									TrackingMethodvar:  myTrackingMethod,
 								}
 
 								retDeviceInfo = append(retDeviceInfo, newDeviceInfo)
@@ -3262,6 +3286,7 @@ func (conn *dbconn) GetDevicesInfoBySourceID(_SourceID string, _OrgID string) ([
 							var myHostName string
 							var myRegion *string
 							var myInstanceID *string
+							var myTrackingMethod *string
 
 							if err = rows.Scan(
 
@@ -3273,17 +3298,19 @@ func (conn *dbconn) GetDevicesInfoBySourceID(_SourceID string, _OrgID string) ([
 								&myHostName,
 								&myRegion,
 								&myInstanceID,
+								&myTrackingMethod,
 							); err == nil {
 
 								newDeviceInfo := &dal.DeviceInfo{
-									IDvar:         myID,
-									SourceIDvar:   mySourceID,
-									OSvar:         myOS,
-									MACvar:        myMAC,
-									IPvar:         myIP,
-									HostNamevar:   myHostName,
-									Regionvar:     myRegion,
-									InstanceIDvar: myInstanceID,
+									IDvar:             myID,
+									SourceIDvar:       mySourceID,
+									OSvar:             myOS,
+									MACvar:            myMAC,
+									IPvar:             myIP,
+									HostNamevar:       myHostName,
+									Regionvar:         myRegion,
+									InstanceIDvar:     myInstanceID,
+									TrackingMethodvar: myTrackingMethod,
 								}
 
 								retDeviceInfo = append(retDeviceInfo, newDeviceInfo)
@@ -8269,11 +8296,11 @@ func (conn *dbconn) UpdateAssetGroupLastTicket(inGroupID string, inOrgID string,
 }
 
 // UpdateAssetIDOsTypeIDOfDevice executes the stored procedure UpdateAssetIDOsTypeIDOfDevice against the database
-func (conn *dbconn) UpdateAssetIDOsTypeIDOfDevice(_ID string, _AssetID string, _ScannerSourceID string, _GroupID string, _OS string, _HostName string, _OsTypeID int, _OrgID string) (id int, affectedRows int, err error) {
+func (conn *dbconn) UpdateAssetIDOsTypeIDOfDevice(_ID string, _AssetID string, _ScannerSourceID string, _GroupID string, _OS string, _HostName string, _OsTypeID int, inTrackingMethod string, _OrgID string) (id int, affectedRows int, err error) {
 
 	conn.Exec(&connection.Procedure{
 		Proc:       "UpdateAssetIDOsTypeIDOfDevice",
-		Parameters: []interface{}{_ID, _AssetID, _ScannerSourceID, _GroupID, _OS, _HostName, _OsTypeID, _OrgID},
+		Parameters: []interface{}{_ID, _AssetID, _ScannerSourceID, _GroupID, _OS, _HostName, _OsTypeID, inTrackingMethod, _OrgID},
 		Callback: func(results interface{}, dberr error) {
 			err = dberr
 
