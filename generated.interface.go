@@ -141,6 +141,7 @@ type GeneratedDatabaseConnection interface {
 	GetTagMapsByOrgCloudSourceID(_CloudID string, _OrganizationID string) ([]TagMap, error)
 	GetTagsForDevice(_DeviceID string) ([]Tag, error)
 	GetTicketByDeviceIDVulnID(inDeviceID string, inVulnID string, inPort int, inProtocol string, inOrgID string) (TicketSummary, error)
+	GetTicketByIPGroupIDVulnID(inIP string, inGroupID string, inVulnID string, inPort int, inProtocol string, inOrgID string) (TicketSummary, error)
 	GetTicketByTitle(_Title string, _OrgID string) (TicketSummary, error)
 	GetTicketCountByStatus(inStatus string, inOrgID string) (QueryData, error)
 	GetTicketCreatedAfter(_UpperCVSS float32, _LowerCVSS float32, _CreatedAfter time.Time, _OrgID string) ([]TicketSummary, error)
