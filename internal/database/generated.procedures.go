@@ -6705,6 +6705,65 @@ func (conn *dbconn) GetTicketByDeviceIDVulnID(inDeviceID string, inVulnID string
 	return retTicketSummary, err
 }
 
+// GetTicketByIPGroupIDVulnID executes the stored procedure GetTicketByIPGroupIDVulnID against the database and returns the read results
+func (conn *dbconn) GetTicketByIPGroupIDVulnID(inIP string, inGroupID string, inVulnID string, inPort int, inProtocol string, inOrgID string) (domain.TicketSummary, error) {
+	var err error
+	var retTicketSummary domain.TicketSummary
+
+	conn.Read(&connection.Procedure{
+		Proc:       "GetTicketByIPGroupIDVulnID",
+		Parameters: []interface{}{inIP, inGroupID, inVulnID, inPort, inProtocol, inOrgID},
+		Callback: func(results interface{}, dberr error) {
+			err = dberr
+
+			if err == nil {
+
+				err = conn.getRows(results,
+					func(rows *sql.Rows) (err error) {
+						if err = rows.Err(); err == nil {
+
+							var myTitle string
+							var myStatus string
+							var myDetectionID string
+							var myOrganizationID string
+							var myUpdatedDate *time.Time
+							var myResolutionDate *time.Time
+							var myDueDate time.Time
+
+							if err = rows.Scan(
+
+								&myTitle,
+								&myStatus,
+								&myDetectionID,
+								&myOrganizationID,
+								&myUpdatedDate,
+								&myResolutionDate,
+								&myDueDate,
+							); err == nil {
+
+								newTicketSummary := &dal.TicketSummary{
+									Titlevar:          myTitle,
+									Statusvar:         myStatus,
+									DetectionIDvar:    myDetectionID,
+									OrganizationIDvar: myOrganizationID,
+									UpdatedDatevar:    myUpdatedDate,
+									ResolutionDatevar: myResolutionDate,
+									DueDatevar:        myDueDate,
+								}
+
+								retTicketSummary = newTicketSummary
+							}
+						}
+
+						return err
+					})
+			}
+		},
+	})
+
+	return retTicketSummary, err
+}
+
 // GetTicketByTitle executes the stored procedure GetTicketByTitle against the database and returns the read results
 func (conn *dbconn) GetTicketByTitle(_Title string, _OrgID string) (domain.TicketSummary, error) {
 	var err error
