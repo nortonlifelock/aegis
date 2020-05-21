@@ -315,7 +315,7 @@ func (job *TicketingJob) processVulnerabilities(vscanner integrations.Vscanner, 
 	)
 }
 
-func (job *TicketingJob) alreadyProcessed(combo domain.Detection, agentDuplicateMap sync.Map, nonAgentDuplicateMap sync.Map) (processed bool, device domain.Device, vuln domain.Vulnerability, err error) {
+func (job *TicketingJob) alreadyProcessed(combo domain.Detection, agentDuplicateMap *sync.Map, nonAgentDuplicateMap *sync.Map) (processed bool, device domain.Device, vuln domain.Vulnerability, err error) {
 	const agent = "agent"
 
 	if device, err = combo.Device(); err == nil {
@@ -360,6 +360,8 @@ func (job *TicketingJob) alreadyProcessed(combo domain.Detection, agentDuplicate
 				if _, processed = agentDuplicateMap.LoadOrStore(keyToPreventDuplicates, true); !processed {
 
 					// if an agent device hasn't, we now check to see if a non-agent device has checked the vulnerability
+					// because agents are processed first (Agent detections are pulled first), this shouldn't really return true, but in-case
+					// that design feature is broken in the future this check exists
 					_, processed = nonAgentDuplicateMap.Load(keyToPreventDuplicates)
 				}
 			}
@@ -409,7 +411,7 @@ func (job *TicketingJob) processVulnerability(in <-chan domain.Detection) <-chan
 							case <-permit:
 							}
 
-							if alreadyProcessed, device, vuln, err := job.alreadyProcessed(item, agentDuplicateMap, nonAgentDuplicateMap); err == nil {
+							if alreadyProcessed, device, vuln, err := job.alreadyProcessed(item, &agentDuplicateMap, &nonAgentDuplicateMap); err == nil {
 								if !alreadyProcessed {
 
 									wg.Add(1)
@@ -470,8 +472,7 @@ func (job *TicketingJob) processVulnerability(in <-chan domain.Detection) <-chan
 									if job.Payload.CorrelateByIPAndGroup {
 										job.lstream.Send(log.Info(
 											fmt.Sprintf(
-												"ALREADY PROCESSED: A ticket was already created for vulnerability [%v] with Vuln ID [%v] with group/ip [%v|%v] during this run. Skipping...",
-												vuln.Name(),
+												"ALREADY PROCESSED: A ticket was already created with Vuln ID [%v] with group/ip [%v|%v] during this run. Skipping...",
 												vuln.SourceID(),
 												sord(device.GroupID()),
 												device.IP(),
@@ -479,8 +480,7 @@ func (job *TicketingJob) processVulnerability(in <-chan domain.Detection) <-chan
 									} else {
 										job.lstream.Send(log.Info(
 											fmt.Sprintf(
-												"ALREADY PROCESSED: A ticket was already created for vulnerability [%v] with Vuln ID [%v] on device [%v] during this run. Skipping...",
-												vuln.Name(),
+												"ALREADY PROCESSED: A ticket was already created with Vuln ID [%v] on device [%v] during this run. Skipping...",
 												vuln.SourceID(),
 												sord(device.SourceID()),
 											)))
@@ -746,7 +746,7 @@ func (job *TicketingJob) createTicket(in <-chan *vulnerabilityPayload) {
 					go func(payload *vulnerabilityPayload) {
 						defer handleRoutinePanic(job.lstream)
 						defer wg.Done()
-						//job.createIndividualTicket(payload) // TODO reintroduce
+						job.createIndividualTicket(payload)
 					}(payload)
 				} else {
 					var err = errors.Errorf("%s had an invalid vulnerability id in createTicket", payload.ticket.VulnerabilityID())
