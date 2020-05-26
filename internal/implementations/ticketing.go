@@ -327,12 +327,6 @@ func (job *TicketingJob) processVulnerability(in <-chan domain.Detection) <-chan
 			job.lstream.Send(log.Debugf("Connection opened to job engine for Job ID [%v].", job.id))
 			job.ticketingEngine = tickets
 
-			const numConcurrentThreads = 100
-			var permit = make(chan bool, numConcurrentThreads)
-			for i := 0; i < numConcurrentThreads; i++ {
-				permit <- true
-			}
-
 			func() {
 				for {
 					select {
@@ -341,19 +335,10 @@ func (job *TicketingJob) processVulnerability(in <-chan domain.Detection) <-chan
 					case item, ok := <-in:
 						if ok {
 
-							select {
-							case <-job.ctx.Done():
-								return
-							case <-permit:
-							}
-
 							wg.Add(1)
 							go func(dvCombo domain.Detection) {
 								defer wg.Done()
 								defer handleRoutinePanic(job.lstream)
-								defer func() {
-									permit <- true
-								}()
 
 								if strings.ToLower(dvCombo.Status()) != strings.ToLower(domain.Fixed) {
 									var err error
