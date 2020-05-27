@@ -429,7 +429,7 @@ func (job *ScanCloseJob) modifyJiraTicketAccordingToVulnerabilityStatus(engine i
 	var inactiveKernel bool
 	if detection != nil {
 		status = detection.Status()
-		inactiveKernel = iord(detection.ActiveKernel()) > 0
+		inactiveKernel = iord(detection.ActiveKernel()) == 0
 
 		if detection.LastFound() != nil && !detection.LastFound().IsZero() && detection.LastFound().After(tord1970(ticket.AlertDate())) {
 			ticket = &lastFoundTicket{

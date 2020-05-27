@@ -6619,6 +6619,65 @@ func (conn *dbconn) GetTagsForDevice(_DeviceID string) ([]domain.Tag, error) {
 	return retTag, err
 }
 
+// GetTicketByDetectionID executes the stored procedure GetTicketByDetectionID against the database and returns the read results
+func (conn *dbconn) GetTicketByDetectionID(inDetectionID string, _OrgID string) (domain.TicketSummary, error) {
+	var err error
+	var retTicketSummary domain.TicketSummary
+
+	conn.Read(&connection.Procedure{
+		Proc:       "GetTicketByDetectionID",
+		Parameters: []interface{}{inDetectionID, _OrgID},
+		Callback: func(results interface{}, dberr error) {
+			err = dberr
+
+			if err == nil {
+
+				err = conn.getRows(results,
+					func(rows *sql.Rows) (err error) {
+						if err = rows.Err(); err == nil {
+
+							var myTitle string
+							var myStatus string
+							var myDetectionID string
+							var myOrganizationID string
+							var myUpdatedDate *time.Time
+							var myResolutionDate *time.Time
+							var myDueDate time.Time
+
+							if err = rows.Scan(
+
+								&myTitle,
+								&myStatus,
+								&myDetectionID,
+								&myOrganizationID,
+								&myUpdatedDate,
+								&myResolutionDate,
+								&myDueDate,
+							); err == nil {
+
+								newTicketSummary := &dal.TicketSummary{
+									Titlevar:          myTitle,
+									Statusvar:         myStatus,
+									DetectionIDvar:    myDetectionID,
+									OrganizationIDvar: myOrganizationID,
+									UpdatedDatevar:    myUpdatedDate,
+									ResolutionDatevar: myResolutionDate,
+									DueDatevar:        myDueDate,
+								}
+
+								retTicketSummary = newTicketSummary
+							}
+						}
+
+						return err
+					})
+			}
+		},
+	})
+
+	return retTicketSummary, err
+}
+
 // GetTicketByDeviceIDVulnID executes the stored procedure GetTicketByDeviceIDVulnID against the database and returns the read results
 func (conn *dbconn) GetTicketByDeviceIDVulnID(inDeviceID string, inVulnID string, inPort int, inProtocol string, inOrgID string) (domain.TicketSummary, error) {
 	var err error
