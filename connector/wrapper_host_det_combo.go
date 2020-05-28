@@ -26,18 +26,30 @@ func (combo *hostDetectionCombo) VulnerabilityID() string {
 // Status dictates whether a detection is considered active or not
 func (combo *hostDetectionCombo) Status() string {
 	var status = combo.detection.d.Status
+	detectionType := strings.ToLower(combo.detection.d.Type)
 
-	switch strings.ToLower(combo.detection.d.Status) {
-	case "new":
-		status = domain.Vulnerable
-	case "active":
-		status = domain.Vulnerable
-	case "re-opened":
-		status = domain.Vulnerable
-	case "fixed":
-		status = domain.Fixed
-	default:
-		// do nothing
+	const (
+		potential = "potential"
+		info      = "info"
+	)
+
+	if detectionType == potential {
+		status = domain.Potential
+	} else if detectionType == info {
+		status = domain.Informational
+	} else {
+		switch strings.ToLower(combo.detection.d.Status) {
+		case "new":
+			status = domain.Vulnerable
+		case "active":
+			status = domain.Vulnerable
+		case "re-opened":
+			status = domain.Vulnerable
+		case "fixed":
+			status = domain.Fixed
+		default:
+			// do nothing
+		}
 	}
 
 	return status
