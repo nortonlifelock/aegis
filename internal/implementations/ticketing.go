@@ -24,6 +24,8 @@ import (
 type TicketingPayload struct {
 	MinDate *time.Time `json:"mindate,omitempty"`
 	Groups  []string   `json:"groups,omitempty"`
+
+	TicketInactiveKernels bool `json:"ticket_inactive_kernels"`
 }
 
 // OrgPayload contains the SLA information for how long a vulnerability has to be remediated given the severity
@@ -242,7 +244,7 @@ func (job *TicketingJob) Process(ctx context.Context, id string, appconfig domai
 													startTime := time.Now() // must be before we load the detections from the db
 
 													var detections []domain.Detection
-													if detections, err = job.db.GetDetectionForGroupAfter(after, job.config.OrganizationID(), groupID); err == nil {
+													if detections, err = job.db.GetDetectionForGroupAfter(after, job.config.OrganizationID(), groupID, job.Payload.TicketInactiveKernels); err == nil {
 
 														job.processVulnerabilities(vscanner, pushDetectionsToChannel(job.ctx, detections))
 

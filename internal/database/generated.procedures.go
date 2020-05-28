@@ -2408,13 +2408,13 @@ func (conn *dbconn) GetDetectionInfoBySourceVulnID(_SourceDeviceID string, _Sour
 }
 
 // GetDetectionInfoForGroupAfter executes the stored procedure GetDetectionInfoForGroupAfter against the database and returns the read results
-func (conn *dbconn) GetDetectionInfoForGroupAfter(_After time.Time, _OrgID string, inGroupID string) ([]domain.DetectionInfo, error) {
+func (conn *dbconn) GetDetectionInfoForGroupAfter(_After time.Time, _OrgID string, inGroupID string, ticketInactiveKernels bool) ([]domain.DetectionInfo, error) {
 	var err error
 	var retDetectionInfo = make([]domain.DetectionInfo, 0)
 
 	conn.Read(&connection.Procedure{
 		Proc:       "GetDetectionInfoForGroupAfter",
-		Parameters: []interface{}{_After, _OrgID, inGroupID},
+		Parameters: []interface{}{_After, _OrgID, inGroupID, ticketInactiveKernels},
 		Callback: func(results interface{}, dberr error) {
 			err = dberr
 
