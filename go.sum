@@ -418,6 +418,8 @@ github.com/nortonlifelock/qualys v1.0.1-0.20200423182312-275f5dc2f433 h1:OLEAdUQ
 github.com/nortonlifelock/qualys v1.0.1-0.20200423182312-275f5dc2f433/go.mod h1:vWGg4mj7QmquZKfXo34RWKtYlW8kbRLhushosomr+zE=
 github.com/nortonlifelock/qualys v1.0.1-0.20200505172842-59de3b269b41 h1:VcZ+JXT+IfkGWISGom0K9OxAgqIgR+TGI5Vtk4+eWWk=
 github.com/nortonlifelock/qualys v1.0.1-0.20200505172842-59de3b269b41/go.mod h1:vWGg4mj7QmquZKfXo34RWKtYlW8kbRLhushosomr+zE=
+github.com/nortonlifelock/qualys v1.0.1-0.20200528161902-825f469edebc h1:cnfnWTR/7aM1uMJ6QnGUNKjAGWvIM919YSSOozvYLiI=
+github.com/nortonlifelock/qualys v1.0.1-0.20200528161902-825f469edebc/go.mod h1:vWGg4mj7QmquZKfXo34RWKtYlW8kbRLhushosomr+zE=
 github.com/nortonlifelock/scaffold v1.0.1-0.20200127165521-bf78a33de233/go.mod h1:W3Qq1Z8VA7UWsCTN3ERhXoVhKR3V3040TgSYHbZdgJk=
 github.com/nortonlifelock/scaffold v1.0.1-0.20200128220520-41da8a42d6d5 h1:cHtAHnaZyVmziV+kwLDbr3YexwSLbk7B0V04H3Mmt2w=
 github.com/nortonlifelock/scaffold v1.0.1-0.20200128220520-41da8a42d6d5/go.mod h1:b2DtRDRTFzZHPiyygHT9ZWGKG3JhxuUMNOKl576HjDU=
