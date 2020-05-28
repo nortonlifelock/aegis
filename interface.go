@@ -19,7 +19,7 @@ type DatabaseConnection interface {
 	GetDetectionBySourceVulnID(_SourceDeviceID string, _SourceVulnerabilityID string, _Port int, _Protocol string) (Detection, error)
 	GetDetectionsForDevice(_DeviceID string) ([]Detection, error)
 	GetDetectionsAfter(after time.Time, orgID string) (detections []Detection, err error)
-	GetDetectionForGroupAfter(_After time.Time, _OrgID string, inGroupID string) ([]Detection, error)
+	GetDetectionForGroupAfter(_After time.Time, _OrgID string, inGroupID string, ticketInactiveKernels bool) ([]Detection, error)
 
 	GetVulnReferences(vulnInfoID string, sourceID string) (references []VulnerabilityReference, err error)
 	GetVulnRef(vulnInfoID string, sourceID string, reference string) (existing VulnerabilityReference, err error)
