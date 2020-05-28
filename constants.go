@@ -79,6 +79,12 @@ const (
 
 	// DeadHost denotes that the vulnerability exists on a host that is no longer online
 	DeadHost = "dead host"
+
+	// Informational denotes that the detection does not contain vulnerability information, but general information about the device
+	Informational = "informational"
+
+	// Potential denotes that the scanner is not confident that the device is vulnerable
+	Potential = "potential"
 )
 
 const (
