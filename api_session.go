@@ -100,7 +100,7 @@ func (session *Session) getFunnelForEndpoint(endpoint string) (client funnel.Cli
 func (session *Session) pullRateInfoForInitialization() (rates Rates, err error) {
 	var req *http.Request
 	// we make a request to a random authenticated endpoint to get the rate limit information in the response headers
-	req, err = http.NewRequest(http.MethodGet, session.Config.Address()+qsAppliance, nil)
+	req, err = http.NewRequest(http.MethodGet, fmt.Sprintf("%s?action=list", session.Config.Address()+qsAppliance), nil)
 	if err == nil {
 		err = session.makeRequest(req, func(response *http.Response) (err error) {
 			defer response.Body.Close()

@@ -292,26 +292,32 @@ func (session *QsSession) pushDetectionsOnChannel(ctx context.Context, output *q
 	for _, h := range output.Hosts {
 		for _, d := range h.Detections {
 
+			var unconfirmedDetection bool
+
 			var deadHostProof = deadHostIPToProof[h.IPAddress]
 			if len(deadHostProof) > 0 {
 				d.Status = domain.DeadHost
 				d.Proof = deadHostProof
 			} else if d.Status == "Fixed" {
 				d.Status = domain.Fixed
+			} else if d.Type != "Confirmed" {
+				unconfirmedDetection = true
 			}
 
-			select {
-			case <-ctx.Done():
-				return true
-			case out <- &hostDetectionCombo{
-				host: &host{
-					h: h,
-				},
-				detection: &detection{
-					d:       d,
-					session: session,
-				},
-			}:
+			if !unconfirmedDetection {
+				select {
+				case <-ctx.Done():
+					return true
+				case out <- &hostDetectionCombo{
+					host: &host{
+						h: h,
+					},
+					detection: &detection{
+						d:       d,
+						session: session,
+					},
+				}:
+				}
 			}
 		}
 	}
