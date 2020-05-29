@@ -16,7 +16,7 @@ func (session *QsSession) pushCombosForHost(ctx context.Context, h qualys.QHost,
 		// Confirmed is important because in Qualys there are potential vulnerabilities in the KB and those vulnerabilities
 		// can be ACTUAL vulnerabilities when scanned for but the KB always shows them as "Potential" so the actual
 		// status on the host itself is what determines if it is actually a vulnerability or not
-		if v.Type == "Confirmed" {
+		if v.Type == "Confirmed" || true {
 
 			// Read the port information from the detection if a port is specified
 			var port = -1
