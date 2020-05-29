@@ -523,6 +523,10 @@ func createOrUpdateDetection(db domain.DatabaseConnection, lstream log.Logger, d
 					canSkipUpdate = false
 				}
 
+				if canSkipUpdate && detectionInDB.DetectionStatusID() != detectionStatus.ID() {
+					canSkipUpdate = false // TODO can remove this block
+				}
+
 				if !canSkipUpdate {
 					_, _, err = db.UpdateDetection(
 						sord(deviceInDb.SourceID()),
@@ -557,6 +561,8 @@ func createOrUpdateDetection(db domain.DatabaseConnection, lstream log.Logger, d
 // This method creates the detection entry in the database
 func createDetection(db domain.DatabaseConnection, lstream log.Logger, orgID string, sourceID string, vuln domain.Detection, exceptionID string, deviceInDb domain.Device, vulnInfo domain.VulnerabilityInfo, assetID string, detectionStatusID int) {
 	var err error
+
+	return
 
 	var detected *time.Time
 	if detected, err = vuln.Detected(); err == nil {
