@@ -169,18 +169,22 @@ func (connector *ConnectorJira) UpdateTicket(ticket domain.Ticket, comment strin
 				}
 			}
 
-			if ticket.ResolutionDate() != nil && existingTicket.ResolutionDate() != nil {
+			if ticket.ResolutionDate() != nil {
 				if !ticket.ResolutionDate().IsZero() {
 					var changeResolutionDate = false
 
-					if !existingTicket.ResolutionDate().IsZero() {
-						var firstTimeDiff = time.Since(*ticket.ResolutionDate())
-						var secondTimeDiff = time.Since(*existingTicket.ResolutionDate())
-						var timeDiff = firstTimeDiff - secondTimeDiff
-						if timeDiff < 0 {
-							timeDiff *= -1
-						}
-						if timeDiff > time.Hour*24 {
+					if existingTicket.ResolutionDate() != nil {
+						if !existingTicket.ResolutionDate().IsZero() {
+							var firstTimeDiff = time.Since(*ticket.ResolutionDate())
+							var secondTimeDiff = time.Since(*existingTicket.ResolutionDate())
+							var timeDiff = firstTimeDiff - secondTimeDiff
+							if timeDiff < 0 {
+								timeDiff *= -1
+							}
+							if timeDiff > time.Hour*24 {
+								changeResolutionDate = true
+							}
+						} else {
 							changeResolutionDate = true
 						}
 					} else {
