@@ -26,5 +26,5 @@ type DeviceInfo interface {
 
 	State() *string
 
-	//TrackingMethod() *string
+	TrackingMethod() *string
 }
