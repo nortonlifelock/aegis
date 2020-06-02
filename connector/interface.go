@@ -301,7 +301,7 @@ func (session *QsSession) pushDetectionsOnChannel(ctx context.Context, output *q
 			} else if d.Status == "Fixed" {
 				d.Status = domain.Fixed
 			} else if d.Type != "Confirmed" {
-				//unconfirmedDetection = true
+				unconfirmedDetection = true
 			}
 
 			if !unconfirmedDetection {
