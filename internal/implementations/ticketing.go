@@ -249,7 +249,7 @@ func (job *TicketingJob) Process(ctx context.Context, id string, appconfig domai
 													startTime := time.Now() // must be before we load the detections from the db
 
 													var detections []domain.Detection
-													if detections, err = job.db.GetDetectionForGroupAfter(after, job.config.OrganizationID(), groupID); err == nil {
+													if detections, err = job.db.GetDetectionForGroupAfter(after, job.config.OrganizationID(), groupID, false); err == nil {
 
 														job.processVulnerabilities(vscanner, pushDetectionsToChannel(job.ctx, detections))
 

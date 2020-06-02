@@ -20,7 +20,7 @@
 
 DROP PROCEDURE IF EXISTS `GetDetectionInfoForGroupAfter`;
 
-CREATE PROCEDURE `GetDetectionInfoForGroupAfter` (_After DATETIME, _OrgID VARCHAR(36), inGroupID VARCHAR(100))
+CREATE PROCEDURE `GetDetectionInfoForGroupAfter` (_After DATETIME, _OrgID VARCHAR(36), inGroupID VARCHAR(100), replaceThisLater bool)
     #BEGIN#
 SELECT
     D.ID,
