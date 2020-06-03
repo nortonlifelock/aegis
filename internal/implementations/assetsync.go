@@ -525,6 +525,7 @@ func createOrUpdateDetection(db domain.DatabaseConnection, lstream log.Logger, d
 
 				if !canSkipUpdate {
 					_, _, err = db.UpdateDetection(
+						detectionInDB.ID(),
 						sord(deviceInDb.SourceID()),
 						vulnInfo.ID(),
 						detectionFromScanner.Port(),

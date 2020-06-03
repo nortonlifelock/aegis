@@ -8357,11 +8357,11 @@ func (conn *dbconn) UpdateAssetIDOsTypeIDOfDevice(_ID string, _AssetID string, _
 }
 
 // UpdateDetection executes the stored procedure UpdateDetection against the database
-func (conn *dbconn) UpdateDetection(_DeviceID string, _VulnID string, _Port int, _Protocol string, _ExceptionID string, _TimesSeen int, _StatusID int, _LastFound time.Time, _LastUpdated time.Time, _DefaultTime time.Time) (id int, affectedRows int, err error) {
+func (conn *dbconn) UpdateDetection(_ID string, _DeviceID string, _VulnID string, _Port int, _Protocol string, _ExceptionID string, _TimesSeen int, _StatusID int, _LastFound time.Time, _LastUpdated time.Time, _DefaultTime time.Time) (id int, affectedRows int, err error) {
 
 	conn.Exec(&connection.Procedure{
 		Proc:       "UpdateDetection",
-		Parameters: []interface{}{_DeviceID, _VulnID, _Port, _Protocol, _ExceptionID, _TimesSeen, _StatusID, _LastFound, _LastUpdated, _DefaultTime},
+		Parameters: []interface{}{_ID, _DeviceID, _VulnID, _Port, _Protocol, _ExceptionID, _TimesSeen, _StatusID, _LastFound, _LastUpdated, _DefaultTime},
 		Callback: func(results interface{}, dberr error) {
 			err = dberr
 
