@@ -330,6 +330,8 @@ func (job *TicketingJob) processVulnerability(in <-chan domain.Detection) <-chan
 			job.ticketingEngine = tickets
 
 			func() {
+				permit := getPermitThread(100)
+
 				for {
 					select {
 					case <-job.ctx.Done():
@@ -337,10 +339,19 @@ func (job *TicketingJob) processVulnerability(in <-chan domain.Detection) <-chan
 					case item, ok := <-in:
 						if ok {
 
+							select {
+							case <-permit:
+							case <-job.ctx.Done():
+								return
+							}
+
 							wg.Add(1)
 							go func(dvCombo domain.Detection) {
 								defer wg.Done()
 								defer handleRoutinePanic(job.lstream)
+								defer func() {
+									permit <- true
+								}()
 
 								if strings.ToLower(dvCombo.Status()) != strings.ToLower(domain.Fixed) {
 									var err error
