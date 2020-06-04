@@ -182,7 +182,7 @@ func (ji *Issue) ResolutionDate() (param *time.Time) {
 	param = new(time.Time)
 	*param = time.Time(ji.Issue.Fields.Resolutiondate)
 	if param.IsZero() {
-		ji.getStringPointer("Resolution Date") // TODO
+		param = ji.getTimePointer("Resolution Date") // TODO
 	}
 	return param
 }
