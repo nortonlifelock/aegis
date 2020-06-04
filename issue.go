@@ -181,6 +181,9 @@ func (ji *Issue) HostName() (param *string) {
 func (ji *Issue) ResolutionDate() (param *time.Time) {
 	param = new(time.Time)
 	*param = time.Time(ji.Issue.Fields.Resolutiondate)
+	if param.IsZero() {
+		ji.getStringPointer("Resolution Date") // TODO
+	}
 	return param
 }
 
