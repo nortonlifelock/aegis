@@ -3578,6 +3578,7 @@ func (conn *dbconn) GetExceptionsByOrg(_OrgID string) ([]domain.Ignore, error) {
 
 							var myID string
 							var myTypeID int
+							var myApproval string
 							var myOrganizationID string
 							var myVulnerabilityID string
 							var myDeviceID string
@@ -3588,6 +3589,7 @@ func (conn *dbconn) GetExceptionsByOrg(_OrgID string) ([]domain.Ignore, error) {
 
 								&myID,
 								&myTypeID,
+								&myApproval,
 								&myOrganizationID,
 								&myVulnerabilityID,
 								&myDeviceID,
@@ -3598,6 +3600,7 @@ func (conn *dbconn) GetExceptionsByOrg(_OrgID string) ([]domain.Ignore, error) {
 								newIgnore := &dal.Ignore{
 									IDvar:              myID,
 									TypeIDvar:          myTypeID,
+									Approvalvar:        myApproval,
 									OrganizationIDvar:  myOrganizationID,
 									VulnerabilityIDvar: myVulnerabilityID,
 									DeviceIDvar:        myDeviceID,
