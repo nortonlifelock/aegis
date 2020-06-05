@@ -488,11 +488,13 @@ func (job *ScanCloseJob) processTicketForPassiveOrExceptionRescan(deadHostIPToPr
 		if err != nil {
 			job.lstream.Send(log.Errorf(err, "error while adding comment to ticket %s", ticket.Title()))
 		}
-	} else if detection == nil || status == domain.Fixed {
+	} else if detection == nil || status == domain.Fixed || status == domain.Potential {
 		// Non-decommission scan, the detection appears to be fixed, so close the ticket
 		var closeReason = closeComment
 		if inactiveKernel {
 			closeReason = inactiveKernelComment
+		} else if status == domain.Potential {
+			closeReason = potentialComment
 		}
 
 		job.lstream.Send(log.Infof("Vulnerability NO LONGER EXISTS, closing Ticket [%s]", ticket.Title()))
@@ -539,11 +541,13 @@ func (job *ScanCloseJob) processTicketForDecommRescan(deadHostIPToProofMap map[s
 }
 
 func (job *ScanCloseJob) processTicketForScheduledScan(ticket domain.Ticket, detection domain.Detection, err error, engine integrations.TicketingEngine, status string, inactiveKernel bool, scan domain.ScanSummary) {
-	if detection == nil || status == domain.Fixed {
+	if detection == nil || status == domain.Fixed || status == domain.Potential {
 		// Non-decommission scan, the detection appears to be fixed, so close the ticket
 		var closeReason = closeComment
 		if inactiveKernel {
 			closeReason = inactiveKernelComment
+		} else if status == domain.Potential {
+			closeReason = potentialComment
 		}
 
 		job.lstream.Send(log.Infof("Vulnerability NO LONGER EXISTS, closing Ticket [%s]", ticket.Title()))
@@ -577,11 +581,13 @@ func (job *ScanCloseJob) processTicketForNormalRescan(deadHostIPToProofMap map[s
 		if err != nil {
 			job.lstream.Send(log.Errorf(err, "error while transitioning ticket %s", ticket.Title()))
 		}
-	} else if detection == nil || status == domain.Fixed {
+	} else if detection == nil || status == domain.Fixed || status == domain.Potential {
 		// Non-decommission scan, the detection appears to be fixed, so close the ticket
 		var closeReason = closeComment
 		if inactiveKernel {
 			closeReason = inactiveKernelComment
+		} else if status == domain.Potential {
+			closeReason = potentialComment
 		}
 
 		job.lstream.Send(log.Infof("Vulnerability NO LONGER EXISTS, closing Ticket [%s]", ticket.Title()))

@@ -595,11 +595,11 @@ func (conn *dbconn) CreateTagMap(_TicketingSourceID string, _TicketingTag string
 }
 
 // CreateTicket executes the stored procedure CreateTicket against the database
-func (conn *dbconn) CreateTicket(_Title string, _Status string, _DetectionID string, _OrganizationID string, _DueDate time.Time, _CreatedDate time.Time, _UpdatedDate time.Time, _ResolutionDate time.Time, _DefaultTime time.Time) (id int, affectedRows int, err error) {
+func (conn *dbconn) CreateTicket(_Title string, _Status string, _DetectionID string, _OrganizationID string, _DueDate time.Time, _UpdatedDate time.Time, _ResolutionDate time.Time, _DefaultTime time.Time) (id int, affectedRows int, err error) {
 
 	conn.Exec(&connection.Procedure{
 		Proc:       "CreateTicket",
-		Parameters: []interface{}{_Title, _Status, _DetectionID, _OrganizationID, _DueDate, _CreatedDate, _UpdatedDate, _ResolutionDate, _DefaultTime},
+		Parameters: []interface{}{_Title, _Status, _DetectionID, _OrganizationID, _DueDate, _UpdatedDate, _ResolutionDate, _DefaultTime},
 		Callback: func(results interface{}, dberr error) {
 			err = dberr
 
