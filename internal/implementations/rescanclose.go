@@ -120,7 +120,7 @@ func (job *ScanCloseJob) processScanDetections(engine integrations.TicketingEngi
 					var wg sync.WaitGroup
 					deviceIDToVulnIDToDetection, deadHostIPToProofMap := job.mapDetectionsAndDeadHosts(detections, deadHostIPToProof)
 
-					if len(deviceIDToVulnIDToDetection) > 0 {
+					if len(deviceIDToVulnIDToDetection) > 0 || len(deadHostIPToProof) > 0 {
 						for _, ticket := range tickets {
 							wg.Add(1)
 							go func(ticket domain.Ticket) {
@@ -447,7 +447,7 @@ func (job *ScanCloseJob) modifyJiraTicketAccordingToVulnerabilityStatus(engine i
 	var inactiveKernel bool
 	if detection != nil {
 		status = detection.Status()
-		inactiveKernel = iord(detection.ActiveKernel()) > 0
+		inactiveKernel = iord(detection.ActiveKernel()) == 0
 
 		if detection.LastFound() != nil && !detection.LastFound().IsZero() && detection.LastFound().After(tord1970(ticket.AlertDate())) {
 			ticket = &lastFoundTicket{
@@ -492,11 +492,13 @@ func (job *ScanCloseJob) processTicketForPassiveOrExceptionRescan(deadHostIPToPr
 		if err != nil {
 			job.lstream.Send(log.Errorf(err, "error while adding comment to ticket %s", ticket.Title()))
 		}
-	} else if detection == nil || status == domain.Fixed {
+	} else if detection == nil || status == domain.Fixed || status == domain.Potential {
 		// Non-decommission scan, the detection appears to be fixed, so close the ticket
 		var closeReason = closeComment
 		if inactiveKernel {
 			closeReason = inactiveKernelComment
+		} else if status == domain.Potential {
+			closeReason = potentialComment
 		}
 
 		job.lstream.Send(log.Infof("Vulnerability NO LONGER EXISTS, closing Ticket [%s]", ticket.Title()))
@@ -586,6 +588,8 @@ func (job *ScanCloseJob) processTicketForScheduledScan(ticket domain.Ticket, det
 		var closeReason = closeComment
 		if inactiveKernel {
 			closeReason = inactiveKernelComment
+		} else if status == domain.Potential {
+			closeReason = potentialComment
 		}
 
 		job.lstream.Send(log.Infof("Vulnerability NO LONGER EXISTS, closing Ticket [%s]", ticket.Title()))
@@ -620,11 +624,13 @@ func (job *ScanCloseJob) processTicketForNormalRescan(deadHostIPToProofMap map[s
 		if err != nil {
 			job.lstream.Send(log.Errorf(err, "error while transitioning ticket %s", ticket.Title()))
 		}
-	} else if detection == nil || status == domain.Fixed {
+	} else if detection == nil || status == domain.Fixed || status == domain.Potential {
 		// Non-decommission scan, the detection appears to be fixed, so close the ticket
 		var closeReason = closeComment
 		if inactiveKernel {
 			closeReason = inactiveKernelComment
+		} else if status == domain.Potential {
+			closeReason = potentialComment
 		}
 
 		job.lstream.Send(log.Infof("Vulnerability NO LONGER EXISTS, closing Ticket [%s]", ticket.Title()))

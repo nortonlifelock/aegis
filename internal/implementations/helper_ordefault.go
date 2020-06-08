@@ -1,6 +1,7 @@
 package implementations
 
 import (
+	"fmt"
 	"github.com/PuerkitoBio/goquery"
 	"strings"
 	"time"
@@ -60,7 +61,12 @@ func removeHTMLTags(input string) (output string) {
 	var docReader *goquery.Document
 	docReader, err = goquery.NewDocumentFromReader(stringReader)
 	if err == nil {
-		docReader.Find("script").Each(func(i int, selection *goquery.Selection) {
+		docReader.Find("A").Each(func(i int, selection *goquery.Selection) {
+			if link, exists := selection.Attr("href"); exists {
+				// converts HREF tag into a hyperlink
+				selection.ReplaceWithHtml(fmt.Sprintf("[%s|%s]", selection.Text(), link))
+			}
+		}).Find("script").Each(func(i int, selection *goquery.Selection) {
 			selection.Remove()
 		})
 		output = docReader.Text()

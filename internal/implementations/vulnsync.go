@@ -139,7 +139,7 @@ func (job *VulnSyncJob) clearSolutionChannel(ctx context.Context, solutionChan <
 
 func (job *VulnSyncJob) processOldVulnerability(ctx context.Context, vulnInDB domain.VulnerabilityInfo, currentVuln domain.Vulnerability, solution string) {
 	var err error
-	if true || (vulnInDB.Updated() == nil && currentVuln.Updated().After(tord(vulnInDB.Created()))) || (vulnInDB.Updated() != nil && currentVuln.Updated().After(tord(vulnInDB.Updated()))) {
+	if (vulnInDB.Updated() == nil && currentVuln.Updated().After(tord(vulnInDB.Created()))) || (vulnInDB.Updated() != nil && currentVuln.Updated().After(tord(vulnInDB.Updated()))) {
 
 		// The vulnerability is already in the database, we can create it's references right away
 		//if err = job.createVulnerabilityReferences(ctx, currentVuln, vulnInDB); err == nil {

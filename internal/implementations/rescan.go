@@ -40,6 +40,7 @@ const (
 	reopenComment         = "Remediation Failed"
 	closeComment          = "Remediation successful; Vulnerability not found"
 	inactiveKernelComment = "Remediation successful; Vulnerable Kernel is no longer active"
+	potentialComment      = "Closing ticket; Potential vulnerability"
 )
 
 // buildPayload loads the Payload from the job history into the RescanPayload

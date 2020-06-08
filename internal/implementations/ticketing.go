@@ -29,6 +29,8 @@ type TicketingPayload struct {
 	// If the field is not present, or holds a value of false, we check for duplicates based on the device ID
 	// If the field is present and holds a value of true, we check for duplicates based on the group ID and IP
 	CorrelateByIPAndGroup bool `json:"ip_correlation"`
+
+	TicketInactiveKernels bool `json:"ticket_inactive_kernels"`
 }
 
 // OrgPayload contains the SLA information for how long a vulnerability has to be remediated given the severity
@@ -249,7 +251,7 @@ func (job *TicketingJob) Process(ctx context.Context, id string, appconfig domai
 													startTime := time.Now() // must be before we load the detections from the db
 
 													var detections []domain.Detection
-													if detections, err = job.db.GetDetectionForGroupAfter(after, job.config.OrganizationID(), groupID, false); err == nil {
+													if detections, err = job.db.GetDetectionForGroupAfter(after, job.config.OrganizationID(), groupID, job.Payload.TicketInactiveKernels); err == nil {
 
 														job.processVulnerabilities(vscanner, pushDetectionsToChannel(job.ctx, detections))
 
@@ -389,14 +391,9 @@ func (job *TicketingJob) processVulnerability(in <-chan domain.Detection) <-chan
 			job.lstream.Send(log.Debugf("Connection opened to job engine for Job ID [%v].", job.id))
 			job.ticketingEngine = tickets
 
-			const numConcurrentThreads = 100
-			var permit = make(chan bool, numConcurrentThreads)
-			for i := 0; i < numConcurrentThreads; i++ {
-				permit <- true
-			}
-
 			func() {
 				var agentDuplicateMap, nonAgentDuplicateMap sync.Map
+				permit := getPermitThread(100)
 
 				for {
 					select {
@@ -406,9 +403,9 @@ func (job *TicketingJob) processVulnerability(in <-chan domain.Detection) <-chan
 						if ok {
 
 							select {
+							case <-permit:
 							case <-job.ctx.Done():
 								return
-							case <-permit:
 							}
 
 							if alreadyProcessed, device, vuln, err := job.alreadyProcessed(item, &agentDuplicateMap, &nonAgentDuplicateMap); err == nil {
@@ -819,9 +816,8 @@ func (job *TicketingJob) createIndividualTicket(payload *vulnerabilityPayload) {
 				domain.StatusOpen,
 				payload.combo.ID(),
 				job.config.OrganizationID(),
-				tord1970(payload.ticket.CreatedDate()),
 				tord1970(payload.ticket.DueDate()),
-				time.Now(),
+				time.Now(), // updated date
 				tord1970(payload.ticket.ResolutionDate()),
 				tord1970(nil), // used to set the resolution date to nil in the DB if the ticket doesn't have one
 			)

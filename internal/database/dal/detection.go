@@ -61,8 +61,7 @@ func (detection *Detection) ActiveKernel() *int {
 
 // Detected returns the date that the detection was identified
 func (detection *Detection) Detected() (*time.Time, error) {
-	date := detection.Info.AlertDate()
-	return &date, nil
+	return detection.Info.LastFound(), nil
 }
 
 // TimesSeen returns the amount of times the detection has been identified according to the vulnerability scanner

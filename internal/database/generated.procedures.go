@@ -595,11 +595,11 @@ func (conn *dbconn) CreateTagMap(_TicketingSourceID string, _TicketingTag string
 }
 
 // CreateTicket executes the stored procedure CreateTicket against the database
-func (conn *dbconn) CreateTicket(_Title string, _Status string, _DetectionID string, _OrganizationID string, _DueDate time.Time, _CreatedDate time.Time, _UpdatedDate time.Time, _ResolutionDate time.Time, _DefaultTime time.Time) (id int, affectedRows int, err error) {
+func (conn *dbconn) CreateTicket(_Title string, _Status string, _DetectionID string, _OrganizationID string, _DueDate time.Time, _UpdatedDate time.Time, _ResolutionDate time.Time, _DefaultTime time.Time) (id int, affectedRows int, err error) {
 
 	conn.Exec(&connection.Procedure{
 		Proc:       "CreateTicket",
-		Parameters: []interface{}{_Title, _Status, _DetectionID, _OrganizationID, _DueDate, _CreatedDate, _UpdatedDate, _ResolutionDate, _DefaultTime},
+		Parameters: []interface{}{_Title, _Status, _DetectionID, _OrganizationID, _DueDate, _UpdatedDate, _ResolutionDate, _DefaultTime},
 		Callback: func(results interface{}, dberr error) {
 			err = dberr
 
@@ -1056,6 +1056,92 @@ func (conn *dbconn) DisableSource(_ID string, _OrgID string, _UpdatedBy string) 
 	})
 
 	return id, affectedRows, err
+}
+
+// GetAllDetectionInfo executes the stored procedure GetAllDetectionInfo against the database and returns the read results
+func (conn *dbconn) GetAllDetectionInfo(_OrgID string) ([]domain.DetectionInfo, error) {
+	var err error
+	var retDetectionInfo = make([]domain.DetectionInfo, 0)
+
+	conn.Read(&connection.Procedure{
+		Proc:       "GetAllDetectionInfo",
+		Parameters: []interface{}{_OrgID},
+		Callback: func(results interface{}, dberr error) {
+			err = dberr
+
+			if err == nil {
+
+				err = conn.getRows(results,
+					func(rows *sql.Rows) (err error) {
+						if err = rows.Err(); err == nil {
+
+							var myID string
+							var myOrganizationID string
+							var mySourceID string
+							var myDeviceID string
+							var myVulnerabilityID string
+							var myIgnoreID *string
+							var myAlertDate time.Time
+							var myLastFound *time.Time
+							var myLastUpdated *time.Time
+							var myProof string
+							var myPort int
+							var myProtocol string
+							var myActiveKernel *int
+							var myDetectionStatusID int
+							var myTimesSeen int
+							var myUpdated time.Time
+
+							if err = rows.Scan(
+
+								&myID,
+								&myOrganizationID,
+								&mySourceID,
+								&myDeviceID,
+								&myVulnerabilityID,
+								&myIgnoreID,
+								&myAlertDate,
+								&myLastFound,
+								&myLastUpdated,
+								&myProof,
+								&myPort,
+								&myProtocol,
+								&myActiveKernel,
+								&myDetectionStatusID,
+								&myTimesSeen,
+								&myUpdated,
+							); err == nil {
+
+								newDetectionInfo := &dal.DetectionInfo{
+									IDvar:                myID,
+									OrganizationIDvar:    myOrganizationID,
+									SourceIDvar:          mySourceID,
+									DeviceIDvar:          myDeviceID,
+									VulnerabilityIDvar:   myVulnerabilityID,
+									IgnoreIDvar:          myIgnoreID,
+									AlertDatevar:         myAlertDate,
+									LastFoundvar:         myLastFound,
+									LastUpdatedvar:       myLastUpdated,
+									Proofvar:             myProof,
+									Portvar:              myPort,
+									Protocolvar:          myProtocol,
+									ActiveKernelvar:      myActiveKernel,
+									DetectionStatusIDvar: myDetectionStatusID,
+									TimesSeenvar:         myTimesSeen,
+									Updatedvar:           myUpdated,
+								}
+
+								retDetectionInfo = append(retDetectionInfo, newDetectionInfo)
+							}
+						}
+
+						return err
+					})
+			}
+		},
+	})
+
+	return retDetectionInfo, err
 }
 
 // GetAllExceptions executes the stored procedure GetAllExceptions against the database and returns the read results
@@ -2408,13 +2494,13 @@ func (conn *dbconn) GetDetectionInfoBySourceVulnID(_SourceDeviceID string, _Sour
 }
 
 // GetDetectionInfoForGroupAfter executes the stored procedure GetDetectionInfoForGroupAfter against the database and returns the read results
-func (conn *dbconn) GetDetectionInfoForGroupAfter(_After time.Time, _OrgID string, inGroupID string, replaceThisLater bool) ([]domain.DetectionInfo, error) {
+func (conn *dbconn) GetDetectionInfoForGroupAfter(_After time.Time, _OrgID string, inGroupID string, ticketInactiveKernels bool) ([]domain.DetectionInfo, error) {
 	var err error
 	var retDetectionInfo = make([]domain.DetectionInfo, 0)
 
 	conn.Read(&connection.Procedure{
 		Proc:       "GetDetectionInfoForGroupAfter",
-		Parameters: []interface{}{_After, _OrgID, inGroupID, replaceThisLater},
+		Parameters: []interface{}{_After, _OrgID, inGroupID, ticketInactiveKernels},
 		Callback: func(results interface{}, dberr error) {
 			err = dberr
 
@@ -3519,6 +3605,7 @@ func (conn *dbconn) GetExceptionsByOrg(_OrgID string) ([]domain.Ignore, error) {
 
 							var myID string
 							var myTypeID int
+							var myApproval string
 							var myOrganizationID string
 							var myVulnerabilityID string
 							var myDeviceID string
@@ -3529,6 +3616,7 @@ func (conn *dbconn) GetExceptionsByOrg(_OrgID string) ([]domain.Ignore, error) {
 
 								&myID,
 								&myTypeID,
+								&myApproval,
 								&myOrganizationID,
 								&myVulnerabilityID,
 								&myDeviceID,
@@ -3539,6 +3627,7 @@ func (conn *dbconn) GetExceptionsByOrg(_OrgID string) ([]domain.Ignore, error) {
 								newIgnore := &dal.Ignore{
 									IDvar:              myID,
 									TypeIDvar:          myTypeID,
+									Approvalvar:        myApproval,
 									OrganizationIDvar:  myOrganizationID,
 									VulnerabilityIDvar: myVulnerabilityID,
 									DeviceIDvar:        myDeviceID,
@@ -6646,6 +6735,65 @@ func (conn *dbconn) GetTagsForDevice(_DeviceID string) ([]domain.Tag, error) {
 	return retTag, err
 }
 
+// GetTicketByDetectionID executes the stored procedure GetTicketByDetectionID against the database and returns the read results
+func (conn *dbconn) GetTicketByDetectionID(inDetectionID string, _OrgID string) (domain.TicketSummary, error) {
+	var err error
+	var retTicketSummary domain.TicketSummary
+
+	conn.Read(&connection.Procedure{
+		Proc:       "GetTicketByDetectionID",
+		Parameters: []interface{}{inDetectionID, _OrgID},
+		Callback: func(results interface{}, dberr error) {
+			err = dberr
+
+			if err == nil {
+
+				err = conn.getRows(results,
+					func(rows *sql.Rows) (err error) {
+						if err = rows.Err(); err == nil {
+
+							var myTitle string
+							var myStatus string
+							var myDetectionID string
+							var myOrganizationID string
+							var myUpdatedDate *time.Time
+							var myResolutionDate *time.Time
+							var myDueDate time.Time
+
+							if err = rows.Scan(
+
+								&myTitle,
+								&myStatus,
+								&myDetectionID,
+								&myOrganizationID,
+								&myUpdatedDate,
+								&myResolutionDate,
+								&myDueDate,
+							); err == nil {
+
+								newTicketSummary := &dal.TicketSummary{
+									Titlevar:          myTitle,
+									Statusvar:         myStatus,
+									DetectionIDvar:    myDetectionID,
+									OrganizationIDvar: myOrganizationID,
+									UpdatedDatevar:    myUpdatedDate,
+									ResolutionDatevar: myResolutionDate,
+									DueDatevar:        myDueDate,
+								}
+
+								retTicketSummary = newTicketSummary
+							}
+						}
+
+						return err
+					})
+			}
+		},
+	})
+
+	return retTicketSummary, err
+}
+
 // GetTicketByDeviceIDVulnID executes the stored procedure GetTicketByDeviceIDVulnID against the database and returns the read results
 func (conn *dbconn) GetTicketByDeviceIDVulnID(inDeviceID string, inVulnID string, inPort int, inProtocol string, inOrgID string) (domain.TicketSummary, error) {
 	var err error
@@ -8384,11 +8532,11 @@ func (conn *dbconn) UpdateAssetIDOsTypeIDOfDevice(_ID string, _AssetID string, _
 }
 
 // UpdateDetection executes the stored procedure UpdateDetection against the database
-func (conn *dbconn) UpdateDetection(_DeviceID string, _VulnID string, _Port int, _Protocol string, _ExceptionID string, _TimesSeen int, _StatusID int, _LastFound time.Time, _LastUpdated time.Time, _DefaultTime time.Time) (id int, affectedRows int, err error) {
+func (conn *dbconn) UpdateDetection(_ID string, _DeviceID string, _VulnID string, _Port int, _Protocol string, _ExceptionID string, _TimesSeen int, _StatusID int, _LastFound time.Time, _LastUpdated time.Time, _DefaultTime time.Time) (id int, affectedRows int, err error) {
 
 	conn.Exec(&connection.Procedure{
 		Proc:       "UpdateDetection",
-		Parameters: []interface{}{_DeviceID, _VulnID, _Port, _Protocol, _ExceptionID, _TimesSeen, _StatusID, _LastFound, _LastUpdated, _DefaultTime},
+		Parameters: []interface{}{_ID, _DeviceID, _VulnID, _Port, _Protocol, _ExceptionID, _TimesSeen, _StatusID, _LastFound, _LastUpdated, _DefaultTime},
 		Callback: func(results interface{}, dberr error) {
 			err = dberr
 

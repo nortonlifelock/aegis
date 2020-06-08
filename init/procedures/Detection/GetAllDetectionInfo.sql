@@ -18,9 +18,9 @@
   Updated             DATETIME      NOT
 */
 
-DROP PROCEDURE IF EXISTS `GetDetectionInfoForGroupAfter`;
+DROP PROCEDURE IF EXISTS `GetAllDetectionInfo`;
 
-CREATE PROCEDURE `GetDetectionInfoForGroupAfter` (_After DATETIME, _OrgID VARCHAR(36), inGroupID VARCHAR(100), ticketInactiveKernels BOOL)
+CREATE PROCEDURE `GetAllDetectionInfo` (_OrgID VARCHAR(36))
     #BEGIN#
 SELECT
     D.ID,
@@ -39,7 +39,4 @@ SELECT
     D.DetectionStatusID,
     D.TimesSeen,
     D.Updated
-FROM Detection D
-         JOIN DetectionStatus DS on D.DetectionStatusId = DS.Id
-         JOIN Device Dev ON Dev.AssetID = D.DeviceID
-WHERE (ticketInactiveKernels OR D.ActiveKernel IS NULL OR D.ActiveKernel = 1) AND D.OrganizationID = _OrgID AND D.IgnoreID IS NULL AND (D.Updated > _After OR D.Created > _After) AND DS.Status != 'fixed' AND Dev.GroupID = inGroupID ORDER BY Dev.TrackingMethod, D.Created;
+FROM Detection D where D.OrganizationID = _OrgID ORDER BY D.Created;
