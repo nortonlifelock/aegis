@@ -9,6 +9,7 @@ type AssignmentRules interface {
 	ExcludeVulnTitleRegex() *string
 	HostnameRegex() *string
 	OSRegex() *string
+	CategoryRegex() *string
 	TagKeyID() *int
 	TagKeyRegex() *string
 	PortCSV() *string
