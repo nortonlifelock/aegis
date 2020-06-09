@@ -109,13 +109,17 @@ func (job *AssetSyncJob) Process(ctx context.Context, id string, appconfig domai
 							}
 						}
 
-						// the cloud tags must all be passed together, as they are used in coordination to find assets
-						if len(cloudTags) > 0 {
-							var cloudTagsAsString = strings.Join(cloudTags, ",")
-							if err = job.createAssetGroupInDB(cloudTagsAsString, job.insources.SourceID(), job.insources.ID()); err == nil {
-								job.lstream.Send(log.Infof("started processing %v", cloudTags))
-								job.processGroup(vscanner, cloudTags)
-								job.lstream.Send(log.Infof("finished processing %v", cloudTags))
+						for _, cloudTag := range cloudTags {
+							if err = job.createAssetGroupInDB(cloudTag, job.insources.SourceID(), job.insources.ID()); err == nil {
+								select {
+								case <-job.ctx.Done():
+									return
+								default:
+								}
+
+								job.lstream.Send(log.Infof("started processing %v", cloudTag))
+								job.processGroup(vscanner, strings.Split(cloudTag, ","))
+								job.lstream.Send(log.Infof("finished processing %v", cloudTag))
 							} else {
 								job.lstream.Send(log.Error("error while creating asset group", err))
 							}
