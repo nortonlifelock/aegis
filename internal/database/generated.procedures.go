@@ -1834,6 +1834,7 @@ func (conn *dbconn) GetAssignmentRulesByOrg(_OrganizationID string) ([]domain.As
 							var myExcludeVulnTitleRegex *string
 							var myHostnameRegex *string
 							var myOSRegex *string
+							var myCategoryRegex *string
 							var myTagKeyID *int
 							var myTagKeyRegex *string
 							var myPortCSV *string
@@ -1850,6 +1851,7 @@ func (conn *dbconn) GetAssignmentRulesByOrg(_OrganizationID string) ([]domain.As
 								&myExcludeVulnTitleRegex,
 								&myHostnameRegex,
 								&myOSRegex,
+								&myCategoryRegex,
 								&myTagKeyID,
 								&myTagKeyRegex,
 								&myPortCSV,
@@ -1866,6 +1868,7 @@ func (conn *dbconn) GetAssignmentRulesByOrg(_OrganizationID string) ([]domain.As
 									ExcludeVulnTitleRegexvar: myExcludeVulnTitleRegex,
 									HostnameRegexvar:         myHostnameRegex,
 									OSRegexvar:               myOSRegex,
+									CategoryRegexvar:         myCategoryRegex,
 									TagKeyIDvar:              myTagKeyID,
 									TagKeyRegexvar:           myTagKeyRegex,
 									PortCSVvar:               myPortCSV,

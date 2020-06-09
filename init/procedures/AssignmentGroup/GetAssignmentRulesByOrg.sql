@@ -8,6 +8,7 @@
     ExcludeVulnTitleRegex VARCHAR(100) NULL
     HostnameRegex         VARCHAR(100) NULL
     OSRegex               VARCHAR(100) NULL
+    CategoryRegex         VARCHAR(300) NULL
     TagKeyID              INT          NULL
     TagKeyRegex           VARCHAR(100) NULL
     PortCSV               VARCHAR(100) NULL
@@ -28,6 +29,7 @@ SELECT
     ExcludeVulnTitleRegex,
     HostnameRegex,
     OSRegex,
+    CategoryRegex,
     TagKeyID,
     TagKeyRegex,
     PortCSV,

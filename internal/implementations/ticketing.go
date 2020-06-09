@@ -199,7 +199,6 @@ func (job *TicketingJob) buildOrgPayload(org domain.Organization) (err error) {
 // Process the ticketing job loads device information from a scanner, and creates a ticket for each device/vulnerability combination where one does not
 // already exist. First, it checks for an entry in the ignore table to see if that device/vulnerability combination is a known exception or false positive
 func (job *TicketingJob) Process(ctx context.Context, id string, appconfig domain.Config, db domain.DatabaseConnection, lstream log.Logger, payload string, jobConfig domain.JobConfig, inSource []domain.SourceConfig, outSource []domain.SourceConfig) (err error) {
-
 	var ok bool
 	if job.ctx, job.id, job.appconfig, job.db, job.lstream, job.payloadJSON, job.config, job.insource, job.outsource, ok = validInputs(ctx, id, appconfig, db, lstream, payload, jobConfig, inSource, outSource); ok {
 
@@ -402,14 +401,14 @@ func (job *TicketingJob) processVulnerability(in <-chan domain.Detection) <-chan
 					case item, ok := <-in:
 						if ok {
 
-							select {
-							case <-permit:
-							case <-job.ctx.Done():
-								return
-							}
-
 							if alreadyProcessed, device, vuln, err := job.alreadyProcessed(item, &agentDuplicateMap, &nonAgentDuplicateMap); err == nil {
 								if !alreadyProcessed {
+
+									select {
+									case <-permit:
+									case <-job.ctx.Done():
+										return
+									}
 
 									wg.Add(1)
 									go func(dvCombo domain.Detection, device domain.Device, vuln domain.Vulnerability) {
@@ -1252,6 +1251,10 @@ func (job *TicketingJob) getAssignmentInformation(tagsForDevice []domain.Tag, pa
 			match = rule.osRegex.MatchString(payload.device.HostName())
 		}
 
+		if match && rule.categoryRegex != nil {
+			match = rule.categoryRegex.MatchString(sord(payload.vuln.Category()))
+		}
+
 		if match && rule.tagKey != nil {
 			var found bool
 			for _, deviceTag := range tagsForDevice {
@@ -1320,6 +1323,7 @@ type assignmentRule struct {
 	excludeVulnTitleRegex *regexp.Regexp
 	hostnameRegex         *regexp.Regexp
 	osRegex               *regexp.Regexp
+	categoryRegex         *regexp.Regexp
 	tagKeyRegex           *regexp.Regexp
 	tagKey                domain.TagKey
 	ports                 []string
@@ -1373,6 +1377,16 @@ func (job *TicketingJob) loadAssignmentRules() (assignmentRules []assignmentRule
 					currentRule.osRegex = regex
 				} else {
 					err = fmt.Errorf("error while compiling OS regex [%s] - %s", sord(rule.OSRegex()), err.Error())
+					break
+				}
+			}
+
+			if rule.CategoryRegex() != nil {
+				var regex *regexp.Regexp
+				if regex, err = regexp.Compile(sord(rule.CategoryRegex())); err == nil {
+					currentRule.categoryRegex = regex
+				} else {
+					err = fmt.Errorf("error while compiling category regex [%s] - %s", sord(rule.CategoryRegex()), err.Error())
 					break
 				}
 			}
