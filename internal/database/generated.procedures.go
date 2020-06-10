@@ -2325,13 +2325,13 @@ func (conn *dbconn) GetDetectionInfoAfter(_After time.Time, _OrgID string) ([]do
 }
 
 // GetDetectionInfoByID executes the stored procedure GetDetectionInfoByID against the database and returns the read results
-func (conn *dbconn) GetDetectionInfoByID(_ID string) (domain.DetectionInfo, error) {
+func (conn *dbconn) GetDetectionInfoByID(_ID string, _OrgID string) (domain.DetectionInfo, error) {
 	var err error
 	var retDetectionInfo domain.DetectionInfo
 
 	conn.Read(&connection.Procedure{
 		Proc:       "GetDetectionInfoByID",
-		Parameters: []interface{}{_ID},
+		Parameters: []interface{}{_ID, _OrgID},
 		Callback: func(results interface{}, dberr error) {
 			err = dberr
 
@@ -7075,6 +7075,50 @@ func (conn *dbconn) GetTicketCreatedAfter(_UpperCVSS float32, _LowerCVSS float32
 	})
 
 	return retTicketSummary, err
+}
+
+// GetTicketTrackingMethod executes the stored procedure GetTicketTrackingMethod against the database and returns the read results
+func (conn *dbconn) GetTicketTrackingMethod(_Title string, _OrgID string) (domain.KeyValue, error) {
+	var err error
+	var retKeyValue domain.KeyValue
+
+	conn.Read(&connection.Procedure{
+		Proc:       "GetTicketTrackingMethod",
+		Parameters: []interface{}{_Title, _OrgID},
+		Callback: func(results interface{}, dberr error) {
+			err = dberr
+
+			if err == nil {
+
+				err = conn.getRows(results,
+					func(rows *sql.Rows) (err error) {
+						if err = rows.Err(); err == nil {
+
+							var myKey string
+							var myValue string
+
+							if err = rows.Scan(
+
+								&myKey,
+								&myValue,
+							); err == nil {
+
+								newKeyValue := &dal.KeyValue{
+									Keyvar:   myKey,
+									Valuevar: myValue,
+								}
+
+								retKeyValue = newKeyValue
+							}
+						}
+
+						return err
+					})
+			}
+		},
+	})
+
+	return retKeyValue, err
 }
 
 // GetUnfinishedScanSummariesBySourceConfigOrgID executes the stored procedure GetUnfinishedScanSummariesBySourceConfigOrgID against the database and returns the read results

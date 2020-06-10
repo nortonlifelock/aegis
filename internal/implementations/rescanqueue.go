@@ -346,6 +346,41 @@ func (job *RescanQueueJob) cleanTickets(tickets <-chan domain.Ticket) (<-chan do
 	return cleanedTickets, err
 }
 
+var ticketTitleOrgIDToUpdatedTime = &sync.Map{}
+
+func (job *RescanQueueJob) ticketIsReadyForRescan(ticket domain.Ticket) (readyForRescan bool) {
+	readyForRescan = true // if we can't discern the tracking method, rescan the ticket by default
+
+	if trackingMethod, err := job.db.GetTicketTrackingMethod(ticket.Title(), job.config.OrganizationID()); err == nil && trackingMethod != nil {
+		if trackingMethod.Value() == AgentDevice && ticket.UpdatedDate() != nil {
+
+			key := fmt.Sprintf("%s;%s", ticket, job.config.OrganizationID())
+
+			updatedDate, _ := ticketTitleOrgIDToUpdatedTime.LoadOrStore(key, ticket.UpdatedDate())
+			if updatedDateVal, ok := updatedDate.(*time.Time); ok {
+				if time.Since(*updatedDateVal) < time.Hour*4 {
+					readyForRescan = false
+
+					job.lstream.Send(log.Infof("Skipping rescan of [%s], waiting until [%s] as it is an agent ticket",
+						ticket.Title(),
+						ticket.UpdatedDate().Add(time.Hour*4).Format(time.RFC822)),
+					)
+				} else {
+					// if this path takes, the agent is ready to be rescanned so we delete the timer that was tracking it
+					// the next time the ticket is marked for rescan, a new updated date should be written
+					ticketTitleOrgIDToUpdatedTime.Delete(key)
+				}
+			} else {
+				job.lstream.Send(log.Errorf(err, "failed to load the updated date [%v] for [%s]", updatedDate, ticket.Title()))
+			}
+		}
+	} else {
+		job.lstream.Send(log.Errorf(err, "error while loading tracking method for [%s]", ticket.Title()))
+	}
+
+	return readyForRescan
+}
+
 // loads tickets that are currently being processed by another job so we don't rescan a ticket that is in the process of being scanned
 func (job *RescanQueueJob) loadRescans() (tickets map[string]bool, err error) {
 	tickets = make(map[string]bool)

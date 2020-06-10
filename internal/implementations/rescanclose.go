@@ -533,6 +533,7 @@ func (job *ScanCloseJob) processTicketForDecommRescan(deadHostIPToProofMap map[s
 const (
 	AgentDevice = "AGENT"
 	EC2Device   = "EC2"
+	IPDevice    = "IP"
 )
 
 func (job *ScanCloseJob) closeTicketAccordingToDeviceType(ticket domain.Ticket, detection domain.Detection, deadHostIPToProofMap map[string]string, engine integrations.TicketingEngine, scan domain.ScanSummary, ipsForCloudDecommissionScan chan<- string, trackingMethod string) (err error) {
