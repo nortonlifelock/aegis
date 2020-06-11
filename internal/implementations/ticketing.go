@@ -698,7 +698,7 @@ func (job *TicketingJob) prepareTicketCreation(in <-chan *vulnerabilityPayload) 
 
 						var tagsForDevice []domain.Tag
 						// map cloud service fields to ticket if necessary
-						tagsForDevice, err = job.handleCloudTagMappings(payload.ticket, payload.device)
+						payload.ticket, tagsForDevice, err = job.handleCloudTagMappings(payload.ticket, payload.device)
 						if err == nil {
 							job.getAssignmentInformation(tagsForDevice, payload)
 						} else {
@@ -1022,22 +1022,22 @@ func (job *TicketingJob) gatherHostInfoFromDevice(payload *vulnerabilityPayload)
 
 // the cloud sync job pulls tag information from cloud service providers. we can use that tag information to overwrite JIRA fields or append
 // the information to a JIRA field
-func (job *TicketingJob) handleCloudTagMappings(tic domain.Ticket, device domain.Device) (tagsForDevice []domain.Tag, err error) {
+func (job *TicketingJob) handleCloudTagMappings(tic domain.Ticket, device domain.Device) (ticket domain.Ticket, tagsForDevice []domain.Tag, err error) {
 	tagsForDevice = make([]domain.Tag, 0)
 
 	// grab all the cloud tags for a device
 	tagsForDevice, err = job.db.GetTagsForDevice(device.ID())
 	if err == nil {
-		if len(job.tagMaps) > 0 {
-			err = job.mapAllTagsForDevice(tic, tagsForDevice, job.tagMaps)
+		if len(job.tagMaps) > 0 && len(tagsForDevice) > 0 {
+			tic, err = job.mapAllTagsForDevice(tic, tagsForDevice, job.tagMaps)
 		}
 	}
 
-	return tagsForDevice, err
+	return tic, tagsForDevice, err
 }
 
 // this ticket takes all tags found for a particular device, and maps them to fields within the domain.Ticket if necessary
-func (job *TicketingJob) mapAllTagsForDevice(tic domain.Ticket, tagsForDevice []domain.Tag, tagMaps []domain.TagMap) (err error) {
+func (job *TicketingJob) mapAllTagsForDevice(tic domain.Ticket, tagsForDevice []domain.Tag, tagMaps []domain.TagMap) (ticket domain.Ticket, err error) {
 	for index := range tagsForDevice {
 		tagForDevice := tagsForDevice[index]
 
@@ -1045,7 +1045,7 @@ func (job *TicketingJob) mapAllTagsForDevice(tic domain.Ticket, tagsForDevice []
 		tagForDeviceKey, err = job.db.GetTagKeyByID(strconv.Itoa(tagForDevice.TagKeyID()))
 		if err == nil {
 			if tagForDeviceKey != nil {
-				err = job.mapTagForDevice(tic, tagForDeviceKey, tagForDevice, tagMaps)
+				tic, err = job.mapTagForDevice(tic, tagForDeviceKey, tagForDevice, tagMaps)
 				if err != nil {
 					break
 				}
@@ -1059,12 +1059,12 @@ func (job *TicketingJob) mapAllTagsForDevice(tic domain.Ticket, tagsForDevice []
 		}
 	}
 
-	return err
+	return tic, err
 }
 
 // check to see if the tags found for a ticket match any of the fields in the tag map
 // a tag map associates a JIRA field to a cloud service tag
-func (job *TicketingJob) mapTagForDevice(tic domain.Ticket, tagForDeviceKey domain.TagKey, tagForDevice domain.Tag, tagMaps []domain.TagMap) (err error) {
+func (job *TicketingJob) mapTagForDevice(tic domain.Ticket, tagForDeviceKey domain.TagKey, tagForDevice domain.Tag, tagMaps []domain.TagMap) (ticket domain.Ticket, err error) {
 	for mapIndex := range tagMaps {
 		tagMap := tagMaps[mapIndex]
 
@@ -1092,7 +1092,7 @@ func (job *TicketingJob) mapTagForDevice(tic domain.Ticket, tagForDeviceKey doma
 		}
 	}
 
-	return err
+	return tic, err
 }
 
 type tagMappedTicket struct {
