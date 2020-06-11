@@ -354,7 +354,7 @@ func (job *RescanQueueJob) ticketIsReadyForRescan(ticket domain.Ticket) (readyFo
 	if trackingMethod, err := job.db.GetTicketTrackingMethod(ticket.Title(), job.config.OrganizationID()); err == nil && trackingMethod != nil {
 		if trackingMethod.Value() == AgentDevice && ticket.UpdatedDate() != nil {
 
-			key := fmt.Sprintf("%s;%s", ticket, job.config.OrganizationID())
+			key := fmt.Sprintf("%s;%s", ticket.Title(), job.config.OrganizationID())
 
 			updatedDate, _ := ticketTitleOrgIDToUpdatedTime.LoadOrStore(key, ticket.UpdatedDate())
 			if updatedDateVal, ok := updatedDate.(*time.Time); ok {
@@ -363,7 +363,7 @@ func (job *RescanQueueJob) ticketIsReadyForRescan(ticket domain.Ticket) (readyFo
 
 					job.lstream.Send(log.Infof("Skipping rescan of [%s], waiting until [%s] as it is an agent ticket",
 						ticket.Title(),
-						ticket.UpdatedDate().Add(time.Hour*4).Format(time.RFC822)),
+						updatedDateVal.Add(time.Hour*4).Format(time.RFC822)),
 					)
 				} else {
 					// if this path takes, the agent is ready to be rescanned so we delete the timer that was tracking it
