@@ -461,6 +461,10 @@ func (i *ImageFinding) Title() (param string) {
 	return
 }
 
+func (i *ImageFinding) SystemName() (param *string) {
+	return nil
+}
+
 func (i *ImageFinding) UpdatedDate() (param *time.Time) {
 	return i.finding.LastUpdated()
 }

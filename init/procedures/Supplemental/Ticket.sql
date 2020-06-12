@@ -31,6 +31,7 @@
   MacAddress          NVARCHAR(255)           NULL
   HostName            NVARCHAR(255)           NULL
   ServicePorts        NVARCHAR(255)           NULL
+  SystemName          VARCHAR(500)            NULL
   VulnerabilityTitle  NVARCHAR(500)           NULL
   CERF                NVARCHAR(30)            NOT
   CERFExpirationDate  DATETIME                NOT

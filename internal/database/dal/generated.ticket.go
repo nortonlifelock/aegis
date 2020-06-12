@@ -55,6 +55,7 @@ type Ticket struct {
 	Solutionvar           *string
 	Statusvar             *string
 	Summaryvar            *string
+	SystemNamevar         *string
 	TicketTypevar         *string
 	Titlevar              string
 	UpdatedDatevar        *time.Time
@@ -108,6 +109,7 @@ func (myTicket Ticket) MarshalJSON() ([]byte, error) {
 		"Solution":           myTicket.Solutionvar,
 		"Status":             myTicket.Statusvar,
 		"Summary":            myTicket.Summaryvar,
+		"SystemName":         myTicket.SystemNamevar,
 		"TicketType":         myTicket.TicketTypevar,
 		"Title":              myTicket.Titlevar,
 		"UpdatedDate":        myTicket.UpdatedDatevar,
@@ -307,6 +309,11 @@ func (myTicket *Ticket) Summary() (param *string) {
 	return myTicket.Summaryvar
 }
 
+// SystemName returns the SystemName parameter from the Ticket struct
+func (myTicket *Ticket) SystemName() (param *string) {
+	return myTicket.SystemNamevar
+}
+
 // TicketType returns the TicketType parameter from the Ticket struct
 func (myTicket *Ticket) TicketType() (param *string) {
 	return myTicket.TicketTypevar
@@ -460,6 +467,11 @@ func (myTicket *Ticket) SetStatus(val string) {
 // SetSummary sets the Summary parameter from the Ticket struct
 func (myTicket *Ticket) SetSummary(val string) {
 	myTicket.Summaryvar = &val
+}
+
+// SetSystemName sets the SystemName parameter from the Ticket struct
+func (myTicket *Ticket) SetSystemName(val string) {
+	myTicket.SystemNamevar = &val
 }
 
 // SetTicketType sets the TicketType parameter from the Ticket struct

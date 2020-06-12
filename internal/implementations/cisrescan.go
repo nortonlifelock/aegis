@@ -716,3 +716,7 @@ func (wrapper *FindingWrapper) VulnerabilityTitle() (param *string) {
 	val := wrapper.Finding.VulnerabilityTitle()
 	return &val
 }
+
+func (wrapper *FindingWrapper) SystemName() (param *string) {
+	return nil
+}

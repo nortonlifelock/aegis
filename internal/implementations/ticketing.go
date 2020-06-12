@@ -1084,6 +1084,7 @@ func (job *TicketingJob) mapTagForDevice(tic domain.Ticket, tagForDeviceKey doma
 					sord(tic.HostName()),
 					sord(tic.AssignmentGroup()),
 					sord(tic.Labels()),
+					sord(tic.SystemName()),
 				}
 			} else {
 				err = fmt.Errorf("unrecognized tag mapping option: %s", tagMap.Options())
@@ -1105,53 +1106,72 @@ type tagMappedTicket struct {
 	hostname        string
 	assignmentGroup string
 	labels          string
+	systemName      string
 }
 
 func (tmt tagMappedTicket) HostName() *string {
-	val := tmt.hostname
-	if tmt.option == Append && len(tmt.hostname) > 0 {
-		val = fmt.Sprintf("%s,%s", tmt.hostname, tmt.tagForDevice.Value())
-	} else { //overwrite
-		val = tmt.tagForDevice.Value()
+	var val string
+
+	if tmt.ticketKeyLower == "hostname" {
+		val = tmt.hostname
+		if tmt.option == Append && len(tmt.hostname) > 0 {
+			val = fmt.Sprintf("%s,%s", tmt.hostname, tmt.tagForDevice.Value())
+		} else { //overwrite
+			val = tmt.tagForDevice.Value()
+		}
+	} else {
+		val = sord(tmt.Ticket.HostName())
 	}
+
 	return &val
 }
 
 func (tmt tagMappedTicket) AssignmentGroup() *string {
-	val := tmt.assignmentGroup
-	if tmt.option == Append && len(tmt.assignmentGroup) > 0 {
-		val = fmt.Sprintf("%s,%s", tmt.assignmentGroup, tmt.tagForDevice.Value())
-	} else { //overwrite
-		val = tmt.tagForDevice.Value()
+	var val string
+	if tmt.ticketKeyLower == "assignmentgroup" {
+		val = tmt.assignmentGroup
+		if tmt.option == Append && len(tmt.assignmentGroup) > 0 {
+			val = fmt.Sprintf("%s,%s", tmt.assignmentGroup, tmt.tagForDevice.Value())
+		} else { //overwrite
+			val = tmt.tagForDevice.Value()
+		}
+	} else {
+		val = sord(tmt.Ticket.AssignmentGroup())
 	}
+
 	return &val
 }
 
 func (tmt tagMappedTicket) Labels() *string {
-	val := fmt.Sprintf("%s-%s", strings.ToLower(tmt.cloudTag), tmt.tagForDevice.Value())
+	var val string
+	if tmt.ticketKeyLower == "labels" {
+		val = fmt.Sprintf("%s-%s", strings.ToLower(tmt.cloudTag), tmt.tagForDevice.Value())
 
-	if tmt.option == Append && len(tmt.labels) > 0 {
-		val = fmt.Sprintf("%s,%s", tmt.labels, val)
+		if tmt.option == Append && len(tmt.labels) > 0 {
+			val = fmt.Sprintf("%s,%s", tmt.labels, val)
+		}
+	} else {
+		val = sord(tmt.Ticket.Labels())
 	}
+
 	return &val
 }
 
-//func (job *TicketingJob) getDeviceByIPList(ips []string) (device domain.Device, err error) {
-//	for index := range ips {
-//		ip := ips[index]
-//
-//		device, err = job.db.GetDeviceByIP(ip, job.config.OrganizationID())
-//		if err == nil {
-//			if device != nil {
-//				break
-//			}
-//		} else {
-//			break
-//		}
-//	}
-//
-//	return device, err
-//}
+func (tmt tagMappedTicket) SystemName() *string {
+	var val string
+	if tmt.ticketKeyLower == "systemname" {
+		val = tmt.hostname
+		if tmt.option == Append && len(tmt.systemName) > 0 {
+			val = fmt.Sprintf("%s,%s", tmt.systemName, tmt.tagForDevice.Value())
+		} else { //overwrite
+			val = tmt.tagForDevice.Value()
+		}
+	} else {
+		val = sord(tmt.Ticket.SystemName())
+	}
+
+	return &val
+}
 
 // transforms the specific OS from the scanner and transforms it to a generic OS that can be chosen in a dropdown field
 func (job *TicketingJob) gatherOSDropdown(input string) (output string) {
