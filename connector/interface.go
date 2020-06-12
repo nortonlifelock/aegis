@@ -275,7 +275,7 @@ func (session *QsSession) ScanResults(ctx context.Context, payload []byte) (<-ch
 						session.lstream.Send(log.Errorf(err, "error while loading detections for [%s]", scanInfo.AssetGroupID))
 					}
 				} else {
-					session.lstream.Send(log.Errorf(err, "Scheduled scan [%s] did not specify the group IDs or cloud tags that it executed against"))
+					session.lstream.Send(log.Errorf(err, "Scheduled scan [%s] did not specify the group IDs or cloud tags that it executed against", scanInfo.Name))
 				}
 			}
 
@@ -298,10 +298,10 @@ func (session *QsSession) pushDetectionsOnChannel(ctx context.Context, output *q
 			if len(deadHostProof) > 0 {
 				d.Status = domain.DeadHost
 				d.Proof = deadHostProof
-			} else if d.Status == "Fixed" {
-				d.Status = domain.Fixed
 			} else if d.Type != "Confirmed" {
 				unconfirmedDetection = true
+			} else if d.Status == "Fixed" {
+				d.Status = domain.Fixed
 			}
 
 			if !unconfirmedDetection {
