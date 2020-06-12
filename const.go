@@ -90,6 +90,7 @@ const (
 	backendScanID           = "ScanID"
 	backendOrg              = "Org"
 	backendAutomationID     = "AutomationID"
+	backendSystemName       = "SystemName"
 	backendCERF             = "CERF"
 	backendCERFExpiration   = "Actual Expiration Date"
 	backendCVEReferences    = "CVE References"

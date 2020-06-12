@@ -47,6 +47,10 @@ func (ji *Issue) DeviceID() (param string) {
 	return ji.getString(backendDeviceID)
 }
 
+func (ji *Issue) SystemName() (param *string) {
+	return ji.getStringPointer(backendSystemName)
+}
+
 func (ji *Issue) Patchable() (param *string) {
 	return ji.getStringPointer(backendPatchable)
 }
