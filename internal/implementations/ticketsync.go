@@ -135,6 +135,7 @@ func (job *TicketSyncJob) processTicket(tic domain.Ticket, orgID string) {
 				job.config.OrganizationID(),
 				sord(tic.AssignmentGroup()),
 				sord(tic.AssignedTo()),
+				tord1970(tic.DueDate()),
 				tord1970(tic.CreatedDate()),
 				tord1970(tic.UpdatedDate()),
 				tord1970(tic.ResolutionDate()),
@@ -162,14 +163,4 @@ func (job *TicketSyncJob) getDetection(deviceID string, vulnID string, port int,
 	}
 
 	return detection, err
-}
-
-// TODO convert tickets status to a status normalized for our database
-func (job *TicketSyncJob) translateStatus(inStatus string) (outStatus string) {
-	outStatus = inStatus
-	switch strings.ToLower(inStatus) {
-
-	}
-
-	return outStatus
 }
