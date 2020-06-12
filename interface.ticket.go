@@ -44,6 +44,7 @@ type Ticket interface {
 	Solution() (param *string)
 	Status() (param *string)
 	Summary() (param *string)
+	SystemName() (param *string)
 	TicketType() (param *string)
 	Title() (param string)
 	UpdatedDate() (param *time.Time)
