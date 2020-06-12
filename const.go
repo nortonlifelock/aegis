@@ -21,6 +21,7 @@ var MappableFields = []string{
 	backendCVSS,
 	backendVulnerabilityID,
 	backendGroupID,
+	backendSystemName,
 	backendPatchable,
 	backendDeviceID,
 	backendScanID,

@@ -84,6 +84,10 @@ func (connector *ConnectorJira) mapDalTicketToJiraIssue(ticket domain.Ticket) (j
 			setJIField(connector, ji, backendGroupID, ticket.GroupID())
 		}
 
+		if len(sord(ticket.SystemName())) > 0 {
+			setJIField(connector, ji, backendSystemName, sord(ticket.SystemName()))
+		}
+
 		setJIField(connector, ji, backendVulnerabilityID, ticket.VulnerabilityID())
 		setJIField(connector, ji, backendOperatingSystem, ticket.OperatingSystem())
 		setJIField(connector, ji, backendVRRPriority, ticket.Priority()) // TODO: This should default to critical if it's not properly set?

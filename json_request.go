@@ -76,6 +76,7 @@ type FieldList struct {
 	MACAddress         *string     `json:"macaddress,omitempty"`
 	Hostname           *string     `json:"hostname,omitempty"`
 	GroupID            string      `json:"groupid,omitempty"`
+	SystemName         *string     `json:"systemname,omitempty"`
 	ScanID             string      `json:"scanid,omitempty"`
 	VulnerabilityID    string      `json:"vulnerabilityid,omitempty"`
 	CreatedDate        *time.Time  `json:"created,omitempty"`
