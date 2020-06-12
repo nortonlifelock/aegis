@@ -164,13 +164,3 @@ func (job *TicketSyncJob) getDetection(deviceID string, vulnID string, port int,
 
 	return detection, err
 }
-
-// TODO convert tickets status to a status normalized for our database
-func (job *TicketSyncJob) translateStatus(inStatus string) (outStatus string) {
-	outStatus = inStatus
-	switch strings.ToLower(inStatus) {
-
-	}
-
-	return outStatus
-}
