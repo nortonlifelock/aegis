@@ -135,6 +135,7 @@ func (job *TicketSyncJob) processTicket(tic domain.Ticket, orgID string) {
 				job.config.OrganizationID(),
 				sord(tic.AssignmentGroup()),
 				sord(tic.AssignedTo()),
+				tord1970(tic.DueDate()),
 				tord1970(tic.CreatedDate()),
 				tord1970(tic.UpdatedDate()),
 				tord1970(tic.ResolutionDate()),
