@@ -465,7 +465,7 @@ func (job *ScanCloseJob) modifyJiraTicketAccordingToVulnerabilityStatus(engine i
 	if detectionsFoundForDevice || deviceReportedAsDead || deviceWithoutDetectionsLikelyDead {
 		switch job.Payload.Type {
 		case domain.RescanNormal:
-			job.processTicketForNormalRescan(deadHostIPToProofMap, ticket, detection, engine, status, inactiveKernel, scan)
+			job.processTicketForNormalRescan(deadHostIPToProofMap, ticket, detection, engine, status, inactiveKernel, scan, trackingMethod)
 		case domain.RescanDecommission:
 			job.processTicketForDecommRescan(deadHostIPToProofMap, ticket, detection, engine, scan, status, deviceWithoutDetectionsLikelyDead, deviceReportedAsDead, ipsForCloudDecommissionScan, trackingMethod)
 		case domain.RescanScheduled:
@@ -611,7 +611,7 @@ func (job *ScanCloseJob) processTicketForScheduledScan(ticket domain.Ticket, det
 	}
 }
 
-func (job *ScanCloseJob) processTicketForNormalRescan(deadHostIPToProofMap map[string]string, ticket domain.Ticket, detection domain.Detection, engine integrations.TicketingEngine, status string, inactiveKernel bool, scan domain.ScanSummary) {
+func (job *ScanCloseJob) processTicketForNormalRescan(deadHostIPToProofMap map[string]string, ticket domain.Ticket, detection domain.Detection, engine integrations.TicketingEngine, status string, inactiveKernel bool, scan domain.ScanSummary, trackingMethod string) {
 	var err error
 	if (len(deadHostIPToProofMap[*ticket.IPAddress()]) > 0 && len(*ticket.IPAddress()) > 0) || (detection != nil && detection.Status() == domain.DeadHost) {
 		job.lstream.Send(log.Infof("the device for %s seems to be dead, but this is not a decommission scan", ticket.Title()))
@@ -619,7 +619,7 @@ func (job *ScanCloseJob) processTicketForNormalRescan(deadHostIPToProofMap map[s
 		if err != nil {
 			job.lstream.Send(log.Errorf(err, "error while adding comment to ticket %s", ticket.Title()))
 		}
-	} else if detection != nil && detection.LastUpdated() != nil && detection.LastUpdated().Before(scan.CreatedDate()) && !detection.LastUpdated().IsZero() && !scan.CreatedDate().IsZero() {
+	} else if detection != nil && detection.LastUpdated() != nil && detection.LastUpdated().Before(scan.CreatedDate()) && !detection.LastUpdated().IsZero() && !scan.CreatedDate().IsZero() && trackingMethod != AgentDevice {
 		job.lstream.Send(log.Infof("the scan didn't check %s for vulnerability %s [%s before %s]", ticket.Title(), ticket.VulnerabilityID(), detection.LastUpdated().Format(time.RFC822), scan.CreatedDate().Format(time.RFC822)))
 		err = engine.Transition(ticket, engine.GetStatusMap(domain.StatusScanError), fmt.Sprintf("The scan did not check the device for the vulnerability likely due to authentication issues"), sord(ticket.AssignedTo()))
 		if err != nil {
