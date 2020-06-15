@@ -16,6 +16,13 @@ import (
 // or decommission rescans
 type RescanQueuePayload struct {
 	Type string `json:"type"`
+
+	// AgentTicketRescanDelayWaitInMinutes describes a quantity in minutes
+	// Devices with agents do not reflect their fixed vulnerabilities immediately, using this variables we can
+	// delay rescans getting kicked off for tickets belonging to agent devices so the scanner (e.g. Qualys) has time to reflect the fix in their own database
+	// The RSQ will wait the following minutes after a ticket is updated - meaning once [time.Now >= (ticket.Updated + AgentTicketRescanDelayWaitInMinutes)] a rescan
+	// will be ticketed off for the ticket
+	AgentTicketRescanDelayWaitInMinutes *time.Duration `json:"agent_ticket_rescan_delay_wait_in_minutes"`
 }
 
 // RescanQueueJob implements the Job interface required to run the job
@@ -358,12 +365,21 @@ func (job *RescanQueueJob) ticketIsReadyForRescan(ticket domain.Ticket) (readyFo
 
 			updatedDate, _ := ticketTitleOrgIDToUpdatedTime.LoadOrStore(key, ticket.UpdatedDate())
 			if updatedDateVal, ok := updatedDate.(*time.Time); ok {
-				if time.Since(*updatedDateVal) < time.Hour*4 {
+
+				var timeToWaitToKickoffRescanForAgentTickets time.Duration
+				if job.Payload.AgentTicketRescanDelayWaitInMinutes == nil {
+					timeToWaitToKickoffRescanForAgentTickets = 0
+				} else {
+					timeToWaitToKickoffRescanForAgentTickets = time.Minute * (*job.Payload.AgentTicketRescanDelayWaitInMinutes)
+				}
+
+				if job.Payload.AgentTicketRescanDelayWaitInMinutes != nil &&
+					time.Since(*updatedDateVal) < timeToWaitToKickoffRescanForAgentTickets {
 					readyForRescan = false
 
 					job.lstream.Send(log.Infof("Skipping rescan of [%s], waiting until [%s] as it is an agent ticket",
 						ticket.Title(),
-						updatedDateVal.Add(time.Hour*4).Format(time.RFC822)),
+						updatedDateVal.Add(timeToWaitToKickoffRescanForAgentTickets).Format(time.RFC822)),
 					)
 				} else {
 					// if this path takes, the agent is ready to be rescanned so we delete the timer that was tracking it

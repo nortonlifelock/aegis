@@ -479,7 +479,7 @@ func (job *ScanCloseJob) modifyJiraTicketAccordingToVulnerabilityStatus(engine i
 		job.lstream.Send(log.Errorf(nil, "scan [%s] did not seem to cover the device %v - scanner did not report any data for device", job.Payload.ScanID, ticket.DeviceID()))
 		err := engine.Transition(ticket, engine.GetStatusMap(domain.StatusScanError), fmt.Sprintf("scan [%s] did not cover the device %v. Please make sure this asset is still in-	scope and associated with an asset group. If this asset is out of scope, please move this ticket to NOTAVRR status or alert the vulnerability management team.", job.Payload.ScanID, ticket.DeviceID()), sord(ticket.AssignedTo()))
 		if err != nil {
-			job.lstream.Send(log.Errorf(err, "error while adding comment to ticket [%s]", ticket.Title()))
+			job.lstream.Send(log.Errorf(err, "error while marking ticket as ScanError [%s]", ticket.Title()))
 		}
 	}
 }
@@ -490,7 +490,7 @@ func (job *ScanCloseJob) processTicketForPassiveOrExceptionRescan(deadHostIPToPr
 		job.lstream.Send(log.Infof("the device for %s seems to be dead, but this is not a decommission scan", ticket.Title()))
 		err = engine.Transition(ticket, engine.GetStatusMap(domain.StatusResolvedDecom), fmt.Sprintf("The device could not be detected though a vulnerability rescan. It has been moved to a resolved decommission status and will be rescanned with another option profile to confirm\nPROOF:\n%s", deadHostIPToProofMap[sord(ticket.IPAddress())]), sord(ticket.AssignedTo()))
 		if err != nil {
-			job.lstream.Send(log.Errorf(err, "error while adding comment to ticket %s", ticket.Title()))
+			job.lstream.Send(log.Errorf(err, "error while marking ticket as ResolvedDecomm %s", ticket.Title()))
 		}
 	} else if detection == nil || status == domain.Fixed || status == domain.Potential {
 		// Non-decommission scan, the detection appears to be fixed, so close the ticket
@@ -617,7 +617,7 @@ func (job *ScanCloseJob) processTicketForNormalRescan(deadHostIPToProofMap map[s
 		job.lstream.Send(log.Infof("the device for %s seems to be dead, but this is not a decommission scan", ticket.Title()))
 		err = engine.Transition(ticket, engine.GetStatusMap(domain.StatusResolvedDecom), fmt.Sprintf("The device could not be detected though a vulnerability rescan. It has been moved to a resolved decommission status and will be rescanned with another option profile to confirm\nPROOF:\n%s", deadHostIPToProofMap[sord(ticket.IPAddress())]), sord(ticket.AssignedTo()))
 		if err != nil {
-			job.lstream.Send(log.Errorf(err, "error while adding comment to ticket %s", ticket.Title()))
+			job.lstream.Send(log.Errorf(err, "error while marking ticket as ResolvedDecomm %s", ticket.Title()))
 		}
 	} else if detection != nil && detection.LastUpdated() != nil && detection.LastUpdated().Before(scan.CreatedDate()) && !detection.LastUpdated().IsZero() && !scan.CreatedDate().IsZero() && trackingMethod != AgentDevice {
 		job.lstream.Send(log.Infof("the scan didn't check %s for vulnerability %s [%s before %s]", ticket.Title(), ticket.VulnerabilityID(), detection.LastUpdated().Format(time.RFC822), scan.CreatedDate().Format(time.RFC822)))
