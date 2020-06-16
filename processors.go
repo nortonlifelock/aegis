@@ -235,7 +235,7 @@ func generateMockSQLDriver(signatures string, templatePath string, interfaceImpo
 				parameters = fmt.Sprintf("%s\n\t%s", parameters, strings.Replace(firstOrderFunction, "\t", "", -1))
 
 				methodBody := fmt.Sprintf(
-					`func (driver *MockSQLDriver) %s {
+					`func (myMockSQLDriver *MockSQLDriver) %s {
 	if driver.func%s != nil {
 		return driver.func%s(%s)
 	} else {
@@ -253,7 +253,8 @@ func generateMockSQLDriver(signatures string, templatePath string, interfaceImpo
 			Repl("%methods", methods).
 			Repl("%class", class).
 			Repl("%parameters", parameters).
-			Repl("%json", json)
+			Repl("%json", json).
+			Repl("package dal", "package database")
 
 		var formattedTemplate []byte
 		formattedTemplate, err = format.Source([]byte(structTemplate.Get()))
