@@ -92,6 +92,14 @@ func ProcessSprocs(dbConn idb, sprocPath string, domainEngPath, sprocGenPath, te
 					}
 				}
 
+				if generateFiles {
+					path = sprocGenPath + "/generated.mock_driver.go"
+					err = generateMockSQLDriver(signatures, templatePath, interfaceImports, path)
+					if err != nil {
+						fmt.Println(err.Error())
+					}
+				}
+
 				// Build the methods files for each database
 				if err == nil && generateFiles {
 					path = sprocGenPath + "/generated.procedures.go"
@@ -185,6 +193,73 @@ func getOrderedListFromProcedureMap(in map[string]*procedureDescriptor) (alphabe
 	sort.Strings(alphabetized)
 
 	return alphabetized
+}
+
+func generateMockSQLDriver(signatures string, templatePath string, interfaceImports map[string]bool, path string) (err error) {
+	signaturesByLines := strings.Split(signatures, "\n")
+
+	var structTemplate *Template
+	if structTemplate, err = NewTemplate(templatePath, "struct"); err == nil {
+
+		var methods, imports, class, parameters, json string
+
+		parameters = "\tconnection.DatabaseConnection"
+
+		class = "MockSQLDriver"
+
+		for k := range interfaceImports {
+			imports = fmt.Sprintf("%s\n\t\"%s\"", imports, k)
+		}
+
+		json = `"NA":"NA"`
+
+		for _, methodSignature := range signaturesByLines {
+			if len(methodSignature) > 0 {
+				methodName := methodSignature[:strings.Index(methodSignature, "(")]
+				methodTail := methodSignature[strings.Index(methodSignature, "("):]
+
+				parameters = fmt.Sprintf("%s\n\tfunc%s", parameters, methodName)
+
+				argsList := methodSignature[strings.Index(methodSignature, "(")+1 : strings.Index(methodSignature, ")")]
+				argsList = strings.Replace(argsList, ", ", ",", -1)
+				argsList = strings.Replace(argsList, " ,", ",", -1)
+
+				args := make([]string, 0)
+				for _, arg := range strings.Split(argsList, ",") {
+					args = append(args, strings.Split(arg, " ")[0])
+				}
+
+				firstOrderFunction := fmt.Sprintf("func%s func%s", methodName, methodTail)
+
+				methodBody := fmt.Sprintf(
+					`func (driver *MockSQLDriver) %s {
+	if driver.func%s != nil {
+		return driver.func%s(%s)
+	} else {
+		panic("method not implemented)" // mock SQL drivers should only be used in testing
+	}
+}`, methodSignature, methodName, methodName, strings.Join(args, ", "))
+
+				methods = fmt.Sprintf("%s\n\n\tfunc%s", methods, methodBody)
+
+			}
+		}
+
+		// methods, imports, class, parameters, json
+		structTemplate.Repl("%imports", imports).
+			Repl("%methods", methods).
+			Repl("%class", class).
+			Repl("%parameters", parameters).
+			Repl("%json", json)
+
+		var formattedTemplate []byte
+		formattedTemplate, err = format.Source([]byte(structTemplate.Get()))
+		if err == nil {
+			err = ioutil.WriteFile(path, formattedTemplate, 0644)
+		}
+	}
+
+	return err
 }
 
 func generateDatabaseInterface(signatures string, templatePath string, interfaceImports map[string]bool, path string) (err error) {
