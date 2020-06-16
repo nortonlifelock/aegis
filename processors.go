@@ -231,7 +231,7 @@ func generateMockSQLDriver(signatures string, templatePath string, interfaceImpo
 					args = append(args, strings.Split(arg, " ")[0])
 				}
 
-				firstOrderFunction := fmt.Sprintf("func%s func%s", methodName, methodTail)
+				firstOrderFunction := fmt.Sprintf("Func%s func%s", methodName, methodTail)
 				parameters = fmt.Sprintf("%s\n\t%s", parameters, strings.Replace(firstOrderFunction, "\t", "", -1))
 
 				methodBody := fmt.Sprintf(
