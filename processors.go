@@ -213,7 +213,7 @@ func generateMockSQLDriver(signatures string, templatePath string, interfaceImpo
 			imports = fmt.Sprintf("%s\n\t\"%s\"", imports, k)
 		}
 
-		json = `"NA":"NA"`
+		json = `"NA":"NA",`
 
 		for _, methodSignature := range signaturesByLines {
 			if len(methodSignature) > 0 {
