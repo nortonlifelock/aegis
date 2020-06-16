@@ -236,8 +236,8 @@ func generateMockSQLDriver(signatures string, templatePath string, interfaceImpo
 
 				methodBody := fmt.Sprintf(
 					`func (myMockSQLDriver *MockSQLDriver) %s {
-	if driver.func%s != nil {
-		return driver.func%s(%s)
+	if myMockSQLDriver.func%s != nil {
+		return myMockSQLDriver.func%s(%s)
 	} else {
 		panic("method not implemented") // mock SQL drivers should only be used in testing
 	}
