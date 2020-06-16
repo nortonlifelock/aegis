@@ -429,18 +429,20 @@ func (job *ScanCloseJob) modifyJiraTicketAccordingToVulnerabilityStatus(engine i
 	var detection domain.Detection
 	if detectionsFoundForDevice {
 		detection = deviceIDToVulnIDToDetection[ticket.DeviceID()][combineVulnerabilityIDAndServicePortTicket(ticket)]
-	} else if job.Payload.Type == domain.RescanScheduled || job.Payload.Type == domain.RescanDecommission {
-		if device, err := job.db.GetDeviceByAssetOrgID(ticket.DeviceID(), job.config.OrganizationID()); err == nil && device != nil {
+	}
+
+	if device, err := job.db.GetDeviceByAssetOrgID(ticket.DeviceID(), job.config.OrganizationID()); err == nil && device != nil {
+		if job.Payload.Type == domain.RescanScheduled || job.Payload.Type == domain.RescanDecommission { // TODO do we only want to only do this for these two rescan types?
 			if sord(device.TrackingMethod()) == EC2Device && job.Payload.Type == domain.RescanScheduled {
 				deviceWithoutDetectionsLikelyDead = true
 			} else if sord(device.TrackingMethod()) == AgentDevice && job.Payload.Type == domain.RescanDecommission {
 				deviceWithoutDetectionsLikelyDead = true
 			}
-
-			trackingMethod = sord(device.TrackingMethod())
-		} else {
-			job.lstream.Send(log.Errorf(err, "error while loading device for %s [%v|%v]", ticket.Title(), err, device))
 		}
+
+		trackingMethod = sord(device.TrackingMethod())
+	} else {
+		job.lstream.Send(log.Errorf(err, "error while loading device for %s [%v|%v]", ticket.Title(), err, device))
 	}
 
 	var status string
