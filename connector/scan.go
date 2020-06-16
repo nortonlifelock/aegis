@@ -226,6 +226,7 @@ func (session *QsSession) prepareIPsAndAGMapping(matches []domain.Match) (groupI
 			// map a device IP to an assignment groups that contain it
 			var ipToAGs = session.mapIPToAssetGroup(matches)
 			for ip, ags := range ipToAGs {
+				var found bool
 				for _, ag := range ags {
 					if groupIDToScanBundle[ag] != nil {
 
@@ -233,11 +234,16 @@ func (session *QsSession) prepareIPsAndAGMapping(matches []domain.Match) (groupI
 							groupIDToScanBundle[ag].seenIP[ip] = true
 							groupIDToScanBundle[ag].ips = append(groupIDToScanBundle[ag].ips, ip)
 						}
+						found = true
 						break
 					} else {
 						// potentialGroupID does not have any online appliances
 						// do nothing
 					}
+				}
+
+				if !found {
+					session.lstream.Send(log.Errorf(err, "could not find asset group with online engine for IP [%s]", ip))
 				}
 			}
 
