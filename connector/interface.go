@@ -346,19 +346,9 @@ func (session *QsSession) Discovery(ctx context.Context, matches []domain.Match)
 		defer handleRoutinePanic(session.lstream)
 		defer close(out)
 
-		// make a list of unique IPs (in case we were provided a slice with duplicates) so we can assign them to a group
-		var seen = make(map[string]bool)
-		var uniqueIPs = make([]string, 0)
-		for _, match := range matches {
-			if !seen[match.IP()] {
-				seen[match.IP()] = true
-				uniqueIPs = append(uniqueIPs, match.IP())
-			}
-		}
-
 		var err error
-		var groupIDToScanBundle map[int]*scanBundle
-		if groupIDToScanBundle, err = session.prepareIPsAndAGMapping(uniqueIPs); err == nil {
+		var groupIDToScanBundle map[string]*scanBundle
+		if groupIDToScanBundle, err = session.prepareIPsAndAGMapping(matches); err == nil {
 			// wg to ensure we don't close the out channel before the threads finish
 			wg := &sync.WaitGroup{}
 

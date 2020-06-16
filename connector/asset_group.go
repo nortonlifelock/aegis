@@ -3,6 +3,7 @@ package connector
 import (
 	"bytes"
 	"fmt"
+	"github.com/nortonlifelock/domain"
 	"github.com/nortonlifelock/log"
 	"github.com/nortonlifelock/qualys"
 	"net"
@@ -28,6 +29,30 @@ func (session *QsSession) GetAGsForIPs(ips []string) (ipToAGs map[string][]int, 
 	}
 
 	return ipToAGs, err
+}
+
+func (session *QsSession) mapIPToAssetGroup(matches []domain.Match) (ipToAGs map[string][]string) {
+	var seenIPAndGroup = make(map[string]bool)
+
+	ipToAGs = make(map[string][]string)
+	for _, match := range matches {
+		if len(match.GroupID()) > 0 {
+			if ipToAGs[match.IP()] == nil {
+				ipToAGs[match.IP()] = make([]string, 0)
+			}
+
+			var key = fmt.Sprintf("%s;%s", match.IP(), match.GroupID())
+			if !seenIPAndGroup[key] {
+				seenIPAndGroup[key] = true
+
+				ipToAGs[match.IP()] = append(ipToAGs[match.IP()], match.GroupID())
+			}
+		} else {
+			session.lstream.Send(log.Errorf(nil, "Device with IP [%s] did not provide an associated GroupID", match.IP()))
+		}
+	}
+
+	return ipToAGs
 }
 
 func (session *QsSession) getAGMapping(ips []string) (ipToAGs map[string][]int, err error) {
