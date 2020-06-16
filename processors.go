@@ -218,8 +218,6 @@ func generateMockSQLDriver(signatures string, templatePath string, interfaceImpo
 				methodName := methodSignature[:strings.Index(methodSignature, "(")]
 				methodTail := methodSignature[strings.Index(methodSignature, "("):]
 
-				parameters = fmt.Sprintf("%s\n\tfunc%s", parameters, methodName)
-
 				argsList := methodSignature[strings.Index(methodSignature, "(")+1 : strings.Index(methodSignature, ")")]
 				argsList = strings.Replace(argsList, ", ", ",", -1)
 				argsList = strings.Replace(argsList, " ,", ",", -1)
@@ -230,6 +228,7 @@ func generateMockSQLDriver(signatures string, templatePath string, interfaceImpo
 				}
 
 				firstOrderFunction := fmt.Sprintf("func%s func%s", methodName, methodTail)
+				parameters = fmt.Sprintf("%s\n\tfunc%s", parameters, firstOrderFunction)
 
 				methodBody := fmt.Sprintf(
 					`func (driver *MockSQLDriver) %s {
