@@ -216,6 +216,8 @@ func generateMockSQLDriver(signatures string, templatePath string, interfaceImpo
 		for _, methodSignature := range signaturesByLines {
 			if len(methodSignature) > 0 {
 				methodName := methodSignature[:strings.Index(methodSignature, "(")]
+				methodName = strings.TrimSpace(methodName)
+
 				methodTail := methodSignature[strings.Index(methodSignature, "("):]
 
 				argsList := methodSignature[strings.Index(methodSignature, "(")+1 : strings.Index(methodSignature, ")")]
@@ -239,7 +241,7 @@ func generateMockSQLDriver(signatures string, templatePath string, interfaceImpo
 	}
 }`, methodSignature, methodName, methodName, strings.Join(args, ", "))
 
-				methods = fmt.Sprintf("%s\n\n\tfunc%s", methods, methodBody)
+				methods = fmt.Sprintf("%s\n\n\t%s", methods, methodBody)
 
 			}
 		}
