@@ -203,6 +203,8 @@ func generateMockSQLDriver(signatures string, templatePath string, interfaceImpo
 
 		var methods, imports, class, parameters, json string
 
+		imports = "\"github.com/nortonlifelock/connection\"\n\"github.com/nortonlifelock/domain\""
+
 		parameters = "\tconnection.DatabaseConnection"
 
 		class = "MockSQLDriver"
@@ -237,7 +239,7 @@ func generateMockSQLDriver(signatures string, templatePath string, interfaceImpo
 	if driver.func%s != nil {
 		return driver.func%s(%s)
 	} else {
-		panic("method not implemented)" // mock SQL drivers should only be used in testing
+		panic("method not implemented") // mock SQL drivers should only be used in testing
 	}
 }`, methodSignature, methodName, methodName, strings.Join(args, ", "))
 
