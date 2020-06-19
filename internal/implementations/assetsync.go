@@ -281,7 +281,7 @@ func (job *AssetSyncJob) processAsset(deviceID string, asset domain.Device, dete
 						if detection != nil {
 							_ = job.processAssetDetections(existingDeviceInDb, sord(asset.SourceID()), detection, decomIgnoreID)
 						} else {
-							job.lstream.Send(log.Errorf(err, "nil detection found for", sord(asset.SourceID())))
+							job.lstream.Send(log.Errorf(err, "nil detection found for [%s]", sord(asset.SourceID())))
 						}
 					}(detection)
 				}

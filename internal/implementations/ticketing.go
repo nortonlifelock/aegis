@@ -257,7 +257,7 @@ func (job *TicketingJob) Process(ctx context.Context, id string, appconfig domai
 														job.lstream.Send(log.Error("Error occurred while loading device vulnerability information", err))
 													}
 												} else {
-													job.lstream.Send(log.Errorf(err, "could not find asset group for org|group [%s|%s], job.config.OrganizationID(), groupID"))
+													job.lstream.Send(log.Errorf(err, "could not find asset group for org|group [%s|%s]", job.config.OrganizationID(), groupID))
 												}
 											} else {
 												err = fmt.Errorf("error while loading asset group for [%s] - %s", groupID, err.Error())
