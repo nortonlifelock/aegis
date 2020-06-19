@@ -207,11 +207,11 @@ func TestAssetSyncJob_enterAssetInformationInDB(t *testing.T) {
 
 		asj.db = &mockDBWrapper{
 			DatabaseConnection: &database.MockSQLDriver{
-				FuncCreateDevice: func(_AssetID string, _SourceID string, _Ip string, _Hostname string, inInstanceID string, _MAC string, _GroupID string, _OrgID string, _OS string, _OSTypeID int) (id int, affectedRows int, err error) {
+				FuncCreateDevice: func(_AssetID string, _SourceID string, _Ip string, _Hostname string, inInstanceID string, _MAC string, _GroupID string, _OrgID string, _OS string, _OSTypeID int, inTrackingMethod string) (id int, affectedRows int, err error) {
 					createMethodCalled = true
 					return
 				},
-				FuncUpdateAssetIDOsTypeIDOfDevice: func(_ID string, _AssetID string, _ScannerSourceID string, _GroupID string, _OS string, _HostName string, _OsTypeID int, _OrgID string) (id int, affectedRows int, err error) {
+				FuncUpdateAssetIDOsTypeIDOfDevice: func(_ID string, _AssetID string, _ScannerSourceID string, _GroupID string, _OS string, _HostName string, _OsTypeID int, inTrackingMethod string, _OrgID string) (id int, affectedRows int, err error) {
 					updateMethodCalled = true
 					return
 				},

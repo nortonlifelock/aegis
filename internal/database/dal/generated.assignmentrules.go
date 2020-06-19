@@ -18,6 +18,7 @@ import (
 type AssignmentRules struct {
 	Assigneevar              *string
 	AssignmentGroupvar       *string
+	CategoryRegexvar         *string
 	ExcludePortCSVvar        *string
 	ExcludeVulnTitleRegexvar *string
 	GroupIDvar               *string
@@ -40,6 +41,7 @@ func (myAssignmentRules AssignmentRules) MarshalJSON() ([]byte, error) {
 	return json.Marshal(map[string]interface{}{
 		"Assignee":              myAssignmentRules.Assigneevar,
 		"AssignmentGroup":       myAssignmentRules.AssignmentGroupvar,
+		"CategoryRegex":         myAssignmentRules.CategoryRegexvar,
 		"ExcludePortCSV":        myAssignmentRules.ExcludePortCSVvar,
 		"ExcludeVulnTitleRegex": myAssignmentRules.ExcludeVulnTitleRegexvar,
 		"GroupID":               myAssignmentRules.GroupIDvar,
@@ -62,6 +64,11 @@ func (myAssignmentRules *AssignmentRules) Assignee() (param *string) {
 // AssignmentGroup returns the AssignmentGroup parameter from the AssignmentRules struct
 func (myAssignmentRules *AssignmentRules) AssignmentGroup() (param *string) {
 	return myAssignmentRules.AssignmentGroupvar
+}
+
+// CategoryRegex returns the CategoryRegex parameter from the AssignmentRules struct
+func (myAssignmentRules *AssignmentRules) CategoryRegex() (param *string) {
+	return myAssignmentRules.CategoryRegexvar
 }
 
 // ExcludePortCSV returns the ExcludePortCSV parameter from the AssignmentRules struct
@@ -127,6 +134,11 @@ func (myAssignmentRules *AssignmentRules) SetAssignee(val string) {
 // SetAssignmentGroup sets the AssignmentGroup parameter from the AssignmentRules struct
 func (myAssignmentRules *AssignmentRules) SetAssignmentGroup(val string) {
 	myAssignmentRules.AssignmentGroupvar = &val
+}
+
+// SetCategoryRegex sets the CategoryRegex parameter from the AssignmentRules struct
+func (myAssignmentRules *AssignmentRules) SetCategoryRegex(val string) {
+	myAssignmentRules.CategoryRegexvar = &val
 }
 
 // SetExcludePortCSV sets the ExcludePortCSV parameter from the AssignmentRules struct

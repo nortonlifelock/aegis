@@ -20,7 +20,7 @@
 
 DROP PROCEDURE IF EXISTS `GetDetectionInfoByID`;
 
-CREATE PROCEDURE `GetDetectionInfoByID` (_ID VARCHAR(36))
+CREATE PROCEDURE `GetDetectionInfoByID` (_ID VARCHAR(36), _OrgID VARCHAR(36))
     #BEGIN#
 SELECT
     D.ID,
@@ -40,4 +40,4 @@ SELECT
     D.TimesSeen,
     D.Updated
 FROM Detection D
-WHERE D.ID = _ID;
+WHERE D.ID = _ID AND D.OrganizationID = _OrgID;

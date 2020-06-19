@@ -25,7 +25,7 @@ type MockSQLDriver struct {
 	FuncCreateCategory                                func(_Category string) (id int, affectedRows int, err error)
 	FuncCreateDBLog                                   func(_User string, _Command string, _Endpoint string) (id int, affectedRows int, err error)
 	FuncCreateDetection                               func(_OrgID string, _SourceID string, _DeviceID string, _VulnID string, _IgnoreID string, _AlertDate time.Time, _LastFound time.Time, _LastUpdated time.Time, _Proof string, _Port int, _Protocol string, _ActiveKernel int, _DetectionStatusID int, _TimesSeen int, _DefaultTime time.Time) (id int, affectedRows int, err error)
-	FuncCreateDevice                                  func(_AssetID string, _SourceID string, _Ip string, _Hostname string, inInstanceID string, _MAC string, _GroupID string, _OrgID string, _OS string, _OSTypeID int) (id int, affectedRows int, err error)
+	FuncCreateDevice                                  func(_AssetID string, _SourceID string, _Ip string, _Hostname string, inInstanceID string, _MAC string, _GroupID string, _OrgID string, _OS string, _OSTypeID int, inTrackingMethod string) (id int, affectedRows int, err error)
 	FuncCreateException                               func(inSourceID string, inOrganizationID string, inTypeID int, inVulnerabilityID string, inDeviceID string, inDueDate time.Time, inApproval string, inActive bool, inPort string, inCreatedBy string) (id int, affectedRows int, err error)
 	FuncCreateJobConfig                               func(_JobID int, _OrganizationID string, _PriorityOverride int, _Continuous bool, _WaitInSeconds int, _MaxInstances int, _AutoStart bool, _CreatedBy string, _DataInSourceID string, _DataOutSourceID string) (id int, affectedRows int, err error)
 	FuncCreateJobConfigWPayload                       func(_JobID int, _OrganizationID string, _PriorityOverride int, _Continuous bool, _WaitInSeconds int, _MaxInstances int, _AutoStart bool, _CreatedBy string, _DataInSourceID string, _DataOutSourceID string, _Payload string) (id int, affectedRows int, err error)
@@ -72,7 +72,7 @@ type MockSQLDriver struct {
 	FuncGetCategoryByName                             func(_Name string) ([]domain.Category, error)
 	FuncGetDetectionInfo                              func(_DeviceID string, _VulnerabilityID string, _Port int, _Protocol string) (domain.DetectionInfo, error)
 	FuncGetDetectionInfoAfter                         func(_After time.Time, _OrgID string) ([]domain.DetectionInfo, error)
-	FuncGetDetectionInfoByID                          func(_ID string) (domain.DetectionInfo, error)
+	FuncGetDetectionInfoByID                          func(_ID string, _OrgID string) (domain.DetectionInfo, error)
 	FuncGetDetectionInfoBySourceVulnID                func(_SourceDeviceID string, _SourceVulnerabilityID string, _Port int, _Protocol string) (domain.DetectionInfo, error)
 	FuncGetDetectionInfoForGroupAfter                 func(_After time.Time, _OrgID string, inGroupID string, ticketInactiveKernels bool) ([]domain.DetectionInfo, error)
 	FuncGetDetectionStatusByID                        func(_ID int) (domain.DetectionStatus, error)
@@ -145,9 +145,11 @@ type MockSQLDriver struct {
 	FuncGetTagsForDevice                              func(_DeviceID string) ([]domain.Tag, error)
 	FuncGetTicketByDetectionID                        func(inDetectionID string, _OrgID string) (domain.TicketSummary, error)
 	FuncGetTicketByDeviceIDVulnID                     func(inDeviceID string, inVulnID string, inPort int, inProtocol string, inOrgID string) (domain.TicketSummary, error)
+	FuncGetTicketByIPGroupIDVulnID                    func(inIP string, inGroupID string, inVulnID string, inPort int, inProtocol string, inOrgID string) (domain.TicketSummary, error)
 	FuncGetTicketByTitle                              func(_Title string, _OrgID string) (domain.TicketSummary, error)
 	FuncGetTicketCountByStatus                        func(inStatus string, inOrgID string) (domain.QueryData, error)
 	FuncGetTicketCreatedAfter                         func(_UpperCVSS float32, _LowerCVSS float32, _CreatedAfter time.Time, _OrgID string) ([]domain.TicketSummary, error)
+	FuncGetTicketTrackingMethod                       func(_Title string, _OrgID string) (domain.KeyValue, error)
 	FuncGetUnfinishedScanSummariesBySourceConfigOrgID func(_ScannerSourceConfigID string, _OrgID string) ([]domain.ScanSummary, error)
 	FuncGetUnfinishedScanSummariesBySourceOrgID       func(_SourceID string, _OrgID string) ([]domain.ScanSummary, error)
 	FuncGetUnmatchedVulns                             func(_SourceID int) ([]domain.VulnerabilityInfo, error)
@@ -173,7 +175,7 @@ type MockSQLDriver struct {
 	FuncSaveScanSummary                               func(_ScanID string, _ScanStatus string) (id int, affectedRows int, err error)
 	FuncSetScheduleLastRun                            func(_ID string) (id int, affectedRows int, err error)
 	FuncUpdateAssetGroupLastTicket                    func(inGroupID string, inOrgID string, inLastTicketTime time.Time) (id int, affectedRows int, err error)
-	FuncUpdateAssetIDOsTypeIDOfDevice                 func(_ID string, _AssetID string, _ScannerSourceID string, _GroupID string, _OS string, _HostName string, _OsTypeID int, _OrgID string) (id int, affectedRows int, err error)
+	FuncUpdateAssetIDOsTypeIDOfDevice                 func(_ID string, _AssetID string, _ScannerSourceID string, _GroupID string, _OS string, _HostName string, _OsTypeID int, inTrackingMethod string, _OrgID string) (id int, affectedRows int, err error)
 	FuncUpdateDetection                               func(_ID string, _DeviceID string, _VulnID string, _Port int, _Protocol string, _ExceptionID string, _TimesSeen int, _StatusID int, _LastFound time.Time, _LastUpdated time.Time, _DefaultTime time.Time) (id int, affectedRows int, err error)
 	FuncUpdateDetectionIgnore                         func(_DeviceID string, _VulnID string, _Port int, _Protocol string, _ExceptionID string) (id int, affectedRows int, err error)
 	FuncUpdateExpirationDateByCERF                    func(_CERForm string, _OrganizationID string, _DueDate time.Time) (id int, affectedRows int, err error)
@@ -257,9 +259,9 @@ func (myMockSQLDriver *MockSQLDriver) CreateDetection(_OrgID string, _SourceID s
 	}
 }
 
-func (myMockSQLDriver *MockSQLDriver) CreateDevice(_AssetID string, _SourceID string, _Ip string, _Hostname string, inInstanceID string, _MAC string, _GroupID string, _OrgID string, _OS string, _OSTypeID int) (id int, affectedRows int, err error) {
+func (myMockSQLDriver *MockSQLDriver) CreateDevice(_AssetID string, _SourceID string, _Ip string, _Hostname string, inInstanceID string, _MAC string, _GroupID string, _OrgID string, _OS string, _OSTypeID int, inTrackingMethod string) (id int, affectedRows int, err error) {
 	if myMockSQLDriver.FuncCreateDevice != nil {
-		return myMockSQLDriver.FuncCreateDevice(_AssetID, _SourceID, _Ip, _Hostname, inInstanceID, _MAC, _GroupID, _OrgID, _OS, _OSTypeID)
+		return myMockSQLDriver.FuncCreateDevice(_AssetID, _SourceID, _Ip, _Hostname, inInstanceID, _MAC, _GroupID, _OrgID, _OS, _OSTypeID, inTrackingMethod)
 	} else {
 		panic("method not implemented") // mock SQL drivers should only be used in testing
 	}
@@ -633,9 +635,9 @@ func (myMockSQLDriver *MockSQLDriver) GetDetectionInfoAfter(_After time.Time, _O
 	}
 }
 
-func (myMockSQLDriver *MockSQLDriver) GetDetectionInfoByID(_ID string) (domain.DetectionInfo, error) {
+func (myMockSQLDriver *MockSQLDriver) GetDetectionInfoByID(_ID string, _OrgID string) (domain.DetectionInfo, error) {
 	if myMockSQLDriver.FuncGetDetectionInfoByID != nil {
-		return myMockSQLDriver.FuncGetDetectionInfoByID(_ID)
+		return myMockSQLDriver.FuncGetDetectionInfoByID(_ID, _OrgID)
 	} else {
 		panic("method not implemented") // mock SQL drivers should only be used in testing
 	}
@@ -1217,6 +1219,14 @@ func (myMockSQLDriver *MockSQLDriver) GetTicketByDeviceIDVulnID(inDeviceID strin
 	}
 }
 
+func (myMockSQLDriver *MockSQLDriver) GetTicketByIPGroupIDVulnID(inIP string, inGroupID string, inVulnID string, inPort int, inProtocol string, inOrgID string) (domain.TicketSummary, error) {
+	if myMockSQLDriver.FuncGetTicketByIPGroupIDVulnID != nil {
+		return myMockSQLDriver.FuncGetTicketByIPGroupIDVulnID(inIP, inGroupID, inVulnID, inPort, inProtocol, inOrgID)
+	} else {
+		panic("method not implemented") // mock SQL drivers should only be used in testing
+	}
+}
+
 func (myMockSQLDriver *MockSQLDriver) GetTicketByTitle(_Title string, _OrgID string) (domain.TicketSummary, error) {
 	if myMockSQLDriver.FuncGetTicketByTitle != nil {
 		return myMockSQLDriver.FuncGetTicketByTitle(_Title, _OrgID)
@@ -1236,6 +1246,14 @@ func (myMockSQLDriver *MockSQLDriver) GetTicketCountByStatus(inStatus string, in
 func (myMockSQLDriver *MockSQLDriver) GetTicketCreatedAfter(_UpperCVSS float32, _LowerCVSS float32, _CreatedAfter time.Time, _OrgID string) ([]domain.TicketSummary, error) {
 	if myMockSQLDriver.FuncGetTicketCreatedAfter != nil {
 		return myMockSQLDriver.FuncGetTicketCreatedAfter(_UpperCVSS, _LowerCVSS, _CreatedAfter, _OrgID)
+	} else {
+		panic("method not implemented") // mock SQL drivers should only be used in testing
+	}
+}
+
+func (myMockSQLDriver *MockSQLDriver) GetTicketTrackingMethod(_Title string, _OrgID string) (domain.KeyValue, error) {
+	if myMockSQLDriver.FuncGetTicketTrackingMethod != nil {
+		return myMockSQLDriver.FuncGetTicketTrackingMethod(_Title, _OrgID)
 	} else {
 		panic("method not implemented") // mock SQL drivers should only be used in testing
 	}
@@ -1441,9 +1459,9 @@ func (myMockSQLDriver *MockSQLDriver) UpdateAssetGroupLastTicket(inGroupID strin
 	}
 }
 
-func (myMockSQLDriver *MockSQLDriver) UpdateAssetIDOsTypeIDOfDevice(_ID string, _AssetID string, _ScannerSourceID string, _GroupID string, _OS string, _HostName string, _OsTypeID int, _OrgID string) (id int, affectedRows int, err error) {
+func (myMockSQLDriver *MockSQLDriver) UpdateAssetIDOsTypeIDOfDevice(_ID string, _AssetID string, _ScannerSourceID string, _GroupID string, _OS string, _HostName string, _OsTypeID int, inTrackingMethod string, _OrgID string) (id int, affectedRows int, err error) {
 	if myMockSQLDriver.FuncUpdateAssetIDOsTypeIDOfDevice != nil {
-		return myMockSQLDriver.FuncUpdateAssetIDOsTypeIDOfDevice(_ID, _AssetID, _ScannerSourceID, _GroupID, _OS, _HostName, _OsTypeID, _OrgID)
+		return myMockSQLDriver.FuncUpdateAssetIDOsTypeIDOfDevice(_ID, _AssetID, _ScannerSourceID, _GroupID, _OS, _HostName, _OsTypeID, inTrackingMethod, _OrgID)
 	} else {
 		panic("method not implemented") // mock SQL drivers should only be used in testing
 	}

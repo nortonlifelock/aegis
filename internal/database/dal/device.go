@@ -61,6 +61,10 @@ func (device *Device) GroupID() *string {
 	return &groupID
 }
 
+func (device *Device) TrackingMethod() *string {
+	return device.Info.TrackingMethod()
+}
+
 // Vulnerabilities returns a channel that contains all the detections that were found on the device
 func (device *Device) Vulnerabilities(ctx context.Context) (param <-chan domain.Detection, err error) {
 	out := make(chan domain.Detection)

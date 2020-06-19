@@ -176,6 +176,77 @@ func (job *ScanSyncJob) createScanCloseJob(scan domain.Scan, correspondingScanSu
 	}
 }
 
+// TODO delete if we don't end up using
+// devices with agents must operate differently than on-demand scans, as agent data updates every four hours
+// in this method we extract the agent results so that we can wait four hours for their data to reflect in Qualys
+// Nexpose devices aren't agent tracked, so you can ignore this than Nexpose
+// non-agent devices will have their scan data processed right away
+//func (job *ScanSyncJob) separateOnDemandAndAgentRescans(scan domain.Scan, correspondingScanSummary domain.ScanSummary, baseJob domain.JobRegistration, rescanCloseJobConfig domain.JobConfig) {
+//	var scanClosePayload = &ScanClosePayload{}
+//	if err := json.Unmarshal([]byte(correspondingScanSummary.ScanClosePayload()), scanClosePayload); err == nil {
+//		var ticketsForAgentDevices = make([]string, 0)
+//		var ticketsForNonAgentDevices = make([]string, 0)
+//
+//		for _, ticket := range scanClosePayload.Tickets {
+//			// TODO don't want to kickoff agent in thread, we want rescan job to stay alive so the RSQ knows not to create another rescan jbo
+//
+//			if ticketSummary, err := job.db.GetTicketByTitle(ticket, job.config.OrganizationID()); err == nil && ticketSummary != nil {
+//				if detection, err := job.db.GetDetectionInfoByID(ticketSummary.DetectionID(), job.config.OrganizationID()); err == nil && detection != nil {
+//					if device, err := job.db.GetDeviceInfoByAssetOrgID(detection.DeviceID(), job.config.OrganizationID()); err == nil  && device != nil {
+//						if sord(device.TrackingMethod()) == IPDevice || sord(device.TrackingMethod()) == "" {
+//							// these tickets are for on demand scans
+//							ticketsForNonAgentDevices = append(ticketsForNonAgentDevices, ticket)
+//						} else {
+//							// non IP-tracked devices should be delayed for four hours
+//							ticketsForAgentDevices = append(ticketsForAgentDevices, ticket)
+//						}
+//					} else {
+//						job.lstream.Send(log.Errorf(err, "error while detection for ticket [%s] for scan [%s]", ticket, scanClosePayload.ScanID))
+//					}
+//				} else {
+//					job.lstream.Send(log.Errorf(err, "error while detection for ticket [%s] for scan [%s]", ticket, scanClosePayload.ScanID))
+//				}
+//			} else {
+//				job.lstream.Send(log.Errorf(err, "error while loading ticket [%s]", ticket))
+//			}
+//		}
+//
+//		if len(ticketsForAgentDevices) > 0 {
+//			scp := &ScanClosePayload{
+//				RescanPayload: RescanPayload{
+//					Group:   scanClosePayload.Group,
+//					Tickets: ticketsForAgentDevices,
+//					Type:    scanClosePayload.Type,
+//				},
+//				Scan:          scanClosePayload.Scan,
+//				Devices:       scanClosePayload.Devices,
+//				ScanID:        scanClosePayload.ScanID,
+//			}
+//
+//			if scpBytes, err := json.Marshal(scp); err == nil {
+//
+//			} else {
+//
+//			}
+//		}
+//
+//		if len(ticketsForNonAgentDevices) > 0 {
+//			scp := &ScanClosePayload{
+//				RescanPayload: RescanPayload{
+//					Group:   scanClosePayload.Group,
+//					Tickets: ticketsForNonAgentDevices,
+//					Type:    scanClosePayload.Type,
+//				},
+//				Scan:          scanClosePayload.Scan,
+//				Devices:       scanClosePayload.Devices,
+//				ScanID:        scanClosePayload.ScanID,
+//			}
+//		}
+//	} else {
+//		job.lstream.Send(log.Errorf(err, "error while unmarshalling payload [%s]", correspondingScanSummary.ScanClosePayload()))
+//	}
+//}
+
 func (job *ScanSyncJob) pushScansOntoChannel(in []domain.ScanSummary) <-chan []byte {
 	var out = make(chan []byte)
 

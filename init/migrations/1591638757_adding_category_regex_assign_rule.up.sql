@@ -1,0 +1,1 @@
+ALTER TABLE AssignmentRules ADD COLUMN CategoryRegex VARCHAR(300) NULL AFTER OSRegex;

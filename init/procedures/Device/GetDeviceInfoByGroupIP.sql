@@ -8,6 +8,7 @@
   HostName    VARCHAR(300) NOT
   Region      VARCHAR(100) NULL
   InstanceID  VARCHAR(100) NULL
+  TrackingMethod VARCHAR(100) NULL
 */
 
 DROP PROCEDURE IF EXISTS `GetDeviceInfoByGroupIP`;
@@ -22,6 +23,7 @@ SELECT
     D.IP,
     D.HostName,
     D.Region,
-    D.InstanceID
+    D.InstanceID,
+    D.TrackingMethod
 FROM Device D
 WHERE D.OrganizationID = inOrgID AND D.IP = inIP AND D.GroupID = inGroupID;

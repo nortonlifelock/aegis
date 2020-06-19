@@ -25,6 +25,11 @@ type TicketingPayload struct {
 	MinDate *time.Time `json:"mindate,omitempty"`
 	Groups  []string   `json:"groups,omitempty"`
 
+	// CorrelateByIPAndGroup controls how we check for duplicates
+	// If the field is not present, or holds a value of false, we check for duplicates based on the device ID
+	// If the field is present and holds a value of true, we check for duplicates based on the group ID and IP
+	CorrelateByIPAndGroup bool `json:"ip_correlation"`
+
 	TicketInactiveKernels bool `json:"ticket_inactive_kernels"`
 }
 
@@ -194,7 +199,6 @@ func (job *TicketingJob) buildOrgPayload(org domain.Organization) (err error) {
 // Process the ticketing job loads device information from a scanner, and creates a ticket for each device/vulnerability combination where one does not
 // already exist. First, it checks for an entry in the ignore table to see if that device/vulnerability combination is a known exception or false positive
 func (job *TicketingJob) Process(ctx context.Context, id string, appconfig domain.Config, db domain.DatabaseConnection, lstream log.Logger, payload string, jobConfig domain.JobConfig, inSource []domain.SourceConfig, outSource []domain.SourceConfig) (err error) {
-
 	var ok bool
 	if job.ctx, job.id, job.appconfig, job.db, job.lstream, job.payloadJSON, job.config, job.insource, job.outsource, ok = validInputs(ctx, id, appconfig, db, lstream, payload, jobConfig, inSource, outSource); ok {
 
@@ -213,7 +217,9 @@ func (job *TicketingJob) Process(ctx context.Context, id string, appconfig domai
 									job.lstream.Send(log.Debug("Scanner connection initialized."))
 
 									var groupsToRunTicketingAgainst = make([]string, 0)
+
 									if len(job.Payload.Groups) == 0 {
+										// if there are no groups specified in the ticketing payload, we ticket all the groups that belong to the organization
 										var assetGroups []domain.AssetGroup
 										if assetGroups, err = job.db.GetAssetGroupsForOrg(job.config.OrganizationID()); err == nil {
 											for _, assetGroup := range assetGroups {
@@ -248,7 +254,6 @@ func (job *TicketingJob) Process(ctx context.Context, id string, appconfig domai
 
 														job.processVulnerabilities(vscanner, pushDetectionsToChannel(job.ctx, detections))
 
-														// passing an empty group ID updates the last ticketing date of ALL groups
 														_, _, err = job.db.UpdateAssetGroupLastTicket(groupID, job.config.OrganizationID(), startTime)
 														if err != nil {
 															job.lstream.Send(log.Criticalf(err, "Error while updating the last ticketed date to %s", startTime.String()))
@@ -311,6 +316,62 @@ func (job *TicketingJob) processVulnerabilities(vscanner integrations.Vscanner, 
 	)
 }
 
+func (job *TicketingJob) alreadyProcessed(combo domain.Detection, agentDuplicateMap *sync.Map, nonAgentDuplicateMap *sync.Map) (processed bool, device domain.Device, vuln domain.Vulnerability, err error) {
+	const agent = "agent"
+
+	if device, err = combo.Device(); err == nil {
+		if vuln, err = combo.Vulnerability(); err == nil {
+			var port int
+			var protocol string
+
+			port = combo.Port()
+			protocol = combo.Protocol()
+
+			var keyToPreventDuplicates string
+			if job.Payload.CorrelateByIPAndGroup {
+				// correlate by group ID/IP
+				keyToPreventDuplicates = fmt.Sprintf("%s-%s-%s", sord(device.GroupID()), device.IP(), vuln.SourceID())
+			} else {
+				// correlate by deviceID
+				keyToPreventDuplicates = fmt.Sprintf("%s-%s", sord(device.SourceID()), vuln.SourceID())
+			}
+
+			// the same device can be tracked under multiple methods (e.g. IP tracked/Agent installed on the device)
+			// this block of code an attempt to filter duplicates when records are duplicated due to a device being tracked under multiple methods
+			// all the data is the same except for the fact that agent tracked devices don't report port/protocol that the vuln was found on
+
+			// note that this blocking only occurs if CorrelateByIPAndGroup is marked true in the payload, if it is false, the duplicate checks
+			// will use the device unique source ID, which will always be different between a device's IP tracked and agent records
+			if strings.ToLower(sord(device.TrackingMethod())) != agent {
+
+				// store the value without the port, as agent devices don't monitor the port/protocol, and we need to verify
+				// for non-agents, we need to verify the port, so we don't do a LoadOrStore when the port isn't included
+				nonAgentDuplicateMap.Store(keyToPreventDuplicates, true)
+
+				// now we check to see if this device was already seen on the port/protocol
+				_, processed = nonAgentDuplicateMap.LoadOrStore(fmt.Sprintf("%s-%d-%s", keyToPreventDuplicates, port, protocol), true)
+
+				if !processed {
+					// let's us know if an agent has already processed the vuln
+					// we don't provide the port, as agents don't record the port
+					_, processed = agentDuplicateMap.Load(keyToPreventDuplicates)
+				}
+			} else {
+				//first we check if an agent device has already processed this vulnerability on the device
+				if _, processed = agentDuplicateMap.LoadOrStore(keyToPreventDuplicates, true); !processed {
+
+					// if an agent device hasn't, we now check to see if a non-agent device has checked the vulnerability
+					// because agents are processed first (Agent detections are pulled first), this shouldn't really return true, but in-case
+					// that design feature is broken in the future this check exists
+					_, processed = nonAgentDuplicateMap.Load(keyToPreventDuplicates)
+				}
+			}
+		}
+	}
+
+	return processed, device, vuln, err
+}
+
 func (job *TicketingJob) processVulnerability(in <-chan domain.Detection) <-chan *vulnerabilityPayload {
 	defer handleRoutinePanic(job.lstream)
 	var out = make(chan *vulnerabilityPayload)
@@ -330,6 +391,7 @@ func (job *TicketingJob) processVulnerability(in <-chan domain.Detection) <-chan
 			job.ticketingEngine = tickets
 
 			func() {
+				var agentDuplicateMap, nonAgentDuplicateMap sync.Map
 				permit := getPermitThread(100)
 
 				for {
@@ -339,73 +401,91 @@ func (job *TicketingJob) processVulnerability(in <-chan domain.Detection) <-chan
 					case item, ok := <-in:
 						if ok {
 
-							select {
-							case <-permit:
-							case <-job.ctx.Done():
-								return
-							}
+							if alreadyProcessed, device, vuln, err := job.alreadyProcessed(item, &agentDuplicateMap, &nonAgentDuplicateMap); err == nil {
+								if !alreadyProcessed {
 
-							wg.Add(1)
-							go func(dvCombo domain.Detection) {
-								defer wg.Done()
-								defer handleRoutinePanic(job.lstream)
-								defer func() {
-									permit <- true
-								}()
-
-								if strings.ToLower(dvCombo.Status()) != strings.ToLower(domain.Fixed) {
-									var err error
-
-									var device domain.Device
-									var vuln domain.Vulnerability
-									var detectedDate *time.Time
-
-									device, err = dvCombo.Device()
-									if err == nil {
-										vuln, err = dvCombo.Vulnerability()
-										if err == nil {
-											detectedDate, err = dvCombo.Detected()
-										}
+									select {
+									case <-permit:
+									case <-job.ctx.Done():
+										return
 									}
 
-									if err == nil {
-										if device != nil && vuln != nil && detectedDate != nil {
-											if job.getCVSSScore(vuln) >= job.OrgPayload.LowestCVSS {
+									wg.Add(1)
+									go func(dvCombo domain.Detection, device domain.Device, vuln domain.Vulnerability) {
+										defer wg.Done()
+										defer handleRoutinePanic(job.lstream)
+										defer func() {
+											select {
+											case permit <- true:
+											case <-job.ctx.Done():
+											}
+										}()
 
-												statuses := make(map[string]bool)
-												loadStatuses(tickets, statuses)
+										if strings.ToLower(dvCombo.Status()) != strings.ToLower(domain.Fixed) {
+											var err error
+											var detectedDate *time.Time
+											detectedDate, err = dvCombo.Detected()
+											if err == nil {
+												if device != nil && vuln != nil && detectedDate != nil {
+													if job.getCVSSScore(vuln) >= job.OrgPayload.LowestCVSS {
 
-												job.lstream.Send(log.Infof("Processing vulnerability [%s] on device [%v]", vuln.SourceID(), sord(device.SourceID())))
+														statuses := make(map[string]bool)
+														loadStatuses(tickets, statuses)
 
-												var payload = &vulnerabilityPayload{
-													tickets,
-													orgcode,
-													dvCombo,
-													device,
-													vuln,
-													detectedDate,
-													statuses,
-													nil,
-												}
+														job.lstream.Send(log.Infof("Processing vulnerability [%s] on device [%v]", vuln.SourceID(), sord(device.SourceID())))
 
-												select {
-												case <-job.ctx.Done():
-													return
-												case out <- payload:
+														var payload = &vulnerabilityPayload{
+															tickets,
+															orgcode,
+															dvCombo,
+															device,
+															vuln,
+															detectedDate,
+															statuses,
+															nil,
+														}
+
+														select {
+														case <-job.ctx.Done():
+															return
+														case out <- payload:
+														}
+													} else {
+														job.lstream.Send(log.Debugf("Skipping vulnerability [%s] on device [%v] with CVSS [%v].", vuln.SourceID(), sord(device.SourceID()), job.getCVSSScore(vuln)))
+													}
+												} else {
+													job.lstream.Send(log.Errorf(err, "failed to load vulnerability information for [%v|%v|%v]", device, vuln, detectedDate))
 												}
 											} else {
-												job.lstream.Send(log.Debugf("Skipping vulnerability [%s] on device [%v] with CVSS [%v].", vuln.SourceID(), sord(device.SourceID()), job.getCVSSScore(vuln)))
+												job.lstream.Send(log.Errorf(err, "error while processing vulnerability %v", dvCombo.VulnerabilityID()))
 											}
 										} else {
-											job.lstream.Send(log.Errorf(err, "failed to load vulnerability information for [%v|%v|%v]", device, vuln, detectedDate))
+											// vulnerability fixed - don't create ticket
 										}
-									} else {
-										job.lstream.Send(log.Errorf(err, "error while processing vulnerability %v", dvCombo.VulnerabilityID()))
-									}
+									}(item, device, vuln)
 								} else {
-									// vulnerability fixed - don't create ticket
+
+									if job.Payload.CorrelateByIPAndGroup {
+										job.lstream.Send(log.Info(
+											fmt.Sprintf(
+												"ALREADY PROCESSED: A ticket was already created with Vuln ID [%v] with group/ip [%v|%v] during this run. Skipping...",
+												vuln.SourceID(),
+												sord(device.GroupID()),
+												device.IP(),
+											)))
+									} else {
+										job.lstream.Send(log.Info(
+											fmt.Sprintf(
+												"ALREADY PROCESSED: A ticket was already created with Vuln ID [%v] on device [%v] during this run. Skipping...",
+												vuln.SourceID(),
+												sord(device.SourceID()),
+											)))
+									}
+
 								}
-							}(item)
+							} else {
+								job.lstream.Send(log.Errorf(err, "error while checking if [%v] was already processed", item.ID()))
+							}
 						} else {
 							return
 						}
@@ -477,89 +557,76 @@ func (job *TicketingJob) checkForExistingTicket(in <-chan *vulnerabilityPayload)
 
 			if ok {
 
-				var port int
-				var protocol string
+				wg.Add(1)
+				go func(payload *vulnerabilityPayload) {
+					defer handleRoutinePanic(job.lstream)
+					defer wg.Done()
 
-				port = payload.combo.Port()
-				protocol = payload.combo.Protocol()
+					var err error
 
-				var keyToPreventDuplicates = fmt.Sprintf("%v-%v-%v-%v", sord(payload.device.SourceID()), payload.vuln.SourceID(), port, protocol)
+					var existingTicket domain.TicketSummary
 
-				var exists bool
-				if _, exists = job.duplicatesMap.LoadOrStore(keyToPreventDuplicates, true); !exists { // doesn't exist in sync map
+					if job.Payload.CorrelateByIPAndGroup {
+						existingTicket, err = job.db.GetTicketByIPGroupIDVulnID(sord(payload.device.GroupID()), payload.device.IP(), payload.vuln.ID(), payload.combo.Port(), payload.combo.Protocol(), job.config.OrganizationID())
+					} else {
+						existingTicket, err = job.db.GetTicketByDeviceIDVulnID(sord(payload.device.SourceID()), payload.vuln.ID(), payload.combo.Port(), payload.combo.Protocol(), job.config.OrganizationID())
+					}
 
-					wg.Add(1)
-					go func(payload *vulnerabilityPayload, exists bool, port int, protocol string) {
-						defer handleRoutinePanic(job.lstream)
-						defer wg.Done()
+					if err == nil {
+						if existingTicket == nil {
 
-						var err error
+							var existingTicketChan <-chan domain.Ticket
+							var statuses = make(map[string]bool)
+							statuses[job.ticketingEngine.GetStatusMap(domain.StatusOpen)] = true
+							statuses[job.ticketingEngine.GetStatusMap(domain.StatusInProgress)] = true
+							statuses[job.ticketingEngine.GetStatusMap(domain.StatusReopened)] = true
+							statuses[job.ticketingEngine.GetStatusMap(domain.StatusResolvedRemediated)] = true
+							statuses[job.ticketingEngine.GetStatusMap(domain.StatusResolvedFalsePositive)] = true
+							statuses[job.ticketingEngine.GetStatusMap(domain.StatusResolvedDecom)] = true
+							statuses[job.ticketingEngine.GetStatusMap(domain.StatusResolvedException)] = true
+							existingTicketChan, err = job.ticketingEngine.GetTicketsByDeviceIDVulnID(job.insource.Source(), payload.orgCode, sord(payload.device.SourceID()), payload.vuln.SourceID(), statuses, payload.combo.Port(), payload.combo.Protocol())
+							if err == nil {
 
-						var existingTicket domain.TicketSummary
-						if existingTicket, err = job.db.GetTicketByDeviceIDVulnID(sord(payload.device.SourceID()), payload.vuln.ID(), port, protocol, job.config.OrganizationID()); err == nil { // TODO is this vuln ID correct? I would be happiest if the device lookup didn't use the source id
-							if existingTicket == nil {
-
-								var existingTicketChan <-chan domain.Ticket
-								var statuses = make(map[string]bool)
-								statuses[job.ticketingEngine.GetStatusMap(domain.StatusOpen)] = true
-								statuses[job.ticketingEngine.GetStatusMap(domain.StatusInProgress)] = true
-								statuses[job.ticketingEngine.GetStatusMap(domain.StatusReopened)] = true
-								statuses[job.ticketingEngine.GetStatusMap(domain.StatusResolvedRemediated)] = true
-								statuses[job.ticketingEngine.GetStatusMap(domain.StatusResolvedFalsePositive)] = true
-								statuses[job.ticketingEngine.GetStatusMap(domain.StatusResolvedDecom)] = true
-								statuses[job.ticketingEngine.GetStatusMap(domain.StatusResolvedException)] = true
-								existingTicketChan, err = job.ticketingEngine.GetTicketsByDeviceIDVulnID(job.insource.Source(), payload.orgCode, sord(payload.device.SourceID()), payload.vuln.SourceID(), statuses, payload.combo.Port(), payload.combo.Protocol())
-								if err == nil {
-
-									if emptyChannel(existingTicketChan) {
-										job.lstream.Send(log.Infof("No ticket found for vulnerability [%s] on device [%v]. Creating new ticket...", payload.vuln.SourceID(), sord(payload.device.SourceID())))
-										select {
-										case <-job.ctx.Done():
-											return
-										case out <- payload:
-										}
+								if emptyChannel(existingTicketChan) {
+									job.lstream.Send(log.Infof("No ticket found for vulnerability [%s] on device [%v]. Creating new ticket...", payload.vuln.SourceID(), sord(payload.device.SourceID())))
+									select {
+									case <-job.ctx.Done():
+										return
+									case out <- payload:
 									}
-								} else {
-									job.lstream.Send(log.Error(
-										fmt.Sprintf(
-											"Error issues from JIRA with vuln title [%v] and ID [%v].",
-											payload.vuln.Name(),
-											payload.vuln.SourceID(),
-										),
-										err,
-									))
 								}
-
 							} else {
-								job.lstream.Send(log.Info(
+								job.lstream.Send(log.Error(
 									fmt.Sprintf(
-										"EXISTING TICKET: [%v] for vulnerability [%v] with Vuln ID [%v] on device [%v]. Skipping...",
-										existingTicket.Title(),
+										"Error issues from JIRA with vuln title [%v] and ID [%v].",
 										payload.vuln.Name(),
 										payload.vuln.SourceID(),
-										sord(payload.device.SourceID()),
-									)))
+									),
+									err,
+								))
 							}
+
 						} else {
-							job.lstream.Send(log.Warning(
+							job.lstream.Send(log.Info(
 								fmt.Sprintf(
-									"Error getting issues from database with vuln title [%v] and ID [%v].",
+									"EXISTING TICKET: [%v] for vulnerability [%v] with Vuln ID [%v] on device [%v]. Skipping...",
+									existingTicket.Title(),
 									payload.vuln.Name(),
 									payload.vuln.SourceID(),
-								),
-								err,
-							))
+									sord(payload.device.SourceID()),
+								)))
 						}
-					}(payload, exists, port, protocol)
-				} else {
-					job.lstream.Send(log.Info(
-						fmt.Sprintf(
-							"ALREADY PROCESSED: A ticket was already created for vulnerability [%v] with Vuln ID [%v] on device [%v] during this run. Skipping...",
-							payload.vuln.Name(),
-							payload.vuln.SourceID(),
-							sord(payload.device.SourceID()),
-						)))
-				}
+					} else {
+						job.lstream.Send(log.Warning(
+							fmt.Sprintf(
+								"Error getting issues from database with vuln title [%v] and ID [%v].",
+								payload.vuln.Name(),
+								payload.vuln.SourceID(),
+							),
+							err,
+						))
+					}
+				}(payload)
 
 			} else {
 				break
@@ -1017,6 +1084,7 @@ func (job *TicketingJob) mapTagForDevice(tic domain.Ticket, tagForDeviceKey doma
 					sord(tic.HostName()),
 					sord(tic.AssignmentGroup()),
 					sord(tic.Labels()),
+					sord(tic.SystemName()),
 				}
 			} else {
 				err = fmt.Errorf("unrecognized tag mapping option: %s", tagMap.Options())
@@ -1038,53 +1106,72 @@ type tagMappedTicket struct {
 	hostname        string
 	assignmentGroup string
 	labels          string
+	systemName      string
 }
 
 func (tmt tagMappedTicket) HostName() *string {
-	val := tmt.hostname
-	if tmt.option == Append && len(tmt.hostname) > 0 {
-		val = fmt.Sprintf("%s,%s", tmt.hostname, tmt.tagForDevice.Value())
-	} else { //overwrite
-		val = tmt.tagForDevice.Value()
+	var val string
+
+	if tmt.ticketKeyLower == "hostname" {
+		val = tmt.hostname
+		if tmt.option == Append && len(tmt.hostname) > 0 {
+			val = fmt.Sprintf("%s,%s", tmt.hostname, tmt.tagForDevice.Value())
+		} else { //overwrite
+			val = tmt.tagForDevice.Value()
+		}
+	} else {
+		val = sord(tmt.Ticket.HostName())
 	}
+
 	return &val
 }
 
 func (tmt tagMappedTicket) AssignmentGroup() *string {
-	val := tmt.assignmentGroup
-	if tmt.option == Append && len(tmt.assignmentGroup) > 0 {
-		val = fmt.Sprintf("%s,%s", tmt.assignmentGroup, tmt.tagForDevice.Value())
-	} else { //overwrite
-		val = tmt.tagForDevice.Value()
+	var val string
+	if tmt.ticketKeyLower == "assignmentgroup" {
+		val = tmt.assignmentGroup
+		if tmt.option == Append && len(tmt.assignmentGroup) > 0 {
+			val = fmt.Sprintf("%s,%s", tmt.assignmentGroup, tmt.tagForDevice.Value())
+		} else { //overwrite
+			val = tmt.tagForDevice.Value()
+		}
+	} else {
+		val = sord(tmt.Ticket.AssignmentGroup())
 	}
+
 	return &val
 }
 
 func (tmt tagMappedTicket) Labels() *string {
-	val := fmt.Sprintf("%s-%s", strings.ToLower(tmt.cloudTag), tmt.tagForDevice.Value())
+	var val string
+	if tmt.ticketKeyLower == "labels" {
+		val = fmt.Sprintf("%s-%s", strings.ToLower(tmt.cloudTag), tmt.tagForDevice.Value())
 
-	if tmt.option == Append && len(tmt.labels) > 0 {
-		val = fmt.Sprintf("%s,%s", tmt.labels, val)
+		if tmt.option == Append && len(tmt.labels) > 0 {
+			val = fmt.Sprintf("%s,%s", tmt.labels, val)
+		}
+	} else {
+		val = sord(tmt.Ticket.Labels())
 	}
+
 	return &val
 }
 
-//func (job *TicketingJob) getDeviceByIPList(ips []string) (device domain.Device, err error) {
-//	for index := range ips {
-//		ip := ips[index]
-//
-//		device, err = job.db.GetDeviceByIP(ip, job.config.OrganizationID())
-//		if err == nil {
-//			if device != nil {
-//				break
-//			}
-//		} else {
-//			break
-//		}
-//	}
-//
-//	return device, err
-//}
+func (tmt tagMappedTicket) SystemName() *string {
+	var val string
+	if tmt.ticketKeyLower == "systemname" {
+		val = tmt.hostname
+		if tmt.option == Append && len(tmt.systemName) > 0 {
+			val = fmt.Sprintf("%s,%s", tmt.systemName, tmt.tagForDevice.Value())
+		} else { //overwrite
+			val = tmt.tagForDevice.Value()
+		}
+	} else {
+		val = sord(tmt.Ticket.SystemName())
+	}
+
+	return &val
+}
 
 // transforms the specific OS from the scanner and transforms it to a generic OS that can be chosen in a dropdown field
 func (job *TicketingJob) gatherOSDropdown(input string) (output string) {
@@ -1184,6 +1271,10 @@ func (job *TicketingJob) getAssignmentInformation(tagsForDevice []domain.Tag, pa
 			match = rule.osRegex.MatchString(payload.device.HostName())
 		}
 
+		if match && rule.categoryRegex != nil {
+			match = rule.categoryRegex.MatchString(sord(payload.vuln.Category()))
+		}
+
 		if match && rule.tagKey != nil {
 			var found bool
 			for _, deviceTag := range tagsForDevice {
@@ -1252,6 +1343,7 @@ type assignmentRule struct {
 	excludeVulnTitleRegex *regexp.Regexp
 	hostnameRegex         *regexp.Regexp
 	osRegex               *regexp.Regexp
+	categoryRegex         *regexp.Regexp
 	tagKeyRegex           *regexp.Regexp
 	tagKey                domain.TagKey
 	ports                 []string
@@ -1305,6 +1397,16 @@ func (job *TicketingJob) loadAssignmentRules() (assignmentRules []assignmentRule
 					currentRule.osRegex = regex
 				} else {
 					err = fmt.Errorf("error while compiling OS regex [%s] - %s", sord(rule.OSRegex()), err.Error())
+					break
+				}
+			}
+
+			if rule.CategoryRegex() != nil {
+				var regex *regexp.Regexp
+				if regex, err = regexp.Compile(sord(rule.CategoryRegex())); err == nil {
+					currentRule.categoryRegex = regex
+				} else {
+					err = fmt.Errorf("error while compiling category regex [%s] - %s", sord(rule.CategoryRegex()), err.Error())
 					break
 				}
 			}

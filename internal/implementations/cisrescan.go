@@ -61,7 +61,7 @@ func (job *CISRescanJob) Process(ctx context.Context, id string, appconfig domai
 
 		if err = job.buildPayload(job.payloadJSON); err == nil {
 
-			if job.orgCode, job.orgPayload, err = job.getOrgInfo(); err == nil {
+			if job.orgCode, job.orgPayload, err = getOrgInfo(job.db, job.config.OrganizationID()); err == nil {
 				var engine integrations.TicketingEngine
 				if engine, err = integrations.GetEngine(job.ctx, job.outsource.Source(), job.db, job.lstream, job.appconfig, job.outsource); err == nil {
 
@@ -104,9 +104,9 @@ func (job *CISRescanJob) Process(ctx context.Context, id string, appconfig domai
 	return err
 }
 
-func (job *CISRescanJob) getOrgInfo() (orgCode string, orgPayload *OrgPayload, err error) {
+func getOrgInfo(db domain.DatabaseConnection, orgID string) (orgCode string, orgPayload *OrgPayload, err error) {
 	var torg domain.Organization
-	if torg, err = job.db.GetOrganizationByID(job.config.OrganizationID()); err == nil {
+	if torg, err = db.GetOrganizationByID(orgID); err == nil {
 		// Ensure there is only one return
 		if torg != nil {
 			orgCode = torg.Code()
@@ -120,7 +120,7 @@ func (job *CISRescanJob) getOrgInfo() (orgCode string, orgPayload *OrgPayload, e
 				}
 			}
 		} else {
-			err = fmt.Errorf("no organization found for [%s]", job.config.OrganizationID())
+			err = fmt.Errorf("no organization found for [%s]", orgID)
 		}
 	}
 
@@ -158,8 +158,8 @@ func (job *CISRescanJob) processFindingsAndTickets(engine integrations.Ticketing
 	// tickets with findings can have their last seen date updated and should be reopened
 	var ticketsWithFindings = make([]findingTicketPair, 0)
 
-	var entityIDToRuleHashToTicket = mapTicketsByEntityIDRuleHash(tickets)
-	var entityIDToRuleHashToFinding = mapFindingsByEntityIDRuleHash(findings)
+	var entityIDToRuleHashToTicket = mapTicketsByDeviceIDVulnID(tickets)
+	var entityIDToRuleHashToFinding = mapFindingsByDeviceIDVulnID(findings)
 
 	var assessmentID = -1
 
@@ -435,7 +435,7 @@ func (job *CISRescanJob) closeTicketsWithMissingFindings(engine integrations.Tic
 	wg.Wait()
 }
 
-func mapTicketsByEntityIDRuleHash(tickets []domain.Ticket) (entityIDToRuleHashToTicket map[string]map[string][]domain.Ticket) {
+func mapTicketsByDeviceIDVulnID(tickets []domain.Ticket) (entityIDToRuleHashToTicket map[string]map[string][]domain.Ticket) {
 	entityIDToRuleHashToTicket = make(map[string]map[string][]domain.Ticket)
 	for _, ticket := range tickets {
 		if entityIDToRuleHashToTicket[ticket.DeviceID()] == nil {
@@ -452,7 +452,10 @@ func mapTicketsByEntityIDRuleHash(tickets []domain.Ticket) (entityIDToRuleHashTo
 	return entityIDToRuleHashToTicket
 }
 
-func mapFindingsByEntityIDRuleHash(findings []domain.Finding) (entityIDToRuleHashToFinding map[string]map[string]domain.Finding) {
+func mapFindingsByDeviceIDVulnID(findings []domain.Finding) (entityIDToRuleHashToFinding map[string]map[string]domain.Finding) {
+	// DeviceID = EntityID
+	// ID = RuleHash/VulnerabilityID
+
 	entityIDToRuleHashToFinding = make(map[string]map[string]domain.Finding)
 	for _, finding := range findings {
 		if len(finding.DeviceID()) > 0 {
@@ -712,4 +715,8 @@ func (wrapper *FindingWrapper) VulnerabilityID() (param string) {
 func (wrapper *FindingWrapper) VulnerabilityTitle() (param *string) {
 	val := wrapper.Finding.VulnerabilityTitle()
 	return &val
+}
+
+func (wrapper *FindingWrapper) SystemName() (param *string) {
+	return nil
 }

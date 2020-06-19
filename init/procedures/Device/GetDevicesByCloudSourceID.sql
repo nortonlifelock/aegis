@@ -10,6 +10,7 @@
   Region          VARCHAR(100) NULL
   InstanceID      VARCHAR(100) NULL
   ScannerSourceID VARCHAR(36)  NOT
+  TrackingMethod VARCHAR(100) NULL
 */
 
 DROP PROCEDURE IF EXISTS `GetDevicesInfoByCloudSourceID`;
@@ -26,7 +27,8 @@ SELECT
     D.State,
     D.Region,
     D.InstanceID,
-    D.SourceID
+    D.SourceID,
+    D.TrackingMethod
 FROM Device D
     JOIN AssetGroup AG on D.GroupID = AG.GroupID AND D.SourceID = AG.ScannerSourceID
 WHERE D.OrganizationID = _OrgID AND AG.CloudSourceID = _CloudSourceID;

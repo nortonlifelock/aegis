@@ -16,6 +16,13 @@ import (
 // or decommission rescans
 type RescanQueuePayload struct {
 	Type string `json:"type"`
+
+	// AgentTicketRescanDelayWaitInMinutes describes a quantity in minutes
+	// Devices with agents do not reflect their fixed vulnerabilities immediately, using this variables we can
+	// delay rescans getting kicked off for tickets belonging to agent devices so the scanner (e.g. Qualys) has time to reflect the fix in their own database
+	// The RSQ will wait the following minutes after a ticket is updated - meaning once [time.Now >= (ticket.Updated + AgentTicketRescanDelayWaitInMinutes)] a rescan
+	// will be ticketed off for the ticket
+	AgentTicketRescanDelayWaitInMinutes *time.Duration `json:"agent_ticket_rescan_delay_wait_in_minutes"`
 }
 
 // RescanQueueJob implements the Job interface required to run the job
@@ -330,7 +337,7 @@ func (job *RescanQueueJob) cleanTickets(tickets <-chan domain.Ticket) (<-chan do
 						}
 					}
 
-					if !tickMap[ticket.Title()] && !skipRescanQueue {
+					if !tickMap[ticket.Title()] && !skipRescanQueue && job.ticketIsReadyForRescan(ticket) {
 						cleanedTickets <- ticket
 					} else if skipRescanQueue {
 						job.lstream.Send(log.Debugf("skipping queuing of [%s] as group [%s] in the AssetGroup table is marked to skip the RSQ", ticket.Title(), ticket.GroupID()))
@@ -344,6 +351,50 @@ func (job *RescanQueueJob) cleanTickets(tickets <-chan domain.Ticket) (<-chan do
 	}
 
 	return cleanedTickets, err
+}
+
+var ticketTitleOrgIDToUpdatedTime = &sync.Map{}
+
+func (job *RescanQueueJob) ticketIsReadyForRescan(ticket domain.Ticket) (readyForRescan bool) {
+	readyForRescan = true // if we can't discern the tracking method, rescan the ticket by default
+
+	if trackingMethod, err := job.db.GetTicketTrackingMethod(ticket.Title(), job.config.OrganizationID()); err == nil && trackingMethod != nil {
+		if trackingMethod.Value() == AgentDevice && ticket.UpdatedDate() != nil {
+
+			key := fmt.Sprintf("%s;%s", ticket.Title(), job.config.OrganizationID())
+
+			updatedDate, _ := ticketTitleOrgIDToUpdatedTime.LoadOrStore(key, ticket.UpdatedDate())
+			if updatedDateVal, ok := updatedDate.(*time.Time); ok {
+
+				var timeToWaitToKickoffRescanForAgentTickets time.Duration
+				if job.Payload.AgentTicketRescanDelayWaitInMinutes == nil {
+					timeToWaitToKickoffRescanForAgentTickets = 0
+				} else {
+					timeToWaitToKickoffRescanForAgentTickets = time.Minute * (*job.Payload.AgentTicketRescanDelayWaitInMinutes)
+				}
+
+				if job.Payload.AgentTicketRescanDelayWaitInMinutes != nil &&
+					time.Since(*updatedDateVal) < timeToWaitToKickoffRescanForAgentTickets {
+					readyForRescan = false
+
+					job.lstream.Send(log.Infof("Skipping rescan of [%s], waiting until [%s] as it is an agent ticket",
+						ticket.Title(),
+						updatedDateVal.Add(timeToWaitToKickoffRescanForAgentTickets).Format(time.RFC822)),
+					)
+				} else {
+					// if this path takes, the agent is ready to be rescanned so we delete the timer that was tracking it
+					// the next time the ticket is marked for rescan, a new updated date should be written
+					ticketTitleOrgIDToUpdatedTime.Delete(key)
+				}
+			} else {
+				job.lstream.Send(log.Errorf(err, "failed to load the updated date [%v] for [%s]", updatedDate, ticket.Title()))
+			}
+		}
+	} else {
+		job.lstream.Send(log.Errorf(err, "error while loading tracking method for [%s]", ticket.Title()))
+	}
+
+	return readyForRescan
 }
 
 // loads tickets that are currently being processed by another job so we don't rescan a ticket that is in the process of being scanned

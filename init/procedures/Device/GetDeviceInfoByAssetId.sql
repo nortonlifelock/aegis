@@ -9,6 +9,7 @@
   Region      VARCHAR(100) NULL
   GroupID     VARCHAR(200) NULL
   InstanceID  VARCHAR(100) NULL
+  TrackingMethod VARCHAR(100) NULL
 */
 
 DROP PROCEDURE IF EXISTS `GetDeviceInfoByAssetOrgID`;
@@ -24,6 +25,7 @@ CREATE PROCEDURE `GetDeviceInfoByAssetOrgID`(inAssetID VARCHAR(36), inOrgID VARC
     D.HostName,
     D.Region,
     D.GroupId,
-    D.InstanceID
+    D.InstanceID,
+    D.TrackingMethod
   FROM Device D
   WHERE D.AssetID = inAssetID AND D.OrganizationID = inOrgID;
