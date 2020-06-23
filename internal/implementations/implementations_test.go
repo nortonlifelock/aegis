@@ -8,6 +8,7 @@ import (
 	"github.com/nortonlifelock/aegis/internal/integrations"
 	"github.com/nortonlifelock/domain"
 	"github.com/nortonlifelock/log"
+	"regexp"
 	"testing"
 	"time"
 )
@@ -38,10 +39,211 @@ func (m *mockLogger) Send(log log.Log) {
 	}
 }
 
+func TestTicketingJob_getAssignmentInformation(t *testing.T) {
+	tests := []struct {
+		tagsForDevice   []domain.Tag
+		payload         *vulnerabilityPayload
+		assignmentRules []assignmentRule
+
+		successFunction func(testIndex int, assignmentGroup, assignee *string)
+
+		errExpected bool
+	}{
+		// testing rule matching on a regex
+		{
+			[]domain.Tag{},
+			&vulnerabilityPayload{
+				ticket: &dal.Ticket{
+					IPAddressvar: addressString(""),
+				},
+				vuln: &mockVulnerability{
+					valName: "a",
+				},
+			},
+			[]assignmentRule{
+				{
+					AssignmentRules: &dal.AssignmentRules{
+						Assigneevar:        addressString("1"),
+						AssignmentGroupvar: addressString("2"),
+					},
+					vulnTitleRegex:        regexp.MustCompile("a"),
+					excludeVulnTitleRegex: regexp.MustCompile("b"),
+					hostnameRegex:         nil,
+					osRegex:               nil,
+					categoryRegex:         nil,
+					tagKeyRegex:           nil,
+					tagKey:                nil,
+					ports:                 nil,
+					excludePorts:          nil,
+				},
+			},
+			func(testIndex int, assignmentGroup, assignee *string) {
+				if assignee != nil && assignmentGroup != nil {
+					if *assignee != "1" || *assignmentGroup != "2" {
+						t.Errorf("[%d] assignment did not occur properly, got [%s|%s] instead of [1|2]", testIndex, *assignee, *assignmentGroup)
+					}
+				} else {
+					t.Errorf("[%d] either assignee or assignmentGroup not set [%v|%v]", testIndex, assignee, assignmentGroup)
+				}
+			},
+			false,
+		},
+
+		// testing rule matching on a regex that doesn't match
+		{
+			[]domain.Tag{},
+			&vulnerabilityPayload{
+				ticket: &dal.Ticket{
+					IPAddressvar: addressString(""),
+				},
+				vuln: &mockVulnerability{
+					valName: "b",
+				},
+			},
+			[]assignmentRule{
+				{
+					AssignmentRules: &dal.AssignmentRules{
+						Assigneevar:        addressString("1"),
+						AssignmentGroupvar: addressString("2"),
+					},
+					vulnTitleRegex:        regexp.MustCompile("a"),
+					excludeVulnTitleRegex: nil,
+					hostnameRegex:         nil,
+					osRegex:               nil,
+					categoryRegex:         nil,
+					tagKeyRegex:           nil,
+					tagKey:                nil,
+					ports:                 nil,
+					excludePorts:          nil,
+				},
+			},
+			func(testIndex int, assignmentGroup, assignee *string) {
+				if assignee != nil || assignmentGroup != nil {
+					t.Errorf("[%d] assignment did not occur properly, got [%v|%v] instead of [nil|nil]", testIndex, assignee, assignmentGroup)
+				}
+			},
+			false,
+		},
+
+		// multiple rules that match - should take first
+		{
+			[]domain.Tag{},
+			&vulnerabilityPayload{
+				ticket: &dal.Ticket{
+					IPAddressvar: addressString(""),
+				},
+				vuln: &mockVulnerability{
+					valName: "ab",
+				},
+			},
+			[]assignmentRule{
+				{
+					AssignmentRules: &dal.AssignmentRules{
+						Assigneevar:        addressString("1"),
+						AssignmentGroupvar: addressString("2"),
+					},
+					vulnTitleRegex:        regexp.MustCompile("a"),
+					excludeVulnTitleRegex: nil,
+					hostnameRegex:         nil,
+					osRegex:               nil,
+					categoryRegex:         nil,
+					tagKeyRegex:           nil,
+					tagKey:                nil,
+					ports:                 nil,
+					excludePorts:          nil,
+				},
+				{
+					AssignmentRules: &dal.AssignmentRules{
+						Assigneevar:        addressString("3"),
+						AssignmentGroupvar: addressString("4"),
+					},
+					vulnTitleRegex:        regexp.MustCompile("b"),
+					excludeVulnTitleRegex: nil,
+					hostnameRegex:         nil,
+					osRegex:               nil,
+					categoryRegex:         nil,
+					tagKeyRegex:           nil,
+					tagKey:                nil,
+					ports:                 nil,
+					excludePorts:          nil,
+				},
+			},
+			func(testIndex int, assignmentGroup, assignee *string) {
+				if assignee != nil && assignmentGroup != nil {
+					if *assignee != "1" || *assignmentGroup != "2" {
+						t.Errorf("[%d] assignment did not occur properly, got [%s|%s] instead of [1|2]", testIndex, *assignee, *assignmentGroup)
+					}
+				} else {
+					t.Errorf("[%d] either assignee or assignmentGroup not set [%v|%v]", testIndex, assignee, assignmentGroup)
+				}
+			},
+			false,
+		},
+
+		// testing exclude regex rule
+		{
+			[]domain.Tag{},
+			&vulnerabilityPayload{
+				ticket: &dal.Ticket{
+					IPAddressvar: addressString(""),
+				},
+				vuln: &mockVulnerability{
+					valName: "ab",
+				},
+			},
+			[]assignmentRule{
+				{
+					AssignmentRules: &dal.AssignmentRules{
+						Assigneevar:        addressString("1"),
+						AssignmentGroupvar: addressString("2"),
+					},
+					vulnTitleRegex:        regexp.MustCompile("a"),
+					excludeVulnTitleRegex: regexp.MustCompile("b"),
+					hostnameRegex:         nil,
+					osRegex:               nil,
+					categoryRegex:         nil,
+					tagKeyRegex:           nil,
+					tagKey:                nil,
+					ports:                 nil,
+					excludePorts:          nil,
+				},
+			},
+			func(testIndex int, assignmentGroup, assignee *string) {
+				if assignee != nil || assignmentGroup != nil {
+					t.Errorf("[%d] assignment did not occur properly, got [%v|%v] instead of [nil|nil]", testIndex, assignee, assignmentGroup)
+				}
+			},
+			false,
+		},
+	}
+
+	for index, test := range tests {
+		tj, errStream := getBaseTicketingJob()
+
+		tj.db = &database.MockSQLDriver{}
+		tj.assignmentRules = test.assignmentRules
+
+		tj.getAssignmentInformation(test.tagsForDevice, test.payload)
+
+		errSeen := streamHasErrors(errStream)
+
+		if errSeen != test.errExpected {
+			t.Errorf("[%d] mismatch in errSeen/errExpected [%v|%v]", index, errSeen, test.errExpected)
+		}
+
+		test.successFunction(index, test.payload.ticket.AssignmentGroup(), test.payload.ticket.AssignedTo())
+	}
+}
+
 func TestTicketingJob_handleCloudTagMapping(t *testing.T) {
+	var ticketHostname = "TICKETHOSTNAME"
+	var tagHostname = "TAGHOSTNAME"
+
+	var ticketAG = "TICKETAG"
+	var tagAG = "TAGAG"
+
 	tests := []struct {
 		ticket domain.Ticket
-		device domain.Device
 
 		funcGetTagsForDevice func(_DeviceID string) ([]domain.Tag, error)
 		funcGetTagKeyByID    func(_ID string) (key domain.TagKey, e error)
@@ -52,15 +254,18 @@ func TestTicketingJob_handleCloudTagMapping(t *testing.T) {
 	}{
 		// testing Append option
 		{
-			&dal.Ticket{},
-			&mockDevice{},
+			&dal.Ticket{
+				HostNamevar: &ticketHostname,
+			},
 			func(_DeviceID string) (tags []domain.Tag, e error) {
-				return []domain.Tag{&dal.Tag{
-					DeviceIDvar: "",
-					IDvar:       "",
-					TagKeyIDvar: 0,
-					Valuevar:    "",
-				}}, nil
+				return []domain.Tag{
+					&dal.Tag{
+						DeviceIDvar: "",
+						IDvar:       "1",
+						TagKeyIDvar: 0,
+						Valuevar:    tagHostname,
+					},
+				}, nil
 			},
 			func(_ID string) (key domain.TagKey, e error) {
 				return &dal.TagKey{
@@ -74,11 +279,190 @@ func TestTicketingJob_handleCloudTagMapping(t *testing.T) {
 					IDvar:                "",
 					Optionsvar:           Append,
 					TicketingSourceIDvar: "",
-					TicketingTagvar:      "",
+					TicketingTagvar:      "Hostname",
 				},
 			},
 			func(testIndex int, ticket domain.Ticket, tagsForDevice []domain.Tag) {
 
+				if ticket == nil {
+					t.Errorf("[%d] nil ticket returned from method", testIndex)
+				} else if ticket.HostName() == nil {
+					t.Errorf("[%d] nil hostname found in ticket returned", testIndex)
+				} else if *ticket.HostName() != fmt.Sprintf("%s,%s", ticketHostname, tagHostname) {
+					t.Errorf("[%d] expected hostname and actual hostname differed [%s|%s]", testIndex, fmt.Sprintf("%s,%s", ticketHostname, tagHostname), *ticket.HostName())
+				}
+			},
+			false,
+		},
+
+		// testing Overwrite option
+		{
+			&dal.Ticket{
+				HostNamevar: &ticketHostname,
+			},
+			func(_DeviceID string) (tags []domain.Tag, e error) {
+				return []domain.Tag{&dal.Tag{
+					DeviceIDvar: "",
+					IDvar:       "",
+					TagKeyIDvar: 0,
+					Valuevar:    tagHostname,
+				}}, nil
+			},
+			func(_ID string) (key domain.TagKey, e error) {
+				return &dal.TagKey{
+					KeyValuevar: "TEST",
+				}, nil
+			},
+			[]domain.TagMap{
+				&dal.TagMap{
+					CloudSourceIDvar:     "",
+					CloudTagvar:          "TEST",
+					IDvar:                "",
+					Optionsvar:           Overwrite,
+					TicketingSourceIDvar: "",
+					TicketingTagvar:      "Hostname",
+				},
+			},
+			func(testIndex int, ticket domain.Ticket, tagsForDevice []domain.Tag) {
+
+				if ticket == nil {
+					t.Errorf("[%d] nil ticket returned from method", testIndex)
+				} else if ticket.HostName() == nil {
+					t.Errorf("[%d] nil hostname found in ticket returned", testIndex)
+				} else if *ticket.HostName() != tagHostname {
+					t.Errorf("[%d] expected hostname and actual hostname differed [%s|%s]", testIndex, tagHostname, *ticket.HostName())
+				}
+			},
+			false,
+		},
+
+		// testing no changes
+		{
+			&dal.Ticket{
+				HostNamevar: &ticketHostname,
+			},
+			func(_DeviceID string) (tags []domain.Tag, e error) {
+				return []domain.Tag{&dal.Tag{
+					DeviceIDvar: "",
+					IDvar:       "",
+					TagKeyIDvar: 0,
+					Valuevar:    tagHostname,
+				}}, nil
+			},
+			func(_ID string) (key domain.TagKey, e error) {
+				return &dal.TagKey{
+					KeyValuevar: "TEST",
+				}, nil
+			},
+			[]domain.TagMap{
+				&dal.TagMap{
+					CloudSourceIDvar:     "",
+					CloudTagvar:          "TEST",
+					IDvar:                "",
+					Optionsvar:           Overwrite,
+					TicketingSourceIDvar: "",
+					TicketingTagvar:      "random value",
+				},
+			},
+			func(testIndex int, ticket domain.Ticket, tagsForDevice []domain.Tag) {
+
+				if ticket == nil {
+					t.Errorf("[%d] nil ticket returned from method", testIndex)
+				} else if ticket.HostName() == nil {
+					t.Errorf("[%d] nil hostname found in ticket returned", testIndex)
+				} else if *ticket.HostName() != ticketHostname {
+					t.Errorf("[%d] expected hostname and actual hostname differed [%s|%s]", testIndex, ticketHostname, *ticket.HostName())
+				}
+			},
+			false,
+		},
+
+		// testing multiple changes
+		{
+			&dal.Ticket{
+				HostNamevar:        &ticketHostname,
+				AssignmentGroupvar: &ticketAG,
+			},
+			func(_DeviceID string) (tags []domain.Tag, e error) {
+				return []domain.Tag{
+					&dal.Tag{
+						DeviceIDvar: "",
+						IDvar:       "",
+						TagKeyIDvar: 1,
+						Valuevar:    tagHostname,
+					},
+					&dal.Tag{
+						DeviceIDvar: "",
+						IDvar:       "",
+						TagKeyIDvar: 2,
+						Valuevar:    tagAG,
+					},
+				}, nil
+			},
+			func(_ID string) (key domain.TagKey, e error) {
+				vals := map[string]domain.TagKey{
+					"1": &dal.TagKey{KeyValuevar: "TEST1"},
+					"2": &dal.TagKey{KeyValuevar: "TEST2"},
+				}
+				return vals[_ID], nil
+			},
+			[]domain.TagMap{
+				&dal.TagMap{
+					CloudSourceIDvar:     "",
+					CloudTagvar:          "TEST1",
+					IDvar:                "",
+					Optionsvar:           Overwrite,
+					TicketingSourceIDvar: "",
+					TicketingTagvar:      "Hostname",
+				},
+				&dal.TagMap{
+					CloudSourceIDvar:     "",
+					CloudTagvar:          "TEST2",
+					IDvar:                "",
+					Optionsvar:           Overwrite,
+					TicketingSourceIDvar: "",
+					TicketingTagvar:      "AssignmentGroup",
+				},
+			},
+			func(testIndex int, ticket domain.Ticket, tagsForDevice []domain.Tag) {
+
+				if ticket == nil {
+					t.Errorf("[%d] nil ticket returned from method", testIndex)
+				} else if ticket.HostName() == nil {
+					t.Errorf("[%d] nil hostname found in ticket returned", testIndex)
+				} else if *ticket.HostName() != tagHostname {
+					t.Errorf("[%d] expected hostname and actual hostname differed [%s|%s]", testIndex, tagHostname, *ticket.HostName())
+				} else if *ticket.AssignmentGroup() != tagAG {
+					t.Errorf("[%d] expected assignment group and actual assignment group differed [%s|%s]", testIndex, tagAG, *ticket.AssignmentGroup())
+				}
+			},
+			false,
+		},
+
+		// testing tag return in absence of tag mapping
+		{
+			&dal.Ticket{
+				HostNamevar: &ticketHostname,
+			},
+			func(_DeviceID string) (tags []domain.Tag, e error) {
+				out := make([]domain.Tag, 0)
+
+				for i := 0; i < 10; i++ {
+					out = append(out, &dal.Tag{})
+				}
+				return out, nil
+			},
+			func(_ID string) (key domain.TagKey, e error) {
+				return &dal.TagKey{
+					KeyValuevar: "TEST",
+				}, nil
+			},
+			[]domain.TagMap{},
+			func(testIndex int, ticket domain.Ticket, tagsForDevice []domain.Tag) {
+
+				if len(tagsForDevice) != 10 {
+					t.Errorf("[%d] expected %d tags returned from method but got %d", testIndex, 10, len(tagsForDevice))
+				}
 			},
 			false,
 		},
@@ -94,7 +478,7 @@ func TestTicketingJob_handleCloudTagMapping(t *testing.T) {
 			FuncGetTagKeyByID:    test.funcGetTagKeyByID,
 		}
 
-		ticket, tagsForDevice, err := tj.handleCloudTagMappings(test.ticket, test.device)
+		ticket, tagsForDevice, err := tj.handleCloudTagMappings(test.ticket, &mockDevice{})
 
 		errSeen := streamHasErrors(errStream)
 		errSeen = errSeen || err != nil
@@ -561,6 +945,77 @@ func (d *mockDetection) Device() (domain.Device, error) {
 
 func (d *mockDetection) Vulnerability() (domain.Vulnerability, error) {
 	return d.valVulnerability, nil
+}
+
+type mockVulnerability struct {
+	valID                   string
+	valSourceID             string
+	valName                 string
+	valDescription          string
+	valCVSS2                float32
+	valCVSS3                *float32
+	valUpdated              time.Time
+	valSoftware             string
+	valPatchable            *string
+	valDetectionInformation string
+	valThreat               *string
+	valCategory             *string
+}
+
+func (m *mockVulnerability) ID() string {
+	return m.valID
+}
+
+func (m *mockVulnerability) SourceID() string {
+	return m.valSourceID
+}
+
+func (m *mockVulnerability) Name() string {
+	return m.valName
+}
+
+func (m *mockVulnerability) Description() string {
+	return m.valDescription
+}
+
+func (m *mockVulnerability) CVSS2() float32 {
+	return m.valCVSS2
+}
+
+func (m *mockVulnerability) CVSS3() *float32 {
+	return m.valCVSS3
+}
+
+func (m *mockVulnerability) Updated() time.Time {
+	return m.valUpdated
+}
+
+func (m *mockVulnerability) Solutions(ctx context.Context) (<-chan domain.Solution, error) {
+	return nil, fmt.Errorf("not implemented")
+}
+
+func (m *mockVulnerability) References(ctx context.Context) (<-chan domain.VulnerabilityReference, error) {
+	return nil, fmt.Errorf("not implemented")
+}
+
+func (m *mockVulnerability) Software() string {
+	return m.valSoftware
+}
+
+func (m *mockVulnerability) Patchable() *string {
+	return m.valPatchable
+}
+
+func (m *mockVulnerability) DetectionInformation() string {
+	return m.valDetectionInformation
+}
+
+func (m *mockVulnerability) Threat() *string {
+	return m.valThreat
+}
+
+func (m *mockVulnerability) Category() (param *string) {
+	return m.valCategory
 }
 
 type mockDevice struct {
