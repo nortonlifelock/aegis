@@ -39,6 +39,140 @@ func (m *mockLogger) Send(log log.Log) {
 	}
 }
 
+func TestScanCloseJob_modifyJiraTicketAccordingToVulnerabilityStatus(t *testing.T) {
+	tests := []struct {
+		ticket                      domain.Ticket
+		scan                        domain.ScanSummary
+		deadHostIPToProofMap        map[string]string
+		deviceIDToVulnIDToDetection map[string]map[string]domain.Detection
+		ipsForCloudDecommissionScan chan string
+		funcGetDeviceByAssetOrgID   func(_AssetID string, OrgID string) (domain.Device, error)
+
+		rescanType string
+
+		expectedStatus string
+		errExpected    bool
+	}{
+
+		// vuln in ticket not in detection slice - ticket should be closed
+		{
+			&dal.Ticket{
+				DeviceIDvar:        "device1",
+				IPAddressvar:       addressString("172.0.0.1"),
+				VulnerabilityIDvar: "vuln2",
+			},
+			&dal.ScanSummary{},
+			map[string]string{},
+			map[string]map[string]domain.Detection{
+				"device1": {
+					"vuln1;": &mockDetection{},
+				},
+			},
+			make(chan string),
+			func(_AssetID string, OrgID string) (device domain.Device, e error) {
+				return &mockDevice{
+					valTrackingMethod: addressString(IPDevice),
+				}, nil
+			},
+			domain.RescanNormal,
+			domain.StatusClosedRemediated,
+			false,
+		},
+
+		// fixed vuln in ticket is in detection slice - ticket should be closed
+		{
+			&dal.Ticket{
+				DeviceIDvar:        "device1",
+				IPAddressvar:       addressString("172.0.0.1"),
+				VulnerabilityIDvar: "vuln1",
+			},
+			&dal.ScanSummary{},
+			map[string]string{},
+			map[string]map[string]domain.Detection{
+				"device1": {
+					"vuln1;": &mockDetection{
+						valStatus: domain.Fixed,
+					},
+				},
+			},
+			make(chan string),
+			func(_AssetID string, OrgID string) (device domain.Device, e error) {
+				return &mockDevice{
+					valTrackingMethod: addressString(IPDevice),
+				}, nil
+			},
+			domain.RescanNormal,
+			domain.StatusClosedRemediated,
+			false,
+		},
+
+		// unfixed vuln in ticket is in detection slice - ticket should be reopened
+		{
+			&dal.Ticket{
+				DeviceIDvar:        "device1",
+				IPAddressvar:       addressString("172.0.0.1"),
+				VulnerabilityIDvar: "vuln1",
+			},
+			&dal.ScanSummary{},
+			map[string]string{},
+			map[string]map[string]domain.Detection{
+				"device1": {
+					"vuln1;": &mockDetection{
+						valStatus: domain.Vulnerable,
+					},
+				},
+			},
+			make(chan string),
+			func(_AssetID string, OrgID string) (device domain.Device, e error) {
+				return &mockDevice{
+					valTrackingMethod: addressString(IPDevice),
+				}, nil
+			},
+			domain.RescanNormal,
+			domain.StatusReopened,
+			false,
+		},
+	}
+
+	for testIndex, test := range tests {
+		scj, errStream := getBaseRescanCloseJob()
+
+		scj.db = &mockDBWrapper{
+			FuncGetDeviceByAssetOrgID: test.funcGetDeviceByAssetOrgID,
+		}
+
+		var engine = &mockTicketingEngine{
+			funcGetStatusMap: func(backendStatus string) (equivalentTicketStatus string) {
+				return backendStatus
+			},
+			funcTransition: func(ticket domain.Ticket, status string, comment string, Assignee string) (err error) {
+				if status != test.expectedStatus {
+					t.Errorf("[%d] mismatch between transitioned status and expected [%s|%s]", testIndex, status, test.expectedStatus)
+				}
+				return
+			},
+		}
+
+		scj.Payload = &ScanClosePayload{}
+		scj.Payload.Type = test.rescanType
+
+		scj.modifyJiraTicketAccordingToVulnerabilityStatus(
+			engine,
+			test.ticket,
+			test.scan,
+			test.deadHostIPToProofMap,
+			test.deviceIDToVulnIDToDetection,
+			test.ipsForCloudDecommissionScan,
+		)
+
+		errSeen := streamHasErrors(errStream)
+
+		if errSeen != test.errExpected {
+			t.Errorf("[%d] mismatch in errSeen/errExpected [%v|%v]", testIndex, errSeen, test.errExpected)
+		}
+	}
+}
+
 func TestTicketingJob_getAssignmentInformation(t *testing.T) {
 	tests := []struct {
 		tagsForDevice   []domain.Tag
@@ -1194,6 +1328,19 @@ func (m *mockDBWrapper) GetVulnBySourceVulnID(_SourceVulnID string) (vulnerabili
 	}
 }
 
+func getBaseRescanCloseJob() (*ScanCloseJob, chan error) {
+	var errStream = make(chan error)
+	sc := &ScanCloseJob{}
+	sc.ctx = getContext()
+	sc.lstream = &mockLogger{
+		errStream,
+	}
+	sc.insource = &dal.SourceConfig{}
+	sc.outsource = &dal.SourceConfig{}
+	sc.config = &dal.JobConfig{}
+	return sc, errStream
+}
+
 func getBaseTicketingJob() (*TicketingJob, chan error) {
 	var errStream = make(chan error)
 	tj := &TicketingJob{}
@@ -1232,4 +1379,112 @@ func streamHasErrors(errStream chan error) bool {
 	}
 
 	return errSeen
+}
+
+type mockTicketingEngine struct {
+	funcCreateTicket               func(ticket domain.Ticket) (sourceID int, sourceKey string, err error)
+	funcUpdateTicket               func(ticket domain.Ticket, comment string) (sourceID int, sourceKey string, err error)
+	funcTransition                 func(ticket domain.Ticket, status string, comment string, Assignee string) (err error)
+	funcGetTicket                  func(sourceKey string) (ticket domain.Ticket, err error)
+	funcGetTicketsByClosedStatus   func(orgCode string, methodOfDiscovery string, startDate time.Time) (tix <-chan domain.Ticket)
+	funcGetTicketsUpdatedSince     func(since time.Time, orgCode string, methodOfDiscovery string) <-chan domain.Ticket
+	funcGetTicketsForRescan        func(cerfs []domain.CERF, methodOfDiscovery string, orgCode string, algorithm string) (issues <-chan domain.Ticket, err error)
+	funcGetTicketsByDeviceIDVulnID func(methodOfDiscovery string, orgCode string, deviceID string, vulnID string, statuses map[string]bool, port int, protocol string) (issues <-chan domain.Ticket, err error)
+	funcGetCERFExpirationUpdates   func(startDate time.Time) (cerfs map[string]time.Time, err error)
+	funcGetOpenTicketsByGroupID    func(methodOfDiscovery string, orgCode string, groupID string) (tickets <-chan domain.Ticket, err error)
+	funcGetRelatedTicketsForRescan func(tickets []domain.Ticket, groupID string, methodOfDiscovery string, orgCode string, rescanType string) (issues <-chan domain.Ticket, err error)
+	funcAssignmentGroupExists      func(groupName string) (exists bool, err error)
+	funcGetStatusMap               func(backendStatus string) (equivalentTicketStatus string)
+}
+
+func (m *mockTicketingEngine) CreateTicket(ticket domain.Ticket) (sourceID int, sourceKey string, err error) {
+	if m.funcCreateTicket != nil {
+		return m.funcCreateTicket(ticket)
+	} else {
+		panic("method not implemented")
+	}
+}
+func (m *mockTicketingEngine) UpdateTicket(ticket domain.Ticket, comment string) (sourceID int, sourceKey string, err error) {
+	if m.funcUpdateTicket != nil {
+		return m.funcUpdateTicket(ticket, comment)
+	} else {
+		panic("method not implemented")
+	}
+}
+func (m *mockTicketingEngine) Transition(ticket domain.Ticket, status string, comment string, Assignee string) (err error) {
+	if m.funcTransition != nil {
+		return m.funcTransition(ticket, status, comment, Assignee)
+	} else {
+		panic("method not implemented")
+	}
+}
+func (m *mockTicketingEngine) GetTicket(sourceKey string) (ticket domain.Ticket, err error) {
+	if m.funcGetTicket != nil {
+		return m.funcGetTicket(sourceKey)
+	} else {
+		panic("method not implemented")
+	}
+}
+func (m *mockTicketingEngine) GetTicketsByClosedStatus(orgCode string, methodOfDiscovery string, startDate time.Time) (tix <-chan domain.Ticket) {
+	if m.funcGetTicketsByClosedStatus != nil {
+		return m.funcGetTicketsByClosedStatus(orgCode, methodOfDiscovery, startDate)
+	} else {
+		panic("method not implemented")
+	}
+}
+func (m *mockTicketingEngine) GetTicketsUpdatedSince(since time.Time, orgCode string, methodOfDiscovery string) <-chan domain.Ticket {
+	if m.funcGetTicketsUpdatedSince != nil {
+		return m.funcGetTicketsUpdatedSince(since, orgCode, methodOfDiscovery)
+	} else {
+		panic("method not implemented")
+	}
+}
+func (m *mockTicketingEngine) GetTicketsForRescan(cerfs []domain.CERF, methodOfDiscovery string, orgCode string, algorithm string) (issues <-chan domain.Ticket, err error) {
+	if m.funcGetTicketsForRescan != nil {
+		return m.funcGetTicketsForRescan(cerfs, methodOfDiscovery, orgCode, algorithm)
+	} else {
+		panic("method not implemented")
+	}
+}
+func (m *mockTicketingEngine) GetTicketsByDeviceIDVulnID(methodOfDiscovery string, orgCode string, deviceID string, vulnID string, statuses map[string]bool, port int, protocol string) (issues <-chan domain.Ticket, err error) {
+	if m.funcGetTicketsByDeviceIDVulnID != nil {
+		return m.funcGetTicketsByDeviceIDVulnID(methodOfDiscovery, orgCode, deviceID, vulnID, statuses, port, protocol)
+	} else {
+		panic("method not implemented")
+	}
+}
+func (m *mockTicketingEngine) GetCERFExpirationUpdates(startDate time.Time) (cerfs map[string]time.Time, err error) {
+	if m.funcGetCERFExpirationUpdates != nil {
+		return m.funcGetCERFExpirationUpdates(startDate)
+	} else {
+		panic("method not implemented")
+	}
+}
+func (m *mockTicketingEngine) GetOpenTicketsByGroupID(methodOfDiscovery string, orgCode string, groupID string) (tickets <-chan domain.Ticket, err error) {
+	if m.funcGetOpenTicketsByGroupID != nil {
+		return m.funcGetOpenTicketsByGroupID(methodOfDiscovery, orgCode, groupID)
+	} else {
+		panic("method not implemented")
+	}
+}
+func (m *mockTicketingEngine) GetRelatedTicketsForRescan(tickets []domain.Ticket, groupID string, methodOfDiscovery string, orgCode string, rescanType string) (issues <-chan domain.Ticket, err error) {
+	if m.funcGetRelatedTicketsForRescan != nil {
+		return m.funcGetRelatedTicketsForRescan(tickets, groupID, methodOfDiscovery, orgCode, rescanType)
+	} else {
+		panic("method not implemented")
+	}
+}
+func (m *mockTicketingEngine) AssignmentGroupExists(groupName string) (exists bool, err error) {
+	if m.funcAssignmentGroupExists != nil {
+		return m.funcAssignmentGroupExists(groupName)
+	} else {
+		panic("method not implemented")
+	}
+}
+func (m *mockTicketingEngine) GetStatusMap(backendStatus string) (equivalentTicketStatus string) {
+	if m.funcGetStatusMap != nil {
+		return m.funcGetStatusMap(backendStatus)
+	} else {
+		panic("method not implemented")
+	}
 }
