@@ -3753,8 +3753,8 @@ func (conn *dbconn) GetGlobalExceptions(_OrgID string) ([]domain.Ignore, error) 
 							var myID string
 							var myOrganizationID string
 							var myVulnerabilityID string
-							var myDeviceID string
 							var myOSRegex *string
+							var myHostnameRegex *string
 							var myDueDate *time.Time
 
 							if err = rows.Scan(
@@ -3762,8 +3762,8 @@ func (conn *dbconn) GetGlobalExceptions(_OrgID string) ([]domain.Ignore, error) 
 								&myID,
 								&myOrganizationID,
 								&myVulnerabilityID,
-								&myDeviceID,
 								&myOSRegex,
+								&myHostnameRegex,
 								&myDueDate,
 							); err == nil {
 
@@ -3771,8 +3771,8 @@ func (conn *dbconn) GetGlobalExceptions(_OrgID string) ([]domain.Ignore, error) 
 									IDvar:              myID,
 									OrganizationIDvar:  myOrganizationID,
 									VulnerabilityIDvar: myVulnerabilityID,
-									DeviceIDvar:        myDeviceID,
 									OSRegexvar:         myOSRegex,
+									HostnameRegexvar:   myHostnameRegex,
 									DueDatevar:         myDueDate,
 								}
 
