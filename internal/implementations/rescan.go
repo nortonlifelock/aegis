@@ -39,7 +39,7 @@ type RescanJob struct {
 const (
 	reopenComment         = "Remediation Failed"
 	closeComment          = "Remediation successful; Vulnerability not found"
-	inactiveKernelComment = "Remediation successful; Vulnerable Kernel is no longer active"
+	inactiveKernelComment = "Remediation successful"
 	potentialComment      = "Closing ticket; Potential vulnerability"
 )
 
