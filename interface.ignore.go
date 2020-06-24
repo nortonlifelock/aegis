@@ -10,6 +10,7 @@ type Ignore interface {
 	OrganizationID() (param string)
 	VulnerabilityID() (param string)
 	OSRegex() (param *string)
+	HostnameRegex() (param *string)
 
 	Approval() (param string)
 	Active() (param bool)
