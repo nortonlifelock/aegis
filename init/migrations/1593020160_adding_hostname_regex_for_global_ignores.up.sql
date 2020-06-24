@@ -1,0 +1,1 @@
+ALTER TABLE `Ignore` ADD COLUMN HostnameRegex VARCHAR(100) NULL AFTER OSRegex;

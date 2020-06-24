@@ -486,12 +486,31 @@ func (job *AssetSyncJob) getExceptionID(assetID string, deviceInDb domain.Device
 
 	if len(exceptionID) == 0 {
 		for _, globalException := range job.globalExceptions {
-			if globalException.exception.VulnerabilityID() == vulnInfo.SourceVulnID() {
-				if globalException.regex.Match([]byte(deviceInDb.OS())) {
-					exceptionID = globalException.exception.ID()
-					break
+
+			if globalException.osRegex != nil || globalException.hostnameRegex != nil {
+				if len(globalException.exception.VulnerabilityID()) == 0 || globalException.exception.VulnerabilityID() == vulnInfo.SourceVulnID() {
+
+					var failedOSCheck, failedHostnameCheck bool
+
+					if globalException.osRegex != nil {
+						if !globalException.osRegex.Match([]byte(deviceInDb.OS())) {
+							failedOSCheck = true
+						}
+					}
+
+					if globalException.hostnameRegex != nil {
+						if !globalException.hostnameRegex.Match([]byte(deviceInDb.HostName())) {
+							failedHostnameCheck = true
+						}
+					}
+
+					if !failedOSCheck && !failedHostnameCheck {
+						exceptionID = globalException.exception.ID()
+						break
+					}
 				}
 			}
+
 		}
 	}
 
@@ -658,8 +677,9 @@ func (job *AssetSyncJob) createAssetGroupInDB(groupID string, scannerSourceID st
 }
 
 type compiledException struct {
-	exception domain.Ignore
-	regex     *regexp.Regexp
+	exception     domain.Ignore
+	osRegex       *regexp.Regexp
+	hostnameRegex *regexp.Regexp
 }
 
 func (job *AssetSyncJob) preloadIgnores() (globals []compiledException, deviceIDToVulnIDToException map[string]map[string]domain.Ignore, err error) {
@@ -670,23 +690,32 @@ func (job *AssetSyncJob) preloadIgnores() (globals []compiledException, deviceID
 	if globalExceptions, err = job.db.GetGlobalExceptions(job.config.OrganizationID()); err == nil {
 		for _, globalException := range globalExceptions {
 
+			var osRegex *regexp.Regexp
 			if len(sord(globalException.OSRegex())) > 0 {
-
-				var regex *regexp.Regexp
-				if regex, err = regexp.Compile(sord(globalException.OSRegex())); err == nil {
-					globals = append(globals, compiledException{
-						exception: globalException,
-						regex:     regex,
-					})
-				} else {
-					err = fmt.Errorf("error while compiling regex for ignore entry [%s]", globalException.ID())
+				if osRegex, err = regexp.Compile(sord(globalException.OSRegex())); err != nil {
+					err = fmt.Errorf("error while compiling regex for global ignore entry [%s]", globalException.ID())
 					break
 				}
-			} else {
-				err = fmt.Errorf("ignore entry [%s] appeared to be a global exception but did not have an OS regex", globalException.ID())
-				break
 			}
 
+			var hostnameRegex *regexp.Regexp
+			if len(sord(globalException.HostnameRegex())) > 0 {
+				if hostnameRegex, err = regexp.Compile(sord(globalException.HostnameRegex())); err != nil {
+					err = fmt.Errorf("error while compiling regex for global ignore entry [%s]", globalException.ID())
+					break
+				}
+			}
+
+			if osRegex != nil || hostnameRegex != nil {
+				globals = append(globals, compiledException{
+					exception:     globalException,
+					osRegex:       osRegex,
+					hostnameRegex: hostnameRegex,
+				})
+			} else {
+				err = fmt.Errorf("neither os regex nor hostname regex compiled for global ignore entry [%s]", globalException.ID())
+				break
+			}
 		}
 	} else {
 		err = fmt.Errorf("error while loading global exceptions - %s", err.Error())

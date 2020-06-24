@@ -3,8 +3,8 @@
   ID              NVARCHAR(36)          NOT
   OrganizationID  NVARCHAR(36)          NOT
   VulnerabilityID NVARCHAR(36)          NOT
-  DeviceID        NVARCHAR(36)          NOT
   OSRegex         VARCHAR(200)          NULL
+  HostnameRegex   VARCHAR(100)          NULL
   DueDate         DATETIME              NULL
 */
 
@@ -16,8 +16,12 @@ SELECT
     ID,
     OrganizationID,
     VulnerabilityID,
-    DeviceID,
     OSRegex,
+    HostnameRegex,
     DueDate
 FROM `Ignore` I
-WHERE I.OrganizationID = _OrgID AND I.OSRegex IS NOT NULL AND I.DeviceID IS NULL AND I.Active = b'1';
+WHERE
+      I.OrganizationID = _OrgID AND
+      (I.OSRegex IS NOT NULL OR I.HostnameRegex IS NOT NULL) AND
+      I.DeviceID IS NULL AND
+      I.Active = b'1';
