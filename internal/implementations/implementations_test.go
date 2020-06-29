@@ -132,12 +132,101 @@ func TestScanCloseJob_modifyJiraTicketAccordingToVulnerabilityStatus(t *testing.
 			domain.StatusReopened,
 			false,
 		},
+
+		// dead ticket should be moved to resolved decomm
+		{
+			&dal.Ticket{
+				DeviceIDvar:        "device1",
+				IPAddressvar:       addressString("172.0.0.1"),
+				VulnerabilityIDvar: "vuln1",
+			},
+			&dal.ScanSummary{},
+			map[string]string{},
+			map[string]map[string]domain.Detection{
+				"device1": {
+					"vuln1;": &mockDetection{
+						valStatus: domain.DeadHost,
+					},
+				},
+			},
+			make(chan string),
+			func(_AssetID string, OrgID string) (device domain.Device, e error) {
+				return &mockDevice{
+					valTrackingMethod: addressString(IPDevice),
+				}, nil
+			},
+			domain.RescanNormal,
+			domain.StatusResolvedDecom,
+			false,
+		},
+
+		// decomm dead ticket should close
+		{
+			&dal.Ticket{
+				DeviceIDvar:        "device1",
+				IPAddressvar:       addressString("172.0.0.1"),
+				VulnerabilityIDvar: "vuln1",
+			},
+			&dal.ScanSummary{},
+			map[string]string{},
+			map[string]map[string]domain.Detection{
+				"device1": {
+					"vuln1;": &mockDetection{
+						valStatus: domain.DeadHost,
+					},
+				},
+			},
+			make(chan string),
+			func(_AssetID string, OrgID string) (device domain.Device, e error) {
+				return &mockDevice{
+					valTrackingMethod: addressString(IPDevice),
+				}, nil
+			},
+			domain.RescanDecommission,
+			domain.StatusClosedDecommissioned,
+			false,
+		},
+
+		// ticket with active vulns should be reopened
+		{
+			&dal.Ticket{
+				DeviceIDvar:        "device1",
+				IPAddressvar:       addressString("172.0.0.1"),
+				VulnerabilityIDvar: "vuln1",
+			},
+			&dal.ScanSummary{},
+			map[string]string{},
+			map[string]map[string]domain.Detection{
+				"device1": {
+					"vuln1;": &mockDetection{
+						valStatus: domain.Vulnerable,
+					},
+				},
+			},
+			make(chan string),
+			func(_AssetID string, OrgID string) (device domain.Device, e error) {
+				return &mockDevice{
+					valTrackingMethod: addressString(IPDevice),
+				}, nil
+			},
+			domain.RescanDecommission,
+			domain.StatusReopened,
+			false,
+		},
 	}
 
 	for testIndex, test := range tests {
 		scj, errStream := getBaseRescanCloseJob()
 
 		scj.db = &mockDBWrapper{
+			DatabaseConnection: &database.MockSQLDriver{
+				FuncDeleteIgnoreForDevice: func(_sourceID string, _devID string, _orgID string) (id int, affectedRows int, err error) {
+					return
+				},
+				FuncSaveIgnore: func(_SourceID string, _OrganizationID string, _TypeID int, _VulnerabilityID string, _DeviceID string, _DueDate time.Time, _Approval string, _Active bool, _port string) (id int, affectedRows int, err error) {
+					return
+				},
+			},
 			FuncGetDeviceByAssetOrgID: test.funcGetDeviceByAssetOrgID,
 		}
 
