@@ -192,6 +192,7 @@ type GeneratedDatabaseConnection interface {
 	UpdateTag(_DeviceID string, _TagKeyID string, _Value string) (id int, affectedRows int, err error)
 	UpdateTagMap(_TicketingSourceID string, _TicketingTag string, _CloudSourceID string, _CloudTag string, _Options string, _OrganizationID string) (id int, affectedRows int, err error)
 	UpdateTicket(_Title string, _Status string, _OrganizationID string, _AssignmentGroup string, _Assignee string, _DueDate time.Time, _CreatedDate time.Time, _UpdatedDate time.Time, _ResolutionDate time.Time, _DefaultTime time.Time) (id int, affectedRows int, err error)
+	UpdateTicketDetectionID(_Title string, _DetectionID string, _OrganizationID string) (id int, affectedRows int, err error)
 	UpdateUserByID(_ID string, _FirstName string, _LastName string, _Email string, _Disabled bool) (id int, affectedRows int, err error)
 	UpdateVulnByID(_ID string, _SourceVulnID string, _Title string, _SourceID string, _CVSSScore float32, _CVSS3Score float32, _Description string, _Threat string, _Solution string, _Software string, _Patchable string, _Category string, _DetectionInformation string) (id int, affectedRows int, err error)
 	UpdateVulnByIDNoCVSS3(_ID string, _SourceVulnID string, _Title string, _SourceID string, _CVSSScore float32, _CVSS3Score float32, _Description string, _Threat string, _Solution string, _Software string, _Patchable string, _DetectionInformation string) (id int, affectedRows int, err error)
