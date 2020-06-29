@@ -9100,6 +9100,35 @@ func (conn *dbconn) UpdateTicket(_Title string, _Status string, _OrganizationID 
 	return id, affectedRows, err
 }
 
+// UpdateTicketDetectionID executes the stored procedure UpdateTicketDetectionID against the database
+func (conn *dbconn) UpdateTicketDetectionID(_Title string, _DetectionID string, _OrganizationID string) (id int, affectedRows int, err error) {
+
+	conn.Exec(&connection.Procedure{
+		Proc:       "UpdateTicketDetectionID",
+		Parameters: []interface{}{_Title, _DetectionID, _OrganizationID},
+		Callback: func(results interface{}, dberr error) {
+			err = dberr
+
+			if result, ok := results.(sql.Result); ok {
+				var idOut int64
+
+				// Get the id of the last inserted record
+				if idOut, err = result.LastInsertId(); err == nil {
+					id = int(idOut)
+				}
+
+				// Get the number of affected rows for the execution
+				if idOut, err = result.RowsAffected(); ok {
+					affectedRows = int(idOut)
+				}
+			}
+
+		},
+	})
+
+	return id, affectedRows, err
+}
+
 // UpdateUserByID executes the stored procedure UpdateUserByID against the database
 func (conn *dbconn) UpdateUserByID(_ID string, _FirstName string, _LastName string, _Email string, _Disabled bool) (id int, affectedRows int, err error) {
 
