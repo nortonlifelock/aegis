@@ -130,13 +130,18 @@ func (session *QsSession) Detections(ctx context.Context, ids []string) (detecti
 				var findings []*qualys.WebAppFinding
 				if findings, err = session.apiSession.GetVulnerabilitiesForSite(webAppID); err == nil {
 					for _, finding := range findings {
-						select {
-						case <-ctx.Done():
-							return
-						case out <- &webAppFindingWrapper{
+
+						detectionWrapper := &webAppFindingWrapper{
 							f:       finding,
 							session: session,
-						}:
+						}
+
+						if detectionWrapper.Status() != domain.Informational {
+							select {
+							case <-ctx.Done():
+								return
+							case out <- detectionWrapper:
+							}
 						}
 					}
 				} else {

@@ -26,8 +26,8 @@ func (f *webAppFindingWrapper) VulnerabilityID() string {
 }
 
 func (f *webAppFindingWrapper) Status() string {
-	var status = f.f.StatusVal                 // NEW, ACTIVE, REOPENED, PROTECTED, and FIXED
-	detectionType := strings.ToLower(f.f.Type) // VULNERABILITY, SENSITIVE_CONTENT, or INFORMATION_GATHERED
+	var status = f.f.StatusVal // NEW, ACTIVE, REOPENED, PROTECTED, and FIXED
+	detectionType := f.f.Type  // VULNERABILITY, SENSITIVE_CONTENT, or INFORMATION_GATHERED
 
 	const (
 		info = "INFORMATION_GATHERED"
