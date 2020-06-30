@@ -37,7 +37,7 @@ func (session *Session) CreateWebAppVulnerabilityScan(webAppID string, webAppOpt
 
 		resp := webAppScanResponse{}
 
-		if err = session.httpCall(http.MethodPost, session.webAppBaseURL+postLaunchScan, nil, &reqBodyString, resp); err == nil {
+		if err = session.httpCall(http.MethodPost, session.webAppBaseURL+postLaunchScan, make(map[string]string), &reqBodyString, resp); err == nil {
 
 			if len(resp.Data.WasScan.ID) > 0 {
 				scanID = resp.Data.WasScan.ID
@@ -59,7 +59,7 @@ func (session *Session) GetScanStatus(scanID string) (status string, err error) 
 
 	resp := &webAppScanResponse{}
 
-	if err = session.httpCall(http.MethodGet, url, nil, nil, resp); err == nil {
+	if err = session.httpCall(http.MethodGet, url, make(map[string]string), nil, resp); err == nil {
 		if len(resp.Data.WasScan.Status) > 0 {
 			status = resp.Data.WasScan.Status
 		} else {
@@ -86,7 +86,7 @@ func (session *Session) GetVulnerabilitiesForSite(siteID string) (findings []*We
 	if reqBodyByte, err = xml.Marshal(reqBody); err == nil {
 		reqBodyString := string(reqBodyByte)
 
-		if err = session.httpCall(http.MethodPost, session.webAppBaseURL+postGetSiteFindings, nil, &reqBodyString, resp); err == nil {
+		if err = session.httpCall(http.MethodPost, session.webAppBaseURL+postGetSiteFindings, make(map[string]string), &reqBodyString, resp); err == nil {
 			if len(resp.Data.Finding) > 0 {
 				findings = resp.Data.Finding
 			} else {
