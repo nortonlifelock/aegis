@@ -1,7 +1,6 @@
 package qualys
 
 import (
-	"encoding/json"
 	"encoding/xml"
 	"fmt"
 	"github.com/nortonlifelock/log"
@@ -33,7 +32,7 @@ func (session *Session) CreateWebAppVulnerabilityScan(webAppID string, webAppOpt
 	reqBody.Data.WasScan.Profile.ID = webAppOptionProfileID
 
 	var reqBodyByte []byte
-	if reqBodyByte, err = json.Marshal(reqBody); err == nil {
+	if reqBodyByte, err = xml.Marshal(reqBody); err == nil {
 		reqBodyString := string(reqBodyByte)
 
 		resp := webAppScanResponse{}
@@ -82,14 +81,21 @@ func (session *Session) GetVulnerabilitiesForSite(siteID string) (findings []*We
 
 	resp := &webAppFindingsResponse{}
 
-	if err = session.httpCall(http.MethodPost, session.webAppBaseURL+postGetSiteFindings, nil, nil, resp); err == nil {
-		if len(resp.Data.Finding) > 0 {
-			findings = resp.Data.Finding
+	var reqBodyByte []byte
+	if reqBodyByte, err = xml.Marshal(reqBody); err == nil {
+		reqBodyString := string(reqBodyByte)
+
+		if err = session.httpCall(http.MethodPost, session.webAppBaseURL+postGetSiteFindings, nil, &reqBodyString, resp); err == nil {
+			if len(resp.Data.Finding) > 0 {
+				findings = resp.Data.Finding
+			} else {
+				session.lstream.Send(log.Errorf(err, "could not find status from [%s]", postGetSiteFindings))
+			}
 		} else {
-			session.lstream.Send(log.Errorf(err, "could not find status from [%s]", postGetSiteFindings))
+			session.lstream.Send(log.Errorf(err, "err while calling api [%s]", postGetSiteFindings))
 		}
 	} else {
-		session.lstream.Send(log.Errorf(err, "err while calling api [%s]", postGetSiteFindings))
+		session.lstream.Send(log.Errorf(err, "error while marshalling GetVulnerabilitiesForSite body"))
 	}
 
 	return findings, err
