@@ -52,3 +52,7 @@ func (w *WebAppWrapper) InstanceID() *string {
 func (w *WebAppWrapper) GroupID() *string {
 	return nil
 }
+
+func (w *WebAppWrapper) TrackingMethod() *string {
+	return nil
+}
