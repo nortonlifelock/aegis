@@ -38,7 +38,7 @@ func (session *Session) CreateWebAppVulnerabilityScan(webAppID string, webAppOpt
 
 		resp := webAppScanResponse{}
 
-		if err = session.httpCall(http.MethodPost, session.Config.Address()+postLaunchScan, nil, &reqBodyString, resp); err == nil {
+		if err = session.httpCall(http.MethodPost, session.webAppBaseURL+postLaunchScan, nil, &reqBodyString, resp); err == nil {
 
 			if len(resp.Data.WasScan.ID) > 0 {
 				scanID = resp.Data.WasScan.ID
@@ -56,7 +56,7 @@ func (session *Session) CreateWebAppVulnerabilityScan(webAppID string, webAppOpt
 }
 
 func (session *Session) GetScanStatus(scanID string) (status string, err error) {
-	url := strings.Replace(session.Config.Address()+getScanStatus, "<id>", scanID, 1)
+	url := strings.Replace(session.webAppBaseURL+getScanStatus, "<id>", scanID, 1)
 
 	resp := &webAppScanResponse{}
 
@@ -82,7 +82,7 @@ func (session *Session) GetVulnerabilitiesForSite(siteID string) (findings []*We
 
 	resp := &webAppFindingsResponse{}
 
-	if err = session.httpCall(http.MethodPost, postGetSiteFindings, nil, nil, resp); err == nil {
+	if err = session.httpCall(http.MethodPost, session.webAppBaseURL+postGetSiteFindings, nil, nil, resp); err == nil {
 		if len(resp.Data.Finding) > 0 {
 			findings = resp.Data.Finding
 		} else {

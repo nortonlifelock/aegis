@@ -2,6 +2,7 @@ package qualys
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"github.com/nortonlifelock/domain"
 	"github.com/nortonlifelock/funnel"
@@ -31,16 +32,21 @@ type Session struct {
 	ctx              context.Context
 	concurrencyLimit int
 	rateLimit        time.Duration
+
+	// Web Application Scanning API uses a different base URL from the Qualys VM API
+	// we can gather the second URL from the AuthInfo column for the Qualys connection in the SourceConfig table
+	// the url JSON key is "host_web_app"
+	webAppBaseURL string
 }
 
 // NewQualysAPISession initializes the Qualys session object but currently all authentication is done with basic auth rather
 // than session management which will be changing in a future release
 func NewQualysAPISession(ctx context.Context, lstream logger, config domain.SourceConfig) (session *Session, err error) {
 	session = &Session{
-		lstream: lstream,
-		Config:  config,
-
-		ctx: ctx,
+		lstream:       lstream,
+		Config:        config,
+		webAppBaseURL: getWebAppURLIfPresent(config),
+		ctx:           ctx,
 	}
 
 	var rates Rates
@@ -118,4 +124,14 @@ func (session *Session) pullRateInfoForInitialization() (rates Rates, err error)
 	}
 
 	return rates, err
+}
+
+func getWebAppURLIfPresent(sourceConfig domain.SourceConfig) (url string) {
+	type parseWebApp struct {
+		URL string `json:"host_web_app"`
+	}
+	parse := &parseWebApp{}
+	_ = json.Unmarshal([]byte(sourceConfig.AuthInfo()), parse)
+	url = parse.URL
+	return url
 }
