@@ -78,6 +78,7 @@ func (session *Session) GetVulnerabilitiesForSite(siteID string) (findings []*We
 	reqBody.Filters.Criteria.Field = "webApp.id"
 	reqBody.Filters.Criteria.Operator = "EQUALS"
 	reqBody.Filters.Criteria.Text = siteID
+	reqBody.Preferences.Verbose = "true"
 
 	resp := &webAppFindingsResponse{}
 
