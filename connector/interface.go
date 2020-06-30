@@ -13,6 +13,7 @@ import (
 )
 
 const tagPrefix = "tag-"
+const webPrefix = "web-"
 
 // KnowledgeBase grabs all vulnerabilities from the Qualys knowledge base and pushes them onto a channel
 func (session *QsSession) KnowledgeBase(ctx context.Context, since *time.Time) <-chan domain.Vulnerability {
@@ -74,10 +75,13 @@ func (session *QsSession) Detections(ctx context.Context, ids []string) (detecti
 		defer close(out)
 
 		var tags = make([]string, 0)
+		var webAppIDs = make([]string, 0)
 		var groupIDs = make([]string, 0)
 		for _, id := range ids {
 			if strings.Index(id, tagPrefix) >= 0 {
 				tags = append(tags, id[strings.Index(id, tagPrefix)+len(tagPrefix):])
+			} else if strings.Index(id, webPrefix) >= 0 {
+				webAppIDs = append(webAppIDs, id[strings.Index(id, webPrefix)+len(webPrefix):])
 			} else {
 				groupIDs = append(groupIDs, id)
 			}
@@ -116,6 +120,28 @@ func (session *QsSession) Detections(ctx context.Context, ids []string) (detecti
 
 			} else {
 				session.lstream.Send(log.Error("Error while loading host detections from Qualys", err))
+			}
+		}
+
+		if len(webAppIDs) > 0 {
+			for _, webAppID := range webAppIDs {
+				session.lstream.Send(log.Infof("Loading web application detection from Qualys using ID [%s]", webAppID))
+
+				var findings []*qualys.WebAppFinding
+				if findings, err = session.apiSession.GetVulnerabilitiesForSite(webAppID); err == nil {
+					for _, finding := range findings {
+						select {
+						case <-ctx.Done():
+							return
+						case out <- &webAppFindingWrapper{
+							f:       finding,
+							session: session,
+						}:
+						}
+					}
+				} else {
+
+				}
 			}
 		}
 
