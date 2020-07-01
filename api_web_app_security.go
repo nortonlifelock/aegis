@@ -37,7 +37,7 @@ func (session *Session) CreateWebAppVulnerabilityScan(webAppID string, webAppOpt
 	if reqBodyByte, err = xml.Marshal(reqBody); err == nil {
 		reqBodyString := string(reqBodyByte)
 
-		resp := webAppScanResponse{}
+		resp := &webAppScanResponse{}
 
 		if err = session.httpCall(http.MethodPost, session.webAppBaseURL+postLaunchScan, make(map[string]string), &reqBodyString, resp); err == nil {
 
