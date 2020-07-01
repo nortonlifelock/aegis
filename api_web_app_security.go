@@ -30,7 +30,7 @@ func (session *Session) CreateWebAppVulnerabilityScan(webAppID string, webAppOpt
 	reqBody.Data.WasScan.Target.ScannerAppliance.Type = scannerType
 
 	// TODO not sure if text is the proper place to put this
-	reqBody.Data.WasScan.Target.ScannerAppliance.Text = scannerName
+	reqBody.Data.WasScan.Target.ScannerAppliance.FriendlyName = scannerName
 	reqBody.Data.WasScan.Profile.ID = webAppOptionProfileID
 
 	var reqBodyByte []byte
@@ -111,7 +111,7 @@ func (session *Session) GetWebApplicationInfo(webAppID string) (defaultScannerNa
 
 	if err = session.httpCall(http.MethodGet, url, make(map[string]string), nil, resp); err == nil {
 		defaultScannerType = resp.Data.WebApp.DefaultScanner.Type
-		defaultScannerName = resp.Data.WebApp.DefaultScanner.Text
+		defaultScannerName = resp.Data.WebApp.DefaultScanner.FriendlyName
 	} else {
 		session.lstream.Send(log.Errorf(err, "err while calling api [%s]", url))
 	}
@@ -139,8 +139,9 @@ type createWebAppScanRequest struct {
 					IsDefault string `xml:"isDefault"` // true
 				} `xml:"webAppAuthRecord"`
 				ScannerAppliance struct {
-					Text string `xml:",chardata"`
-					Type string `xml:"type"` // EXTERNAL/what else?
+					Text         string `xml:",chardata"`
+					Type         string `xml:"type"` // EXTERNAL/what else?
+					FriendlyName string `xml:"friendlyName"`
 				} `xml:"scannerAppliance"`
 			} `xml:"target"`
 			Profile struct {
@@ -351,8 +352,9 @@ type getWebAppResponse struct {
 				Name string `xml:"name"`
 			} `xml:"defaultProfile"`
 			DefaultScanner struct {
-				Text string `xml:",chardata"`
-				Type string `xml:"type"`
+				Text         string `xml:",chardata"`
+				Type         string `xml:"type"`
+				FriendlyName string `xml:"friendlyName"`
 			} `xml:"defaultScanner"`
 			ScannerLocked string `xml:"scannerLocked"`
 			UrlBlacklist  struct {
