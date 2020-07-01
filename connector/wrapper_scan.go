@@ -41,18 +41,22 @@ func (s *scan) GroupID() string {
 }
 
 func (s *scan) Status() (status string, err error) {
-	var scan qualys.ScanQualys
-	scan, err = s.session.apiSession.GetScanByReference(s.ScanID)
-	if err == nil {
-		status = scan.Status.State
+	if !strings.Contains(s.ScanID, webPrefix) {
+		var scan qualys.ScanQualys
+		scan, err = s.session.apiSession.GetScanByReference(s.ScanID)
+		if err == nil {
+			status = scan.Status.State
 
-		if strings.ToLower(status) == strings.ToLower(domain.ScanFINISHED) {
-			if scan.Processed == 0 {
-				status = domain.ScanPROCESSING
+			if strings.ToLower(status) == strings.ToLower(domain.ScanFINISHED) {
+				if scan.Processed == 0 {
+					status = domain.ScanPROCESSING
+				}
 			}
-		}
 
-		status = strings.ToLower(status)
+			status = strings.ToLower(status)
+		}
+	} else {
+		status, err = s.session.apiSession.GetWebAppScanStatus(strings.Replace(s.ScanID, webPrefix, "", 1))
 	}
 
 	return status, err

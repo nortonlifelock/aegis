@@ -17,46 +17,51 @@ const (
 )
 
 func (session *Session) CreateWebAppVulnerabilityScan(webAppID string, webAppOptionProfileID string, scannerType string, scannerName string) (scanID string, title string, err error) {
-	reqBody := &createWebAppScanRequest{}
+	if len(webAppID) > 0 && len(webAppOptionProfileID) > 0 && len(scannerType) > 0 { // scanner name can be empty for externel scans
+		reqBody := &createWebAppScanRequest{}
 
-	// TODO configurable scan name
-	reqBody.Data.WasScan.Name = fmt.Sprintf("aegis_webapp_vulnerability_scan_%s", time.Now().Format(time.RFC3339))
-	reqBody.Data.WasScan.Type = "VULNERABILITY"
-	title = reqBody.Data.WasScan.Name
+		// TODO configurable scan name
+		reqBody.Data.WasScan.Name = fmt.Sprintf("aegis_webapp_vulnerability_scan_%s", time.Now().Format(time.RFC3339))
+		reqBody.Data.WasScan.Type = "VULNERABILITY"
+		title = reqBody.Data.WasScan.Name
 
-	reqBody.Data.WasScan.Target.WebApp.ID = webAppID
-	reqBody.Data.WasScan.Target.WebAppAuthRecord.IsDefault = "true"
+		reqBody.Data.WasScan.Target.WebApp.ID = webAppID
+		reqBody.Data.WasScan.Target.WebAppAuthRecord.IsDefault = "true"
 
-	reqBody.Data.WasScan.Target.ScannerAppliance.Type = scannerType
+		reqBody.Data.WasScan.Target.ScannerAppliance.Type = scannerType
 
-	// TODO not sure if text is the proper place to put this
-	reqBody.Data.WasScan.Target.ScannerAppliance.FriendlyName = scannerName
-	reqBody.Data.WasScan.Profile.ID = webAppOptionProfileID
+		// TODO not sure if text is the proper place to put this
+		reqBody.Data.WasScan.Target.ScannerAppliance.FriendlyName = scannerName
+		reqBody.Data.WasScan.Profile.ID = webAppOptionProfileID
 
-	var reqBodyByte []byte
-	if reqBodyByte, err = xml.Marshal(reqBody); err == nil {
-		reqBodyString := string(reqBodyByte)
+		var reqBodyByte []byte
+		if reqBodyByte, err = xml.Marshal(reqBody); err == nil {
+			reqBodyString := string(reqBodyByte)
 
-		resp := &webAppScanResponse{}
+			resp := &webAppScanResponse{}
 
-		if err = session.httpCall(http.MethodPost, session.webAppBaseURL+postLaunchScan, make(map[string]string), &reqBodyString, resp); err == nil {
+			if err = session.httpCall(http.MethodPost, session.webAppBaseURL+postLaunchScan, make(map[string]string), &reqBodyString, resp); err == nil {
 
-			if len(resp.Data.WasScan.ID) > 0 {
-				scanID = resp.Data.WasScan.ID
+				if len(resp.Data.WasScan.ID) > 0 {
+					scanID = resp.Data.WasScan.ID
+				} else {
+					session.lstream.Send(log.Errorf(err, "could not find scan ID from [%s]", postLaunchScan))
+					err = fmt.Errorf("could not find scan ID from [%s]", postLaunchScan)
+				}
 			} else {
-				session.lstream.Send(log.Errorf(err, "could not find scan ID from [%s]", postLaunchScan))
+				session.lstream.Send(log.Errorf(err, "nil response while calling api [%s]", postLaunchScan))
 			}
 		} else {
-			session.lstream.Send(log.Errorf(err, "nil response while calling api [%s]", postLaunchScan))
+			session.lstream.Send(log.Errorf(err, "error while marshalling scan body"))
 		}
 	} else {
-		session.lstream.Send(log.Errorf(err, "error while marshalling scan body"))
+		err = fmt.Errorf("all input parameters not provided [%s|%s|%s]", webAppID, webAppOptionProfileID, scannerType)
 	}
 
 	return scanID, title, err
 }
 
-func (session *Session) GetScanStatus(scanID string) (status string, err error) {
+func (session *Session) GetWebAppScanStatus(scanID string) (status string, err error) {
 	url := strings.Replace(session.webAppBaseURL+getScanStatus, "<id>", scanID, 1)
 
 	resp := &webAppScanResponse{}

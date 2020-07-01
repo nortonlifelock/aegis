@@ -107,7 +107,7 @@ func (session *QsSession) createScanForWebApplication(ctx context.Context, detec
 
 				scan := &scan{
 					Name:       title,
-					ScanID:     scanID,
+					ScanID:     fmt.Sprintf("%s%s", webPrefix, scanID),
 					TemplateID: "", // keep empty so the option profile isn't deleted in cleanup
 
 					AssetGroupID: fmt.Sprintf("%s%s", webPrefix, webAppID),
