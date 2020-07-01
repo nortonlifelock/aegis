@@ -89,6 +89,47 @@ func (session *QsSession) createVulnerabilityScanForGroup(ctx context.Context, o
 	return err
 }
 
+func (session *QsSession) createScanForWebApplication(ctx context.Context, detections []domain.Match, out chan<- domain.Scan) {
+	var webAppIDToMatch = make(map[string][]domain.Match)
+	for _, detection := range detections {
+		if webAppIDToMatch[detection.Device()] == nil {
+			webAppIDToMatch[detection.Device()] = make([]domain.Match, 0)
+		}
+		webAppIDToMatch[detection.Device()] = append(webAppIDToMatch[detection.Device()], detection)
+	}
+
+	for webAppID := range webAppIDToMatch {
+		defaultScannerName, defaultScannerType, err := session.apiSession.GetWebApplicationInfo(webAppID)
+
+		if err == nil {
+			scanID, title, err := session.apiSession.CreateWebAppVulnerabilityScan(webAppID, session.payload.WebAppOptionProfile, defaultScannerType, defaultScannerName)
+			if err == nil {
+
+				scan := &scan{
+					Name:       title,
+					ScanID:     scanID,
+					TemplateID: "", // keep empty so the option profile isn't deleted in cleanup
+
+					AssetGroupID: fmt.Sprintf("%s%s", webPrefix, webAppID),
+					EngineIDs:    []string{defaultScannerName, defaultScannerType},
+
+					Created: time.Now(),
+				}
+
+				select {
+				case <-ctx.Done():
+					return
+				case out <- scan:
+				}
+			} else {
+				session.lstream.Send(log.Errorf(err, "error while making web app scan for [%s|%s|%s|%s]", webAppID, session.payload.WebAppOptionProfile, defaultScannerType, defaultScannerName))
+			}
+		} else {
+			session.lstream.Send(log.Errorf(err, "error while pulling default scanner for web app [%s]", webAppID))
+		}
+	}
+}
+
 func (session *QsSession) createScanForDetections(ctx context.Context, detections []domain.Match, out chan<- domain.Scan) {
 	var err error
 

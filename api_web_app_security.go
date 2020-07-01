@@ -13,14 +13,16 @@ const (
 	postLaunchScan      = "/qps/rest/3.0/launch/was/wasscan/"
 	postGetSiteFindings = "/qps/rest/3.0/search/was/finding"
 	getScanStatus       = "/qps/rest/3.0/status/was/wasscan/<id>"
+	getWebAppInfo       = "/qps/rest/3.0/get/was/webapp/<id>"
 )
 
-func (session *Session) CreateWebAppVulnerabilityScan(webAppID string, webAppOptionProfileID string, scannerType string, scannerName string) (scanID string, err error) {
+func (session *Session) CreateWebAppVulnerabilityScan(webAppID string, webAppOptionProfileID string, scannerType string, scannerName string) (scanID string, title string, err error) {
 	reqBody := &createWebAppScanRequest{}
 
 	// TODO configurable scan name
 	reqBody.Data.WasScan.Name = fmt.Sprintf("aegis_webapp_vulnerability_scan_%s", time.Now().Format(time.RFC3339))
 	reqBody.Data.WasScan.Type = "VULNERABILITY"
+	title = reqBody.Data.WasScan.Name
 
 	reqBody.Data.WasScan.Target.WebApp.ID = webAppID
 	reqBody.Data.WasScan.Target.WebAppAuthRecord.IsDefault = "true"
@@ -51,7 +53,7 @@ func (session *Session) CreateWebAppVulnerabilityScan(webAppID string, webAppOpt
 		session.lstream.Send(log.Errorf(err, "error while marshalling scan body"))
 	}
 
-	return scanID, err
+	return scanID, title, err
 }
 
 func (session *Session) GetScanStatus(scanID string) (status string, err error) {
@@ -100,6 +102,21 @@ func (session *Session) GetVulnerabilitiesForSite(siteID string) (findings []*We
 	}
 
 	return findings, err
+}
+
+func (session *Session) GetWebApplicationInfo(webAppID string) (defaultScannerName, defaultScannerType string, err error) {
+	url := strings.Replace(session.webAppBaseURL+getWebAppInfo, "<id>", webAppID, 1)
+
+	resp := &getWebAppResponse{}
+
+	if err = session.httpCall(http.MethodGet, url, make(map[string]string), nil, resp); err == nil {
+		defaultScannerType = resp.Data.WebApp.DefaultScanner.Type
+		defaultScannerName = resp.Data.WebApp.DefaultScanner.Text
+	} else {
+		session.lstream.Send(log.Errorf(err, "err while calling api [%s]", url))
+	}
+
+	return defaultScannerName, defaultScannerType, err
 }
 
 type createWebAppScanRequest struct {
@@ -291,4 +308,117 @@ type WebAppFinding struct {
 	IgnoredDate    string `xml:"ignoredDate"`
 	IgnoredComment string `xml:"ignoredComment"`
 	Retest         string `xml:"retest"`
+}
+
+type getWebAppResponse struct {
+	XMLName                   xml.Name `xml:"ServiceResponse"`
+	Text                      string   `xml:",chardata"`
+	Xsi                       string   `xml:"xsi,attr"`
+	NoNamespaceSchemaLocation string   `xml:"noNamespaceSchemaLocation,attr"`
+	ResponseCode              string   `xml:"responseCode"`
+	Count                     string   `xml:"count"`
+	Data                      struct {
+		Text   string `xml:",chardata"`
+		WebApp struct {
+			Text  string `xml:",chardata"`
+			ID    string `xml:"id"`
+			Name  string `xml:"name"`
+			URL   string `xml:"url"`
+			Os    string `xml:"os"`
+			Owner struct {
+				Text      string `xml:",chardata"`
+				ID        string `xml:"id"`
+				Username  string `xml:"username"`
+				FirstName string `xml:"firstName"`
+				LastName  string `xml:"lastName"`
+			} `xml:"owner"`
+			Scope string `xml:"scope"`
+			Uris  struct {
+				Text  string `xml:",chardata"`
+				Count string `xml:"count"`
+				List  struct {
+					Text string `xml:",chardata"`
+					URL  string `xml:"Url"`
+				} `xml:"list"`
+			} `xml:"uris"`
+			Attributes struct {
+				Text  string `xml:",chardata"`
+				Count string `xml:"count"`
+			} `xml:"attributes"`
+			DefaultProfile struct {
+				Text string `xml:",chardata"`
+				ID   string `xml:"id"`
+				Name string `xml:"name"`
+			} `xml:"defaultProfile"`
+			DefaultScanner struct {
+				Text string `xml:",chardata"`
+				Type string `xml:"type"`
+			} `xml:"defaultScanner"`
+			ScannerLocked string `xml:"scannerLocked"`
+			UrlBlacklist  struct {
+				Text  string `xml:",chardata"`
+				Count string `xml:"count"`
+			} `xml:"urlBlacklist"`
+			UrlWhitelist struct {
+				Text  string `xml:",chardata"`
+				Count string `xml:"count"`
+			} `xml:"urlWhitelist"`
+			PostDataBlacklist struct {
+				Text  string `xml:",chardata"`
+				Count string `xml:"count"`
+			} `xml:"postDataBlacklist"`
+			LogoutRegexList struct {
+				Text  string `xml:",chardata"`
+				Count string `xml:"count"`
+			} `xml:"logoutRegexList"`
+			AuthRecords struct {
+				Text  string `xml:",chardata"`
+				Count string `xml:"count"`
+			} `xml:"authRecords"`
+			DnsOverrides struct {
+				Text  string `xml:",chardata"`
+				Count string `xml:"count"`
+			} `xml:"dnsOverrides"`
+			UseRobots           string `xml:"useRobots"`
+			UseSitemap          string `xml:"useSitemap"`
+			MalwareMonitoring   string `xml:"malwareMonitoring"`
+			MalwareNotification string `xml:"malwareNotification"`
+			Tags                struct {
+				Text  string `xml:",chardata"`
+				Count string `xml:"count"`
+			} `xml:"tags"`
+			Comments struct {
+				Text  string `xml:",chardata"`
+				Count string `xml:"count"`
+			} `xml:"comments"`
+			IsScheduled string `xml:"isScheduled"`
+			LastScan    struct {
+				Text string `xml:",chardata"`
+				ID   string `xml:"id"`
+				Name string `xml:"name"`
+			} `xml:"lastScan"`
+			CreatedBy struct {
+				Text      string `xml:",chardata"`
+				ID        string `xml:"id"`
+				Username  string `xml:"username"`
+				FirstName string `xml:"firstName"`
+				LastName  string `xml:"lastName"`
+			} `xml:"createdBy"`
+			CreatedDate string `xml:"createdDate"`
+			UpdatedBy   struct {
+				Text      string `xml:",chardata"`
+				ID        string `xml:"id"`
+				Username  string `xml:"username"`
+				FirstName string `xml:"firstName"`
+				LastName  string `xml:"lastName"`
+			} `xml:"updatedBy"`
+			UpdatedDate     string `xml:"updatedDate"`
+			Screenshot      string `xml:"screenshot"`
+			Config          string `xml:"config"`
+			CrawlingScripts struct {
+				Text  string `xml:",chardata"`
+				Count string `xml:"count"`
+			} `xml:"crawlingScripts"`
+		} `xml:"WebApp"`
+	} `xml:"data"`
 }

@@ -50,6 +50,9 @@ type QSPayload struct {
 
 	// ExternalGroups holds a list of asset groups that must be scanned with the external scanner
 	ExternalGroups []int `json:"external_groups"`
+
+	// WebAppOptionProfile holds the ID of the option profile that you'd like to use for web application scans (WAS - optional)
+	WebAppOptionProfile string `json:"web_app_option_profile"`
 }
 
 // QsSession is the struct that is responsible for making Qualys API calls

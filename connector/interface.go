@@ -415,7 +415,15 @@ func (session *QsSession) Scan(ctx context.Context, detections []domain.Match) (
 		defer handleRoutinePanic(session.lstream)
 		defer close(out)
 
-		session.createScanForDetections(ctx, detections, out)
+		if len(detections) > 0 {
+			if !strings.Contains(detections[0].GroupID(), webPrefix) {
+				session.createScanForDetections(ctx, detections, out)
+			} else {
+				session.createScanForWebApplication(ctx, detections, out)
+			}
+		} else {
+			session.lstream.Send(log.Error("empty list of detections sent for scan", nil))
+		}
 	}(out)
 
 	return out, err

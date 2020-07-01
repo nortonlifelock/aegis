@@ -46,7 +46,7 @@ func (f *webAppFindingWrapper) Status() string {
 		case "fixed":
 			status = domain.Fixed
 		case "protected":
-			status = domain.Fixed
+			status = domain.Vulnerable
 			// TODO what does protected mean precisely?
 		default:
 			// do nothing
