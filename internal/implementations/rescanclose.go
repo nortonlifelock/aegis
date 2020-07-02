@@ -120,7 +120,7 @@ func (job *ScanCloseJob) processScanDetections(engine integrations.TicketingEngi
 					var wg sync.WaitGroup
 					deviceIDToVulnIDToDetection, deadHostIPToProofMap := job.mapDetectionsAndDeadHosts(detections, deadHostIPToProof)
 
-					if len(deviceIDToVulnIDToDetection) > 0 || len(deadHostIPToProof) > 0 {
+					if len(deviceIDToVulnIDToDetection) > 0 || len(deadHostIPToProof) > 0 || job.Payload.Type == domain.RescanDecommission {
 						for _, ticket := range tickets {
 							wg.Add(1)
 							go func(ticket domain.Ticket) {
