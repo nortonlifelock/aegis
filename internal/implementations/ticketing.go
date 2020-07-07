@@ -567,7 +567,7 @@ func (job *TicketingJob) checkForExistingTicket(in <-chan *vulnerabilityPayload)
 					var existingTicket domain.TicketSummary
 
 					if job.Payload.CorrelateByIPAndGroup {
-						existingTicket, err = job.db.GetTicketByIPGroupIDVulnID(sord(payload.device.GroupID()), payload.device.IP(), payload.vuln.ID(), payload.combo.Port(), payload.combo.Protocol(), job.config.OrganizationID())
+						existingTicket, err = job.db.GetTicketByIPGroupIDVulnID(payload.device.IP(), sord(payload.device.GroupID()), payload.vuln.ID(), payload.combo.Port(), payload.combo.Protocol(), job.config.OrganizationID())
 					} else {
 						existingTicket, err = job.db.GetTicketByDeviceIDVulnID(sord(payload.device.SourceID()), payload.vuln.ID(), payload.combo.Port(), payload.combo.Protocol(), job.config.OrganizationID())
 					}
