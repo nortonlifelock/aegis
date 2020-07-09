@@ -67,6 +67,7 @@ func (session *QsSession) KnowledgeBase(ctx context.Context, since *time.Time) <
 
 // Detections returns a channel which contains combinations of devices/vulnerabilities within a group where the vulnerability was found on the device
 // and the device exists in the asset group
+// TODO refactor method
 func (session *QsSession) Detections(ctx context.Context, ids []string) (detections <-chan domain.Detection, err error) {
 	var out = make(chan domain.Detection)
 
@@ -145,7 +146,7 @@ func (session *QsSession) Detections(ctx context.Context, ids []string) (detecti
 						}
 					}
 				} else {
-
+					session.lstream.Send(log.Errorf(err, "error while gathering vulnerabilities for site [%s]", webAppID))
 				}
 			}
 		}
@@ -200,9 +201,9 @@ func (session *QsSession) ScanResults(ctx context.Context, payload []byte) (<-ch
 		defer handleRoutinePanic(session.lstream)
 		defer close(out)
 
-		var needToClose = true
+		var needToCloseDeadIPChannel = true
 		defer func() {
-			if needToClose {
+			if needToCloseDeadIPChannel {
 				close(deadIPToProof)
 			}
 		}()
@@ -212,102 +213,20 @@ func (session *QsSession) ScanResults(ctx context.Context, payload []byte) (<-ch
 
 			if !scanInfo.Scheduled {
 				if len(scanInfo.ScanID) > 0 {
-
-					// Ask Qualys for the scan so we can find what IPs it scanned
-					var scan qualys.ScanQualys
-					scan, err = session.apiSession.GetScanByReference(scanInfo.ScanID)
-					if err == nil {
-						ipList := cleanIPList(scan.Target)
-
-						// Use the IPs to grab the host detections
-						var output *qualys.QHostListDetectionOutput
-						output, err = session.apiSession.GetHostSpecificDetections(ipList, []string{scanInfo.AssetGroupID}, session.payload.KernelFilter)
-						if err == nil {
-
-							var deadHostIPToProof map[string]string
-							if deadHostIPToProof, err = session.getDeadHostsForScan(scanInfo.ScanID, scanInfo.Created); err == nil {
-
-								needToClose = false
-								go func() {
-									defer close(deadIPToProof)
-
-									for deadIP, proof := range deadHostIPToProof {
-										select {
-										case <-ctx.Done():
-											return
-										case deadIPToProof <- deadIPProofCombo{
-											ip:    deadIP,
-											proof: proof,
-										}:
-										}
-									}
-								}()
-
-								if session.pushDetectionsOnChannel(ctx, output, deadHostIPToProof, out) {
-									return
-								}
-							} else {
-								session.lstream.Send(log.Errorf(err, "error while loading dead hosts for scan %v", scanInfo.ScanID))
-							}
-
-							// TODO refactor this to own method
-							if scanInfo.TemplateID != strconv.Itoa(session.payload.DiscoveryOptionProfileID) && scanInfo.TemplateID != strconv.Itoa(session.payload.OptionProfileID) {
-								if len(scanInfo.TemplateID) > 0 {
-									templateFields := strings.Split(scanInfo.TemplateID, templateDelimiter)
-									if err = session.apiSession.DeleteOptionProfile(templateFields[0]); err != nil {
-										session.lstream.Send(log.Errorf(err, "error while deleting option profile for scan %v", scanInfo.ScanID))
-									}
-
-									// search list only exists in vulnerability scans
-									if len(templateFields) > 1 {
-										if err = session.apiSession.DeleteSearchList(templateFields[1]); err != nil {
-											session.lstream.Send(log.Errorf(err, "error while deleting search list for scan %v", scanInfo.ScanID))
-										}
-									}
-								} else {
-									session.lstream.Send(log.Warningf(err, "no template found in payload of scan %v", scanInfo.ScanID))
-								}
-							} else {
-								// do nothing - we don't want to delete the option profile which we make copies of
-								// this block should never hit, but we keep it just in case
-							}
-						} else {
-							session.lstream.Send(log.Errorf(err, "error while getting host detections for scan %v", scanInfo.ScanID))
-						}
+					if strings.Contains(scanInfo.ScanID, "scan") {
+						needToCloseDeadIPChannel = session.pushDetectionsForOnDemandScan(ctx, scanInfo, out, deadIPToProof)
+					} else if strings.Contains(scanInfo.ScanID, webPrefix) {
+						session.pushDetectionsForWASScan(ctx, scanInfo, out)
 					} else {
-						session.lstream.Send(log.Errorf(err, "error while gathering the scan %v", scanInfo.ScanID))
+						session.lstream.Send(log.Infof("malformed scan ID [%s]", scanInfo.ScanID))
 					}
 				} else {
 					session.lstream.Send(log.Errorf(err, "zero length scan ID received in payload"))
 				}
+			} else if len(scanInfo.AssetGroupID) > 0 {
+				session.pushDetectionsForScheduledScan(ctx, out, scanInfo)
 			} else {
-				if len(scanInfo.AssetGroupID) > 0 {
-					detections, err := session.Detections(ctx, strings.Split(scanInfo.AssetGroupID, ","))
-					if err == nil {
-						func() {
-							for {
-								select {
-								case <-ctx.Done():
-									return
-								case val, ok := <-detections:
-									if ok {
-										select {
-										case <-ctx.Done():
-											return
-										case out <- val:
-										}
-									} else {
-										return
-									}
-								}
-							}
-						}()
-					} else {
-						session.lstream.Send(log.Errorf(err, "error while loading detections for [%s]", scanInfo.AssetGroupID))
-					}
-				} else {
-					session.lstream.Send(log.Errorf(err, "Scheduled scan [%s] did not specify the group IDs or cloud tags that it executed against", scanInfo.Name))
-				}
+				session.lstream.Send(log.Errorf(err, "Scheduled scan [%s] did not specify the group IDs or cloud tags that it executed against", scanInfo.Name))
 			}
 
 		} else {
@@ -317,6 +236,131 @@ func (session *QsSession) ScanResults(ctx context.Context, payload []byte) (<-ch
 	}(out, deadIPToProof)
 
 	return out, deadIPToProof, nil
+}
+
+func (session *QsSession) pushDetectionsForWASScan(ctx context.Context, scanInfo *scan, out chan<- domain.Detection) {
+	detections, err := session.Detections(ctx, []string{scanInfo.ScanID})
+
+	if err == nil {
+		func() {
+			for {
+				select {
+				case <-ctx.Done():
+					return
+				case val, ok := <-detections:
+					if ok {
+						select {
+						case <-ctx.Done():
+							return
+						case out <- val:
+						}
+					} else {
+						return
+					}
+				}
+			}
+		}()
+	} else {
+		session.lstream.Send(log.Errorf(err, "error while loading detections for [%s]", scanInfo.AssetGroupID))
+	}
+}
+
+func (session *QsSession) pushDetectionsForOnDemandScan(ctx context.Context, scanInfo *scan, out chan<- domain.Detection, deadIPToProof chan<- domain.KeyValue) (needToClose bool) {
+	var err error
+
+	// Ask Qualys for the scan so we can find what IPs it scanned
+	var scan qualys.ScanQualys
+	scan, err = session.apiSession.GetScanByReference(scanInfo.ScanID)
+	if err == nil {
+		ipList := cleanIPList(scan.Target)
+
+		// Use the IPs to grab the host detections
+		var output *qualys.QHostListDetectionOutput
+		output, err = session.apiSession.GetHostSpecificDetections(ipList, []string{scanInfo.AssetGroupID}, session.payload.KernelFilter)
+		if err == nil {
+
+			var deadHostIPToProof map[string]string
+			if deadHostIPToProof, err = session.getDeadHostsForScan(scanInfo.ScanID, scanInfo.Created); err == nil {
+
+				needToClose = false
+				go func() {
+					defer close(deadIPToProof)
+
+					for deadIP, proof := range deadHostIPToProof {
+						select {
+						case <-ctx.Done():
+							return
+						case deadIPToProof <- deadIPProofCombo{
+							ip:    deadIP,
+							proof: proof,
+						}:
+						}
+					}
+				}()
+
+				if session.pushDetectionsOnChannel(ctx, output, deadHostIPToProof, out) {
+					return
+				}
+			} else {
+				session.lstream.Send(log.Errorf(err, "error while loading dead hosts for scan %v", scanInfo.ScanID))
+			}
+
+			// TODO refactor this to own method
+			if scanInfo.TemplateID != strconv.Itoa(session.payload.DiscoveryOptionProfileID) && scanInfo.TemplateID != strconv.Itoa(session.payload.OptionProfileID) {
+				if len(scanInfo.TemplateID) > 0 {
+					templateFields := strings.Split(scanInfo.TemplateID, templateDelimiter)
+					if err = session.apiSession.DeleteOptionProfile(templateFields[0]); err != nil {
+						session.lstream.Send(log.Errorf(err, "error while deleting option profile for scan %v", scanInfo.ScanID))
+					}
+
+					// search list only exists in vulnerability scans
+					if len(templateFields) > 1 {
+						if err = session.apiSession.DeleteSearchList(templateFields[1]); err != nil {
+							session.lstream.Send(log.Errorf(err, "error while deleting search list for scan %v", scanInfo.ScanID))
+						}
+					}
+				} else {
+					session.lstream.Send(log.Warningf(err, "no template found in payload of scan %v", scanInfo.ScanID))
+				}
+			} else {
+				// do nothing - we don't want to delete the option profile which we make copies of
+				// this block should never hit, but we keep it just in case
+			}
+		} else {
+			session.lstream.Send(log.Errorf(err, "error while getting host detections for scan %v", scanInfo.ScanID))
+		}
+	} else {
+		session.lstream.Send(log.Errorf(err, "error while gathering the scan %v", scanInfo.ScanID))
+	}
+
+	return
+}
+
+func (session *QsSession) pushDetectionsForScheduledScan(ctx context.Context, out chan<- domain.Detection, scanInfo *scan) {
+	// scheduled scans should be provided the asset group ID they are covering
+	detections, err := session.Detections(ctx, strings.Split(scanInfo.AssetGroupID, ","))
+	if err == nil {
+		func() {
+			for {
+				select {
+				case <-ctx.Done():
+					return
+				case val, ok := <-detections:
+					if ok {
+						select {
+						case <-ctx.Done():
+							return
+						case out <- val:
+						}
+					} else {
+						return
+					}
+				}
+			}
+		}()
+	} else {
+		session.lstream.Send(log.Errorf(err, "error while loading detections for [%s]", scanInfo.AssetGroupID))
+	}
 }
 
 func (session *QsSession) pushDetectionsOnChannel(ctx context.Context, output *qualys.QHostListDetectionOutput, deadHostIPToProof map[string]string, out chan<- domain.Detection) bool {

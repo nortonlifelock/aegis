@@ -52,12 +52,12 @@ func (s *scan) Status() (status string, err error) {
 					status = domain.ScanPROCESSING
 				}
 			}
-
-			status = strings.ToLower(status)
 		}
 	} else {
 		status, err = s.session.apiSession.GetWebAppScanStatus(strings.Replace(s.ScanID, webPrefix, "", 1))
 	}
+
+	status = strings.ToLower(status)
 
 	return status, err
 }
