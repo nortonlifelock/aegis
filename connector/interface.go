@@ -214,9 +214,9 @@ func (session *QsSession) ScanResults(ctx context.Context, payload []byte) (<-ch
 			if !scanInfo.Scheduled {
 				if len(scanInfo.ScanID) > 0 {
 					if strings.Contains(scanInfo.ScanID, "scan") {
-						needToCloseDeadIPChannel = session.pushDetectionsForOnDemandScan(ctx, scanInfo, out, deadIPToProof)
+						needToCloseDeadIPChannel = session.pushDetectionsByScanTarget(ctx, scanInfo, out, deadIPToProof)
 					} else if strings.Contains(scanInfo.ScanID, webPrefix) {
-						session.pushDetectionsForWASScan(ctx, scanInfo, out)
+						session.pushDetectionsByAssetGroup(ctx, out, scanInfo)
 					} else {
 						session.lstream.Send(log.Infof("malformed scan ID [%s]", scanInfo.ScanID))
 					}
@@ -224,7 +224,7 @@ func (session *QsSession) ScanResults(ctx context.Context, payload []byte) (<-ch
 					session.lstream.Send(log.Errorf(err, "zero length scan ID received in payload"))
 				}
 			} else if len(scanInfo.AssetGroupID) > 0 {
-				session.pushDetectionsForScheduledScan(ctx, out, scanInfo)
+				session.pushDetectionsByAssetGroup(ctx, out, scanInfo)
 			} else {
 				session.lstream.Send(log.Errorf(err, "Scheduled scan [%s] did not specify the group IDs or cloud tags that it executed against", scanInfo.Name))
 			}
@@ -238,34 +238,7 @@ func (session *QsSession) ScanResults(ctx context.Context, payload []byte) (<-ch
 	return out, deadIPToProof, nil
 }
 
-func (session *QsSession) pushDetectionsForWASScan(ctx context.Context, scanInfo *scan, out chan<- domain.Detection) {
-	detections, err := session.Detections(ctx, []string{scanInfo.ScanID})
-
-	if err == nil {
-		func() {
-			for {
-				select {
-				case <-ctx.Done():
-					return
-				case val, ok := <-detections:
-					if ok {
-						select {
-						case <-ctx.Done():
-							return
-						case out <- val:
-						}
-					} else {
-						return
-					}
-				}
-			}
-		}()
-	} else {
-		session.lstream.Send(log.Errorf(err, "error while loading detections for [%s]", scanInfo.AssetGroupID))
-	}
-}
-
-func (session *QsSession) pushDetectionsForOnDemandScan(ctx context.Context, scanInfo *scan, out chan<- domain.Detection, deadIPToProof chan<- domain.KeyValue) (needToClose bool) {
+func (session *QsSession) pushDetectionsByScanTarget(ctx context.Context, scanInfo *scan, out chan<- domain.Detection, deadIPToProof chan<- domain.KeyValue) (needToClose bool) {
 	var err error
 
 	// Ask Qualys for the scan so we can find what IPs it scanned
@@ -336,7 +309,7 @@ func (session *QsSession) pushDetectionsForOnDemandScan(ctx context.Context, sca
 	return
 }
 
-func (session *QsSession) pushDetectionsForScheduledScan(ctx context.Context, out chan<- domain.Detection, scanInfo *scan) {
+func (session *QsSession) pushDetectionsByAssetGroup(ctx context.Context, out chan<- domain.Detection, scanInfo *scan) {
 	// scheduled scans should be provided the asset group ID they are covering
 	detections, err := session.Detections(ctx, strings.Split(scanInfo.AssetGroupID, ","))
 	if err == nil {
