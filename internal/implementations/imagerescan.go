@@ -107,6 +107,7 @@ func (job *ImageRescanJob) processImageFindings(engine integrations.TicketingEng
 				var ticketsWithFindings = make([]imageFindingTicketPair, 0)
 
 				ticketSlice := fanInChannel(tickets)
+				ticketSlice = getTicketsForImage(ticketSlice, image)
 
 				deviceIDToVulnIDToTicket := mapTicketsByDeviceIDVulnID(ticketSlice)
 				deviceIDToVulnIDToFinding := mapImageFindingsByDeviceIDVulnID(findings)
@@ -498,4 +499,16 @@ func mapImageFindingsByDeviceIDVulnID(findings []domain.ImageFinding) (entityIDT
 	}
 
 	return entityIDToRuleHashToFinding
+}
+
+func getTicketsForImage(in []domain.Ticket, image string) (out []domain.Ticket) {
+	out = make([]domain.Ticket, 0)
+
+	for _, tic := range in {
+		if tic.DeviceID() == image {
+			out = append(out, tic)
+		}
+	}
+
+	return out
 }

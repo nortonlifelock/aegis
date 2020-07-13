@@ -6,7 +6,7 @@ import (
 	"net/http"
 )
 
-func (cli *apiClient) GetRepositories() (repos []RepositoryResult, err error) {
+func (cli *APIClient) GetRepositories() (repos []RepositoryResult, err error) {
 	repos = make([]RepositoryResult, 0)
 	page := 1
 

@@ -7,7 +7,7 @@ import (
 	"net/http"
 )
 
-func (cli *apiClient) GetScanSummaries(ctx context.Context, registry string, imageAndTag string) (scan *Scan, err error) {
+func (cli *APIClient) GetScanSummaries(ctx context.Context, registry string, imageAndTag string) (scan *Scan, err error) {
 	endpoint := "/api/v1/scanqueue?order_by=-created" // order by created desc, the earlier the scan is in the response, the more recently it was created
 
 	page := 1

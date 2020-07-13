@@ -9,7 +9,7 @@ import (
 	"net/http"
 )
 
-type apiClient struct {
+type APIClient struct {
 	client   *http.Client
 	lstream  log.Logger
 	username string
@@ -18,8 +18,8 @@ type apiClient struct {
 	baseURL  string
 }
 
-func CreateClient(URL, username, password string, lstream log.Logger) (client *apiClient, err error) {
-	client = &apiClient{
+func CreateClient(URL, username, password string, lstream log.Logger) (client *APIClient, err error) {
+	client = &APIClient{
 		client:   &http.Client{},
 		username: username,
 		password: password,
@@ -32,7 +32,7 @@ func CreateClient(URL, username, password string, lstream log.Logger) (client *a
 	return client, err
 }
 
-func (cli *apiClient) executeRequest(req *http.Request) (body []byte, err error) {
+func (cli *APIClient) executeRequest(req *http.Request) (body []byte, err error) {
 	req.Header.Add("Content-Type", "application/json")
 	req.Header.Add("Accept", "application/json")
 
@@ -77,7 +77,7 @@ type bearer struct {
 	Token string `json:"token"`
 }
 
-func (cli *apiClient) getJWT(username string, password string) (jwt string, err error) {
+func (cli *APIClient) getJWT(username string, password string) (jwt string, err error) {
 	log := &login{ID: username, Pass: password}
 
 	var body []byte

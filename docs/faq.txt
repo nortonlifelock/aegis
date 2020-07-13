@@ -16,6 +16,9 @@ INSERT INTO `VM`.`JobHistory` (`JobId`, `ConfigID`, `StatusId`, `Priority`, `Pay
                 (select Payload from JobConfig where JobID = (select ID from Job where Struct = 'TicketingJob') LIMIT 1)
 );
 
+OR if you want to create a JobHistory using a specific ConfigID you can use the following
+INSERT INTO `VM`.`JobHistory` (`JobId`, `ConfigID`, `StatusId`, `Priority`, `Payload`) select JobID, ID, 1, 0, Payload from JobConfig where ID = 'YOUR JobConfig ID HERE';
+
 If you have more than one Organization, or more than one JobConfig entry for a single job, you'll have to specify which exact JobConfig you're using.
 
 Q) How are tickets created?

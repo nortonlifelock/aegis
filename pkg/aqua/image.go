@@ -6,14 +6,29 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"time"
 )
 
-func (cli *apiClient) GetImagesForRepository(registry, repository string) (images []ImageResult, err error) {
+func (cli *APIClient) getMostRecentImageTag(images []ImageResult) (mostRecentTag string) {
+	var mostRecentDate time.Time
+	for _, image := range images {
+		if image.ScanStatus == finished && image.Created.After(mostRecentDate) {
+			mostRecentTag = image.Tag
+			mostRecentDate = image.Created
+		}
+	}
+
+	return mostRecentTag
+}
+
+func (cli *APIClient) GetImagesForRepository(registry, repository string) (images []ImageResult, err error) {
 	images = make([]ImageResult, 0)
 	page := 1
 
 	endpoint := strings.Replace(getImages, "$REPOSITORYNAME", repository, 1)
 	endpoint = strings.Replace(endpoint, "$REGISTRYNAME", registry, 1)
+
+	endpoint = strings.Replace(endpoint, " ", "%20", -1)
 
 	for {
 		var request *http.Request
@@ -43,7 +58,7 @@ func (cli *apiClient) GetImagesForRepository(registry, repository string) (image
 	return images, err
 }
 
-func (cli *apiClient) StartImageScan(registryName string, imageName string) (err error) {
+func (cli *APIClient) StartImageScan(registryName string, imageName string) (err error) {
 	endpoint := strings.Replace(postStartImageScan, "$REGISTRYNAME", registryName, 1)
 	endpoint = strings.Replace(endpoint, "$IMAGENAME", imageName, 1)
 
@@ -74,7 +89,7 @@ type ImageRescanReq struct {
 	Tag        string `json:"tag"`
 }
 
-func (cli *apiClient) StartFullImageRescan(registryName, imageName string) (err error) {
+func (cli *APIClient) StartFullImageRescan(registryName, imageName string) (err error) {
 	endpoint := "/api/v1/images/rescan"
 
 	reqBody := &fullImageRescanReq{
@@ -82,9 +97,9 @@ func (cli *apiClient) StartFullImageRescan(registryName, imageName string) (err 
 		Images: []ImageRescanReq{
 			{
 				Registry:   registryName,
-				Name:       fmt.Sprintf("%s:latest", imageName),
+				Name:       fmt.Sprintf("%s:master", imageName),
 				Repository: imageName,
-				Tag:        "latest",
+				Tag:        "master",
 			},
 		},
 	}
@@ -111,7 +126,7 @@ func (cli *apiClient) StartFullImageRescan(registryName, imageName string) (err 
 }
 
 // TODO getting auth issue on this endpoint alone for some reason?
-//func (cli *apiClient) GetImageScanStatus(registryName string, imageName string) (status string, err error) {
+//func (cli *APIClient) GetImageScanStatus(registryName string, imageName string) (status string, err error) {
 //	endpoint := strings.Replace(getImageScanStatus, "$REGISTRYNAME", registryName, 1)
 //	endpoint = strings.Replace(endpoint, "$IMAGENAME", imageName, 1)
 //	fmt.Println(endpoint)
