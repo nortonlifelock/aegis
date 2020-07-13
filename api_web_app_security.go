@@ -256,12 +256,21 @@ type WebAppFinding struct {
 				Text           string `xml:",chardata"`
 				Authentication string `xml:"authentication"`
 				Ajax           string `xml:"ajax"`
-				Payloads       struct {
+				AccessPath     struct {
+					XMLName xml.Name `xml:"accessPath"`
+					Text    string   `xml:",chardata"`
+					Count   string   `xml:"count"`
+					List    struct {
+						Text string   `xml:",chardata"`
+						URL  []string `xml:"Url"`
+					} `xml:"list"`
+				} `xml:"accessPath"`
+				Payloads struct {
 					Text  string `xml:",chardata"`
 					Count string `xml:"count"`
 					List  struct {
 						Text            string `xml:",chardata"`
-						PayloadInstance struct {
+						PayloadInstance []struct {
 							Text    string `xml:",chardata"`
 							Payload string `xml:"payload"`
 							Request struct {

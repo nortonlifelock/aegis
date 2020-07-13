@@ -1,6 +1,7 @@
 package connector
 
 import (
+	"fmt"
 	"github.com/nortonlifelock/domain"
 	"github.com/nortonlifelock/qualys"
 	"strconv"
@@ -76,7 +77,32 @@ func (f *webAppFindingWrapper) TimesSeen() int {
 }
 
 func (f *webAppFindingWrapper) Proof() string {
-	return ""
+	var accessPath string
+	for index, url := range f.f.ResultList.List.Result.AccessPath.List.URL {
+		if len(accessPath) > 0 {
+			accessPath = fmt.Sprintf("%s\n%d) %s", accessPath, index, url)
+		} else {
+			accessPath = fmt.Sprintf("%d) %s", index, url)
+		}
+	}
+
+	var payload string
+	for index, payloadInstance := range f.f.ResultList.List.Result.Payloads.List.PayloadInstance {
+
+		payloadInfo := fmt.Sprintf("Payload: %s\nMethod: %s\nLink: %s\nHeaders: %s\nResponse: %s",
+			payloadInstance.Payload,
+			payloadInstance.Request.Method,
+			payloadInstance.Request.Link,
+			payloadInstance.Request.Headers,
+			payloadInstance.Response,
+		)
+		if len(payload) > 0 {
+			payload = fmt.Sprintf("%s\n%d) %s", payload, index, payloadInfo)
+		} else {
+			payload = fmt.Sprintf("%d) %s", index, payloadInfo)
+		}
+	}
+	return fmt.Sprintf("Access Paths\n%s\nPayloads\n%s", accessPath, payload)
 }
 
 func (f *webAppFindingWrapper) Port() int {
@@ -84,7 +110,7 @@ func (f *webAppFindingWrapper) Port() int {
 }
 
 func (f *webAppFindingWrapper) Protocol() string {
-	return ""
+	return f.f.UniqueId
 }
 
 func (f *webAppFindingWrapper) IgnoreID() (*string, error) {

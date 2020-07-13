@@ -226,7 +226,12 @@ func (session *QsSession) populateGroupVulnerabilityChecks(detections []domain.M
 		}
 
 		if !matchFound {
-			err = fmt.Errorf("could not find a group for %v - check to see if there is an online appliance for its expected group", match.IP())
+			if len(match.GroupID()) > 0 {
+				err = fmt.Errorf("empty group ID for IP [%s]", match.IP())
+			} else {
+				err = fmt.Errorf("could not find a group for %v - check to see if there is an online appliance for its expected group", match.IP())
+			}
+
 			break
 		}
 	}
