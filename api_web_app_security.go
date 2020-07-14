@@ -80,30 +80,53 @@ func (session *Session) GetWebAppScanStatus(scanID string) (status string, err e
 }
 
 func (session *Session) GetVulnerabilitiesForSite(siteID string) (findings []*WebAppFinding, err error) {
-	reqBody := &WebAppFindingsRequest{}
+	var hasMoreRecords = true
+	var lastID = "0"
+	findings = make([]*WebAppFinding, 0)
 
-	reqBody.Filters.Criteria.Field = "webApp.id"
-	reqBody.Filters.Criteria.Operator = "EQUALS"
-	reqBody.Filters.Criteria.Text = siteID
-	reqBody.Preferences.Verbose = "true"
+	for hasMoreRecords {
+		reqBody := &WebAppFindingsRequest{}
 
-	resp := &webAppFindingsResponse{}
+		webCriteria := SearchCriteria{
+			Field:    "webApp.id",
+			Operator: "EQUALS",
+			Text:     siteID,
+		}
 
-	var reqBodyByte []byte
-	if reqBodyByte, err = xml.Marshal(reqBody); err == nil {
-		reqBodyString := string(reqBodyByte)
+		pagingCriteria := SearchCriteria{
+			Field:    "id",
+			Operator: "GREATER",
+			Text:     lastID,
+		}
 
-		if err = session.httpCall(http.MethodPost, session.webAppBaseURL+postGetSiteFindings, make(map[string]string), &reqBodyString, resp); err == nil {
-			if len(resp.Data.Finding) > 0 {
-				findings = resp.Data.Finding
+		reqBody.Filters.Criteria = []SearchCriteria{webCriteria, pagingCriteria}
+
+		reqBody.Preferences.Verbose = "true"
+
+		resp := &webAppFindingsResponse{}
+
+		var reqBodyByte []byte
+		if reqBodyByte, err = xml.Marshal(reqBody); err == nil {
+			reqBodyString := string(reqBodyByte)
+
+			if err = session.httpCall(http.MethodPost, session.webAppBaseURL+postGetSiteFindings, make(map[string]string), &reqBodyString, resp); err == nil {
+				if len(resp.Data.Finding) > 0 {
+					findings = append(findings, resp.Data.Finding...)
+
+					hasMoreRecords = strings.ToLower(resp.HasMoreRecords) == "true"
+					lastID = resp.LastID
+				} else {
+					session.lstream.Send(log.Errorf(err, "could not find status from [%s]", postGetSiteFindings))
+					break
+				}
 			} else {
-				session.lstream.Send(log.Errorf(err, "could not find status from [%s]", postGetSiteFindings))
+				session.lstream.Send(log.Errorf(err, "err while calling api [%s]", postGetSiteFindings))
+				break
 			}
 		} else {
-			session.lstream.Send(log.Errorf(err, "err while calling api [%s]", postGetSiteFindings))
+			session.lstream.Send(log.Errorf(err, "error while marshalling GetVulnerabilitiesForSite body"))
+			break
 		}
-	} else {
-		session.lstream.Send(log.Errorf(err, "error while marshalling GetVulnerabilitiesForSite body"))
 	}
 
 	return findings, err
@@ -182,13 +205,15 @@ type WebAppFindingsRequest struct {
 		Verbose string `xml:"verbose"`
 	} `xml:"preferences"`
 	Filters struct {
-		Text     string `xml:",chardata"`
-		Criteria struct {
-			Text     string `xml:",chardata"`
-			Field    string `xml:"field,attr"`
-			Operator string `xml:"operator,attr"`
-		} `xml:"Criteria"`
+		Text     string           `xml:",chardata"`
+		Criteria []SearchCriteria `xml:"Criteria"`
 	} `xml:"filters"`
+}
+
+type SearchCriteria struct {
+	Text     string `xml:",chardata"`
+	Field    string `xml:"field,attr"`
+	Operator string `xml:"operator,attr"`
 }
 
 type webAppFindingsResponse struct {
@@ -199,6 +224,7 @@ type webAppFindingsResponse struct {
 	ResponseCode              string   `xml:"responseCode"`
 	Count                     string   `xml:"count"`
 	HasMoreRecords            string   `xml:"hasMoreRecords"`
+	LastID                    string   `xml:"lastId"`
 	Data                      struct {
 		Text    string           `xml:",chardata"`
 		Finding []*WebAppFinding `xml:"Finding"`
