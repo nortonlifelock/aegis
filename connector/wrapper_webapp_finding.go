@@ -123,7 +123,8 @@ func (f *webAppFindingWrapper) LastFound() *time.Time {
 }
 
 func (f *webAppFindingWrapper) LastUpdated() *time.Time {
-	return nil
+	timeVal, _ := time.Parse(webAppFindingTimeFormat, f.f.LastTestedDate)
+	return &timeVal
 }
 
 func (f *webAppFindingWrapper) Device() (domain.Device, error) {
