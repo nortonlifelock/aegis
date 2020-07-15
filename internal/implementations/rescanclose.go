@@ -432,17 +432,15 @@ func (job *ScanCloseJob) modifyJiraTicketAccordingToVulnerabilityStatus(engine i
 	}
 
 	if device, err := job.db.GetDeviceByAssetOrgID(ticket.DeviceID(), job.config.OrganizationID()); err == nil && device != nil {
-		if job.Payload.Type == domain.RescanScheduled || job.Payload.Type == domain.RescanDecommission { // TODO do we only want to only do this for these two rescan types?
-			if deviceReportedAsDead {
-				if sord(device.TrackingMethod()) == EC2Device && job.Payload.Type == domain.RescanScheduled {
-					deviceWithoutDetectionsLikelyDead = true
-				} else if sord(device.TrackingMethod()) == AgentDevice && job.Payload.Type == domain.RescanDecommission {
+		trackingMethod = sord(device.TrackingMethod())
+
+		if !detectionsFoundForDevice {
+			if job.Payload.Type == domain.RescanScheduled || job.Payload.Type == domain.RescanDecommission { // TODO do we only want to only do this for these two rescan types?
+				if trackingMethod == EC2Device || trackingMethod == AgentDevice {
 					deviceWithoutDetectionsLikelyDead = true
 				}
 			}
 		}
-
-		trackingMethod = sord(device.TrackingMethod())
 	} else {
 		job.lstream.Send(log.Errorf(err, "error while loading device for %s [%v|%v]", ticket.Title(), err, device))
 	}
