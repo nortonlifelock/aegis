@@ -589,6 +589,36 @@ func (connector *ConnectorJira) getDeviceVulnsQueries(issues []domain.Ticket) (q
 	return qs, err
 }
 
+func (connector *ConnectorJira) runQueriesForScheduledScan(groupID string, methodOfDiscovery string, orgCode string) (relatedTickets <-chan domain.Ticket, err error) {
+	var out = make(chan domain.Ticket)
+	go func() {
+		defer close(out)
+		var normalTickets, decommTickets <-chan domain.Ticket
+		if normalTickets, err = connector.getTicketsForRescan(nil, groupID, methodOfDiscovery, orgCode, domain.RescanNormal); err == nil {
+			if decommTickets, err = connector.getTicketsForRescan(nil, groupID, methodOfDiscovery, orgCode, domain.RescanDecommission); err == nil {
+
+				for {
+					if tic, ok := <-normalTickets; ok {
+						out <- tic
+					} else {
+						break
+					}
+				}
+
+				for {
+					if tic, ok := <-decommTickets; ok {
+						out <- tic
+					} else {
+						break
+					}
+				}
+			}
+		}
+	}()
+
+	return out, err
+}
+
 // runQueriesForIssues runs all the queries that has been generated to pull the additional tickets per device/vuln
 func (connector *ConnectorJira) runQueriesForIssues(qs []Query, tickets []domain.Ticket) <-chan domain.Ticket {
 	var relatedTickets = make(chan domain.Ticket)

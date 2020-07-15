@@ -64,7 +64,7 @@ func (connector *ConnectorJira) GetRelatedTicketsForRescan(tickets []domain.Tick
 			}
 		}
 	case domain.RescanScheduled:
-		relatedTickets, err = connector.getTicketsForRescan(nil, groupID, methodOfDiscovery, orgCode, domain.RescanNormal)
+		relatedTickets, err = connector.runQueriesForScheduledScan(groupID, methodOfDiscovery, orgCode)
 	case domain.RescanPassive, domain.RescanExceptions:
 		// do nothing
 	default:
