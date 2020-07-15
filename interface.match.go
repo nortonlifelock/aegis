@@ -7,5 +7,5 @@ type Match interface {
 	Device() string
 	Vulnerability() string
 	GroupID() string
-	//Engine() int // TODO this is not in the current integrations matched interface
+	Protocol() string
 }
