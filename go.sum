@@ -146,6 +146,8 @@ github.com/nortonlifelock/jira v1.0.1-0.20200612173856-cfe5ba496954 h1:StoIvcsf3
 github.com/nortonlifelock/jira v1.0.1-0.20200612173856-cfe5ba496954/go.mod h1:wi24kQe15lPt4ZfLFS9oI2vsrAtc0fZL94pSQduHChU=
 github.com/nortonlifelock/jira v1.0.1-0.20200629203320-3d86c2568819 h1:M3QqfaqnovzjuW3ysSgijWsNtzwBr8ZhyBhCPvUN7RI=
 github.com/nortonlifelock/jira v1.0.1-0.20200629203320-3d86c2568819/go.mod h1:wi24kQe15lPt4ZfLFS9oI2vsrAtc0fZL94pSQduHChU=
+github.com/nortonlifelock/jira v1.0.1-0.20200715164422-06a203866fa7 h1:Gm+s6SmaJHdK8YNPj4+QEVFuVe5vj8d4lsBRp+tuBlA=
+github.com/nortonlifelock/jira v1.0.1-0.20200715164422-06a203866fa7/go.mod h1:wi24kQe15lPt4ZfLFS9oI2vsrAtc0fZL94pSQduHChU=
 github.com/nortonlifelock/jira-tool v1.0.0 h1:gxue0xy39eve1BchepLSxqfsqvfYFut74TSXJcQW1Rg=
 github.com/nortonlifelock/jira-tool v1.0.0/go.mod h1:/oHnPKmXd2vmw8qvJKtYpKb5fx0LwmFRuc2VGJn8QlU=
 github.com/nortonlifelock/job v1.0.1-0.20200127165455-ca80a64d226c h1:5xsHmrs+UO4CJQD+j0KPlMlhZyUfUDtaQOQ5V4Wrsb8=
