@@ -5,5 +5,6 @@ type Scan interface {
 	ID() string
 	Title() string
 	GroupID() string
+	Matches() []Match
 	Status() (string, error)
 }

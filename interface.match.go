@@ -7,5 +7,4 @@ type Match interface {
 	Device() string
 	Vulnerability() string
 	GroupID() string
-	Protocol() string
 }
