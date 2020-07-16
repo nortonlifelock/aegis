@@ -407,7 +407,7 @@ func (session *QsSession) Discovery(ctx context.Context, matches []domain.Match)
 					defer wg.Done()
 
 					// error intentionally scoped out
-					err := session.createDiscoveryScanForGroup(ctx, out, bundle)
+					err := session.createDiscoveryScanForGroup(ctx, out, bundle, matches)
 					if err != nil {
 						session.lstream.Send(log.Errorf(err, "error while creating scan for group %v", bundle.groupID))
 					}

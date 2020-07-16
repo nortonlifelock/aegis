@@ -51,7 +51,20 @@ func cleanIPList(ipList string) (ips []string) {
 	return ips
 }
 
-func (session *QsSession) createVulnerabilityScanForGroup(ctx context.Context, out chan<- domain.Scan, bundle *scanBundle) (err error) {
+func getMatchesCoveredInScanBundle(bundle *scanBundle, matches []domain.Match) (matchesCoveredByBundle []domain.Match) {
+	matchesCoveredByBundle = make([]domain.Match, 0)
+	if bundle != nil {
+		for _, match := range matches {
+			if bundle.seenIP[match.IP()] {
+				matchesCoveredByBundle = append(matchesCoveredByBundle, match)
+			}
+		}
+	}
+
+	return matchesCoveredByBundle
+}
+
+func (session *QsSession) createVulnerabilityScanForGroup(ctx context.Context, out chan<- domain.Scan, bundle *scanBundle, matches []domain.Match) (err error) {
 	var scanRef string
 	var optionProfileID, searchListID string
 
@@ -69,6 +82,7 @@ func (session *QsSession) createVulnerabilityScanForGroup(ctx context.Context, o
 					EngineIDs:    intArrayToStringArray(bundle.appliances),
 
 					Created: time.Now(),
+					matches: getMatchesCoveredInScanBundle(bundle, matches),
 				}
 
 				session.lstream.Send(log.Infof("scan %v created for group %v", scan.ScanID, bundle.groupID))
@@ -109,6 +123,7 @@ func (session *QsSession) createScanForWebApplication(ctx context.Context, detec
 					EngineIDs:    []string{},
 
 					Created: time.Now(),
+					matches: detections,
 				}
 
 				select {
@@ -141,7 +156,7 @@ func (session *QsSession) createScanForDetections(ctx context.Context, detection
 					if len(bundle.ips) > 0 && len(bundle.vulns) > 0 {
 						session.lstream.Send(log.Infof("Creating vulnerability scan for group %v", bundle.groupID))
 						// error intentionally scoped out
-						err := session.createVulnerabilityScanForGroup(ctx, out, bundle)
+						err := session.createVulnerabilityScanForGroup(ctx, out, bundle, detections)
 						if err != nil {
 							session.lstream.Send(log.Errorf(err, "error while creating scan for group %v", bundle.groupID))
 						}
@@ -162,7 +177,7 @@ func (session *QsSession) createScanForDetections(ctx context.Context, detection
 
  */
 
-func (session *QsSession) createDiscoveryScanForGroup(ctx context.Context, out chan<- domain.Scan, bundle *scanBundle) (err error) {
+func (session *QsSession) createDiscoveryScanForGroup(ctx context.Context, out chan<- domain.Scan, bundle *scanBundle, matches []domain.Match) (err error) {
 	if len(bundle.ips) > 0 {
 
 		if session.payload.DiscoveryOptionProfileID > 0 {
@@ -183,6 +198,7 @@ func (session *QsSession) createDiscoveryScanForGroup(ctx context.Context, out c
 						EngineIDs:    intArrayToStringArray(bundle.appliances),
 
 						Created: time.Now(),
+						matches: getMatchesCoveredInScanBundle(bundle, matches),
 					}
 
 					select {

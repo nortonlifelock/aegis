@@ -26,6 +26,10 @@ type scan struct {
 	Created time.Time `json:"created"`
 
 	Scheduled bool `json:"scheduled"`
+
+	// matches holds the device/vuln combos that are covered in the scan
+	// they are not included in the json intentionally as it is not required
+	matches []domain.Match
 }
 
 func (s *scan) ID() string {
@@ -38,6 +42,10 @@ func (s *scan) Title() string {
 
 func (s *scan) GroupID() string {
 	return s.AssetGroupID
+}
+
+func (s *scan) Matches() []domain.Match {
+	return s.matches
 }
 
 func (s *scan) Status() (status string, err error) {
