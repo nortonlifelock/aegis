@@ -116,14 +116,14 @@ func (session *QsSession) createScanForWebApplication(ctx context.Context, detec
 			if err == nil {
 				scan := &scan{
 					Name:       fmt.Sprintf("was_aegis_retest_%s_%s", findingUID, time.Now().Format(time.RFC3339)),
-					ScanID:     fmt.Sprintf("%s_%s_%s", webPrefix, findingUID, time.Now().Format(time.RFC3339)),
+					ScanID:     fmt.Sprintf("%s%s_%s", webPrefix, findingUID, time.Now().Format(time.RFC3339)),
 					TemplateID: findingUID,
 
 					AssetGroupID: detection.GroupID(),
 					EngineIDs:    []string{},
 
 					Created: time.Now(),
-					matches: detections,
+					matches: []domain.Match{detection},
 				}
 
 				select {
