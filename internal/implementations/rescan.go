@@ -142,10 +142,10 @@ func (job *RescanJob) createAndMonitorScan(matches []domain.Match, tickets []str
 						return
 					case scan, ok := <-scans:
 						if ok {
-							job.lstream.Send(log.Infof("New scan created [ID: %v] for [%v] tickets", scan.ID(), len(matches)))
+							job.lstream.Send(log.Infof("New scan created [ID: %v] for [%v] tickets", scan.ID(), len(scan.Matches())))
 
 							// to be used in the Payload for the scan summary
-							scanClosePayload := job.createScanClosePayload(scan, matches, tickets)
+							scanClosePayload := job.createScanClosePayload(scan, scan.Matches(), tickets)
 
 							var bytePayload []byte
 							bytePayload, err = json.Marshal(scanClosePayload)
@@ -295,4 +295,8 @@ func (m matchTicket) Vulnerability() string {
 // GroupID returns the group that the ticket belongs to. This is used to create the scan within the scanning engine
 func (m matchTicket) GroupID() string {
 	return m.groupID
+}
+
+func (m matchTicket) Protocol() string {
+	return sord(m.t.ServicePorts())
 }
