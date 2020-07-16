@@ -36,6 +36,10 @@ type Scan struct {
 
 	// VulnerabilityIDs holds the list of vulnerability identifiers scanned for in the scan
 	VulnerabilityIDs []string `json:"vulnerabilities,omitempty"`
+
+	// matches holds the device/vuln combos that are covered in the scan
+	// they are not included in the json intentionally as it is not required
+	matches []domain.Match
 }
 
 // ID returns the scan id from nexpose
@@ -76,6 +80,10 @@ func (s *Scan) Devices() []string {
 // Vulnerabilities returns the list of vulnerability ids for the scan
 func (s *Scan) Vulnerabilities() []string {
 	return s.VulnerabilityIDs
+}
+
+func (s *Scan) Matches() []domain.Match {
+	return s.matches
 }
 
 func (conn *Connection) createScanForDetections(detectionsToRescan []domain.Match, groupToRescan string, scanName string, scanTemplate string, rescanSite string) (scan *Scan, err error) {
@@ -125,6 +133,7 @@ func (conn *Connection) createScanForDetections(detectionsToRescan []domain.Matc
 				AssetGroupID:     groupToRescan,
 				Assets:           devices,
 				VulnerabilityIDs: vulns,
+				matches:          detectionsToRescan,
 			}
 		} else {
 			conn.logger.Send(log.Errorf(err, "error while creating Nexpose scan"))
