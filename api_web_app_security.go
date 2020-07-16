@@ -14,7 +14,21 @@ const (
 	postGetSiteFindings = "/qps/rest/3.0/search/was/finding"
 	getScanStatus       = "/qps/rest/3.0/status/was/wasscan/<id>"
 	getWebAppInfo       = "/qps/rest/3.0/get/was/webapp/<id>"
+	postRetestFinding   = "/qps/rest/3.0/retest/was/finding/<uid>"
 )
+
+// findingUID in the form aaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa
+func (session *Session) CreateRetestForWebAppVulnerabilityFinding(findingUID string) (count string, err error) {
+	url := strings.Replace(session.webAppBaseURL+postRetestFinding, "<uid>", findingUID, 1)
+	resp := &webAppRetestFindingResponse{}
+	if err = session.httpCall(http.MethodPost, url, make(map[string]string), nil, resp); err == nil {
+		count = resp.Count
+	} else {
+		session.lstream.Send(log.Errorf(err, "err while calling api [%s]", url))
+	}
+
+	return count, err
+}
 
 func (session *Session) CreateWebAppVulnerabilityScan(webAppID string, webAppOptionProfileID string, scannerType string, scannerName string) (scanID string, title string, err error) {
 	if len(webAppID) > 0 && len(webAppOptionProfileID) > 0 && len(scannerType) > 0 { // scanner name can be empty for externel scans
@@ -462,5 +476,22 @@ type getWebAppResponse struct {
 				Count string `xml:"count"`
 			} `xml:"crawlingScripts"`
 		} `xml:"WebApp"`
+	} `xml:"data"`
+}
+
+type webAppRetestFindingResponse struct {
+	XMLName                   xml.Name `xml:"ServiceResponse"`
+	Text                      string   `xml:",chardata"`
+	Xsi                       string   `xml:"xsi,attr"`
+	NoNamespaceSchemaLocation string   `xml:"noNamespaceSchemaLocation,attr"`
+	ResponseCode              string   `xml:"responseCode"`
+	Count                     string   `xml:"count"`
+	Data                      struct {
+		Text    string `xml:",chardata"`
+		Finding struct {
+			Text     string `xml:",chardata"`
+			ID       string `xml:"id"`
+			UniqueId string `xml:"uniqueId"`
+		} `xml:"Finding"`
 	} `xml:"data"`
 }

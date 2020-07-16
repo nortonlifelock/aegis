@@ -90,28 +90,23 @@ func (session *QsSession) createVulnerabilityScanForGroup(ctx context.Context, o
 }
 
 func (session *QsSession) createScanForWebApplication(ctx context.Context, detections []domain.Match, out chan<- domain.Scan) {
-	var webAppIDToMatch = make(map[string][]domain.Match)
+	var seen = make(map[string]bool)
+
 	for _, detection := range detections {
-		if webAppIDToMatch[detection.Device()] == nil {
-			webAppIDToMatch[detection.Device()] = make([]domain.Match, 0)
-		}
-		webAppIDToMatch[detection.Device()] = append(webAppIDToMatch[detection.Device()], detection)
-	}
+		var findingUID = detection.Device()
 
-	for webAppID := range webAppIDToMatch {
-		defaultScannerName, defaultScannerType, err := session.apiSession.GetWebApplicationInfo(webAppID)
+		if !seen[findingUID] {
+			seen[findingUID] = true
 
-		if err == nil {
-			scanID, title, err := session.apiSession.CreateWebAppVulnerabilityScan(webAppID, session.payload.WebAppOptionProfile, defaultScannerType, defaultScannerName)
+			_, err := session.apiSession.CreateRetestForWebAppVulnerabilityFinding(findingUID)
 			if err == nil {
-
 				scan := &scan{
-					Name:       title,
-					ScanID:     fmt.Sprintf("%s%s", webPrefix, scanID),
-					TemplateID: "", // keep empty so the option profile isn't deleted in cleanup
+					Name:       fmt.Sprintf("was_aegis_retest_%s_%s", findingUID, time.Now().Format(time.RFC3339)),
+					ScanID:     fmt.Sprintf("%s_%s_%s", webPrefix, findingUID, time.Now().Format(time.RFC3339)),
+					TemplateID: findingUID,
 
-					AssetGroupID: fmt.Sprintf("%s%s", webPrefix, webAppID),
-					EngineIDs:    []string{defaultScannerName, defaultScannerType},
+					AssetGroupID: detection.GroupID(),
+					EngineIDs:    []string{},
 
 					Created: time.Now(),
 				}
@@ -122,10 +117,8 @@ func (session *QsSession) createScanForWebApplication(ctx context.Context, detec
 				case out <- scan:
 				}
 			} else {
-				session.lstream.Send(log.Errorf(err, "error while making web app scan for [%s|%s|%s|%s]", webAppID, session.payload.WebAppOptionProfile, defaultScannerType, defaultScannerName))
+				session.lstream.Send(log.Errorf(err, "error while retesting finding UID [%s]", findingUID))
 			}
-		} else {
-			session.lstream.Send(log.Errorf(err, "error while pulling default scanner for web app [%s]", webAppID))
 		}
 	}
 }

@@ -89,7 +89,7 @@ func (f *webAppFindingWrapper) Proof() string {
 	var payload string
 	for index, payloadInstance := range f.f.ResultList.List.Result.Payloads.List.PayloadInstance {
 
-		payloadInfo := fmt.Sprintf("Payload: %s\nMethod: %s\nLink: %s\nHeaders: %s\nResponse: %s",
+		payloadInfo := fmt.Sprintf("Payload: %s\nMethod: %s\nLink: %s\nHeaders: %s\nResponse:\n%s",
 			payloadInstance.Payload,
 			payloadInstance.Request.Method,
 			payloadInstance.Request.Link,
@@ -110,7 +110,7 @@ func (f *webAppFindingWrapper) Port() int {
 }
 
 func (f *webAppFindingWrapper) Protocol() string {
-	return f.f.UniqueId
+	return ""
 }
 
 func (f *webAppFindingWrapper) IgnoreID() (*string, error) {
@@ -129,9 +129,10 @@ func (f *webAppFindingWrapper) LastUpdated() *time.Time {
 
 func (f *webAppFindingWrapper) Device() (domain.Device, error) {
 	return &WebAppWrapper{
-		sourceID: f.f.WebApp.ID,
-		name:     f.f.WebApp.Name,
-		url:      f.f.WebApp.URL,
+		sourceID:  f.f.WebApp.ID,
+		findingID: f.f.UniqueId,
+		name:      f.f.WebApp.Name,
+		url:       f.f.WebApp.URL,
 	}, nil
 }
 

@@ -2,13 +2,18 @@ package connector
 
 import (
 	"context"
+	"fmt"
 	"github.com/nortonlifelock/domain"
 )
 
 type WebAppWrapper struct {
+	// the webApp ID
 	sourceID string
-	name     string
-	url      string
+
+	// the finding UID
+	findingID string
+	name      string
+	url       string
 }
 
 // ID is the ID of the device as reported by the backend database of Aegis
@@ -17,7 +22,7 @@ func (w *WebAppWrapper) ID() string {
 }
 
 func (w *WebAppWrapper) SourceID() *string {
-	return &w.sourceID
+	return &w.findingID
 }
 
 func (w *WebAppWrapper) OS() string {
@@ -38,7 +43,7 @@ func (w *WebAppWrapper) IP() string {
 
 // Vulnerabilities not implemented as the interface method is not yet used
 func (w *WebAppWrapper) Vulnerabilities(ctx context.Context) (param <-chan domain.Detection, err error) {
-	return nil, nil
+	return nil, fmt.Errorf("not implemented")
 }
 
 func (w *WebAppWrapper) Region() *string {

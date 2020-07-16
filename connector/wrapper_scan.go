@@ -54,7 +54,16 @@ func (s *scan) Status() (status string, err error) {
 			}
 		}
 	} else {
-		status, err = s.session.apiSession.GetWebAppScanStatus(strings.Replace(s.ScanID, webPrefix, "", 1))
+		// WAS Retest - the finding UID is stored in the TemplateID field
+		// the only way I've found that we can tell that a previously kicked off retest is finished
+		// is by attempting to kickoff a new restest. if the old retest is finished, a new one will be kicked off
+		var count string
+		count, err = s.session.apiSession.CreateRetestForWebAppVulnerabilityFinding(s.TemplateID)
+		if count == "0" {
+			status = domain.ScanPROCESSING
+		} else {
+			status = domain.ScanFINISHED
+		}
 	}
 
 	status = strings.ToLower(status)
