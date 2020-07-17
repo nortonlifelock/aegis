@@ -113,9 +113,9 @@ func (f *webAppFindingWrapper) Proof() string {
 	}
 	for index, owasp := range f.f.Owasp.List.OWASP {
 		if len(owasps) > 0 {
-			owasps = fmt.Sprintf("%s\n%d) %s", owasps, index, owasp)
+			owasps = fmt.Sprintf("%s\n%d) [%s|%s]", owasps, index, owasp.Name, owasp.URL)
 		} else {
-			owasps = fmt.Sprintf("%d) %s", index, owasp)
+			owasps = fmt.Sprintf("%d) [%s|%s]", index, owasp.Name, owasp.URL)
 		}
 	}
 	var references = fmt.Sprintf("CWE\n%s\n\nOWASP\n%s", cwes, owasps)
