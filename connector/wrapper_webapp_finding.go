@@ -102,7 +102,25 @@ func (f *webAppFindingWrapper) Proof() string {
 			payload = fmt.Sprintf("%d) %s", index, payloadInfo)
 		}
 	}
-	return fmt.Sprintf("Access Paths\n%s\nPayloads\n%s", accessPath, payload)
+
+	var cwes, owasps string
+	for index, cwe := range f.f.Cwe.List.Long {
+		if len(cwes) > 0 {
+			cwes = fmt.Sprintf("%s\n%d) CWE-%s", cwes, index, cwe)
+		} else {
+			cwes = fmt.Sprintf("%d) CWE-%s", index, cwe)
+		}
+	}
+	for index, owasp := range f.f.Owasp.List.OWASP {
+		if len(owasps) > 0 {
+			owasps = fmt.Sprintf("%s\n%d) %s", owasps, index, owasp)
+		} else {
+			owasps = fmt.Sprintf("%d) %s", index, owasp)
+		}
+	}
+	var references = fmt.Sprintf("CWE\n%s\n\nOWASP\n%s", cwes, owasps)
+
+	return fmt.Sprintf("Access Paths\n%s\nPayloads\n%s\n%s", accessPath, payload, references)
 }
 
 func (f *webAppFindingWrapper) Port() int {

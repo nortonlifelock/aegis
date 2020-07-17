@@ -257,8 +257,8 @@ type WebAppFinding struct {
 		Text  string `xml:",chardata"`
 		Count string `xml:"count"`
 		List  struct {
-			Text string `xml:",chardata"`
-			Long string `xml:"long"`
+			Text string   `xml:",chardata"`
+			Long []string `xml:"long"`
 		} `xml:"list"`
 	} `xml:"cwe"`
 	Owasp struct {
@@ -266,7 +266,7 @@ type WebAppFinding struct {
 		Count string `xml:"count"`
 		List  struct {
 			Text  string `xml:",chardata"`
-			OWASP struct {
+			OWASP []struct {
 				Text string `xml:",chardata"`
 				Name string `xml:"name"`
 				URL  string `xml:"url"`
