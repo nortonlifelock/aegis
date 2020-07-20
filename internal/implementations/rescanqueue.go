@@ -227,20 +227,7 @@ func (job *RescanQueueJob) processGroup(groupID string, tickets []domain.Ticket)
 		ticketTitles = append(ticketTitles, ticket.Title())
 	}
 
-	if job.shouldKickoffCloudDecommRescan(groupID) {
-		var ips []string
-		var seen = make(map[string]bool)
-		for _, ticket := range tickets {
-			if !seen[sord(ticket.IPAddress())] && len(sord(ticket.IPAddress())) > 0 {
-				seen[sord(ticket.IPAddress())] = true
-				ips = append(ips, sord(ticket.IPAddress()))
-			}
-		}
-
-		createCloudDecommissionJob(job.id, job.db, job.lstream, job.config.OrganizationID(), groupID, ips)
-	} else {
-		job.queueRescan(groupID, ticketTitles)
-	}
+	job.queueRescan(groupID, ticketTitles)
 }
 
 func (job *RescanQueueJob) shouldKickoffCloudDecommRescan(groupID string) (shouldKickoffDecomm bool) {
@@ -345,10 +332,20 @@ func (job *RescanQueueJob) cleanTickets(tickets <-chan domain.Ticket) (<-chan do
 	cleanedTickets := make(chan domain.Ticket)
 
 	var groupIDToGroup = make(map[string]domain.AssetGroup)
+	var assetGroupUsesCloudDecomm = make(map[string]bool)
+
 	var assetGroups []domain.AssetGroup
 	if assetGroups, err = job.db.GetAssetGroupsForOrg(job.config.OrganizationID()); err == nil {
 		for _, assetGroup := range assetGroups {
 			groupIDToGroup[assetGroup.GroupID()] = assetGroup
+
+			// CloudDecommission scans are only kicked off by Decommission RSQs
+			// this check is redundant, but maintained in multiple areas for readability
+			if job.Payload.Type == domain.RescanDecommission {
+				if job.shouldKickoffCloudDecommRescan(assetGroup.GroupID()) {
+					assetGroupUsesCloudDecomm[assetGroup.GroupID()] = true
+				}
+			}
 		}
 	} else {
 		err = fmt.Errorf("error while getting asset groups for org [%s]", job.config.OrganizationID())
@@ -360,6 +357,8 @@ func (job *RescanQueueJob) cleanTickets(tickets <-chan domain.Ticket) (<-chan do
 		go func() {
 			defer handleRoutinePanic(job.lstream)
 			defer close(cleanedTickets)
+
+			var groupIDToListOfIPsForCloudDecomm = make(map[string][]string)
 
 			for {
 				if ticket, ok := <-tickets; ok {
@@ -373,12 +372,23 @@ func (job *RescanQueueJob) cleanTickets(tickets <-chan domain.Ticket) (<-chan do
 
 					if !tickMap[ticket.Title()] && !skipRescanQueue && job.ticketIsReadyForRescan(ticket) {
 						cleanedTickets <- ticket
+					} else if job.Payload.Type == domain.RescanDecommission && assetGroupUsesCloudDecomm[ticket.GroupID()] {
+						if groupIDToListOfIPsForCloudDecomm[ticket.GroupID()] == nil {
+							groupIDToListOfIPsForCloudDecomm[ticket.GroupID()] = make([]string, 0)
+						}
+
+						groupIDToListOfIPsForCloudDecomm[ticket.GroupID()] = append(groupIDToListOfIPsForCloudDecomm[ticket.GroupID()], sord(ticket.IPAddress()))
 					} else if skipRescanQueue {
 						job.lstream.Send(log.Debugf("skipping queuing of [%s] as group [%s] in the AssetGroup table is marked to skip the RSQ", ticket.Title(), ticket.GroupID()))
 					}
 				} else {
 					break
 				}
+			}
+
+			for groupID, listOfIpsForCloudDecomm := range groupIDToListOfIPsForCloudDecomm {
+				job.lstream.Send(log.Infof("creating cloud decommission job for group [%s] on IPs [%s]", groupID, strings.Join(listOfIpsForCloudDecomm, ",")))
+				createCloudDecommissionJob(job.id, job.db, job.lstream, job.config.OrganizationID(), groupID, listOfIpsForCloudDecomm)
 			}
 		}()
 
@@ -389,6 +399,8 @@ func (job *RescanQueueJob) cleanTickets(tickets <-chan domain.Ticket) (<-chan do
 
 var ticketTitleOrgIDToUpdatedTime = &sync.Map{}
 
+// this method is used to delay the Agent tickets from being scanned immediately as it takes several
+// hours for changes on such machines to reflect in their respective scanning engine
 func (job *RescanQueueJob) ticketIsReadyForRescan(ticket domain.Ticket) (readyForRescan bool) {
 	readyForRescan = true // if we can't discern the tracking method, rescan the ticket by default
 
