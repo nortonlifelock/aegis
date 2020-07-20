@@ -228,7 +228,15 @@ func (job *RescanQueueJob) processGroup(groupID string, tickets []domain.Ticket)
 	}
 
 	if job.shouldKickoffCloudDecommRescan(groupID) {
-		// TODO ips
+		var ips []string
+		var seen = make(map[string]bool)
+		for _, ticket := range tickets {
+			if !seen[sord(ticket.IPAddress())] && len(sord(ticket.IPAddress())) > 0 {
+				seen[sord(ticket.IPAddress())] = true
+				ips = append(ips, sord(ticket.IPAddress()))
+			}
+		}
+
 		createCloudDecommissionJob(job.id, job.db, job.lstream, job.config.OrganizationID(), groupID, ips)
 	} else {
 		job.queueRescan(groupID, ticketTitles)
