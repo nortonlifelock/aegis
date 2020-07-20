@@ -79,9 +79,9 @@ func (job *RescanJob) Process(ctx context.Context, id string, appconfig domain.C
 					const batchSize = 400
 					for i := 0; i < len(tickets); i += batchSize {
 						if i+batchSize <= len(tickets) {
-							err = job.createAndMonitorScan(ticketToMatch(tickets[i:i+batchSize], job.Payload.Group), getTicketTitles(tickets[i:i+batchSize]))
+							err = job.createAndMonitorScan(ticketToMatch(tickets[i:i+batchSize], job.Payload.Group), tickets[i:i+batchSize])
 						} else {
-							err = job.createAndMonitorScan(ticketToMatch(tickets[i:], job.Payload.Group), getTicketTitles(tickets[i:]))
+							err = job.createAndMonitorScan(ticketToMatch(tickets[i:], job.Payload.Group), tickets[i:])
 						}
 
 						if err != nil {
@@ -105,28 +105,16 @@ func (job *RescanJob) Process(ctx context.Context, id string, appconfig domain.C
 	return err
 }
 
-func getTicketTitles(tickets []domain.Ticket) (titles []string) {
-	titles = make([]string, 0)
-
-	for _, ticket := range tickets {
-		titles = append(titles, ticket.Title())
-	}
-
-	return titles
-}
-
 // creates a connection to the scanning engine in order to create a scan for the ips and vulnerabilities
 // after the scan is created, the method monitors the status of the scan in the database and does not end
 // until the scan leaves the queued status
-func (job *RescanJob) createAndMonitorScan(matches []domain.Match, tickets []string) (err error) {
+func (job *RescanJob) createAndMonitorScan(matches []domain.Match, tickets []domain.Ticket) (err error) {
 	// Initialize scanner object
 	var vscanner integrations.Vscanner
 	if vscanner, err = integrations.NewVulnScanner(job.ctx, job.inSource.Source(), job.db, job.lstream, job.appConfig, job.inSource); err == nil {
-
-		job.lstream.Send(log.Debugf("Scanning Engine Connection Initialized. Loading Tickets [%s]", strings.Join(tickets, ",")))
+		job.lstream.Send(log.Debugf("scanning engine connection initialized"))
 
 		var scans <-chan domain.Scan
-
 		if job.Payload.Type == domain.RescanDecommission {
 			scans = vscanner.Discovery(job.ctx, matches)
 		} else {
@@ -142,10 +130,15 @@ func (job *RescanJob) createAndMonitorScan(matches []domain.Match, tickets []str
 						return
 					case scan, ok := <-scans:
 						if ok {
-							job.lstream.Send(log.Infof("New scan created [ID: %v] for [%v] tickets", scan.ID(), len(scan.Matches())))
+							ticketsToRescan := getTicketsBelongingToMatches(scan.Matches(), tickets)
+							job.lstream.Send(log.Infof("New scan created [ID: %v] for [%v] tickets", scan.ID(), len(ticketsToRescan)))
+
+							if len(ticketsToRescan) != len(scan.Matches()) {
+								job.lstream.Send(log.Warningf(err, "mismatch between match length and ticket length [%d != %d]", len(ticketsToRescan), len(scan.Matches())))
+							}
 
 							// to be used in the Payload for the scan summary
-							scanClosePayload := job.createScanClosePayload(scan, scan.Matches(), tickets)
+							scanClosePayload := job.createScanClosePayload(scan, scan.Matches(), ticketsToRescan)
 
 							var bytePayload []byte
 							bytePayload, err = json.Marshal(scanClosePayload)
@@ -297,6 +290,19 @@ func (m matchTicket) GroupID() string {
 	return m.groupID
 }
 
-func (m matchTicket) Protocol() string {
-	return sord(m.t.ServicePorts())
+func getTicketsBelongingToMatches(matches []domain.Match, tickets []domain.Ticket) (ticketsBelongingToMatches []string) {
+	ticketsBelongingToMatches = make([]string, 0)
+
+	for _, match := range matches {
+		for _, ticket := range tickets {
+			if ticket.DeviceID() == match.Device() &&
+				strings.Contains(ticket.VulnerabilityID(), match.Vulnerability()) && // strings.Contains because there might be a version at the end of the ticket vuln ID
+				ticket.GroupID() == match.GroupID() {
+				ticketsBelongingToMatches = append(ticketsBelongingToMatches, ticket.Title())
+				break
+			}
+		}
+	}
+
+	return ticketsBelongingToMatches
 }

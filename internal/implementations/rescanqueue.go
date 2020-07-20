@@ -161,6 +161,7 @@ func (job *RescanQueueJob) processCleanedIssues(issues <-chan domain.Ticket) {
 						defer handleRoutinePanic(job.lstream)
 						defer dbWG.Done()
 
+						// TODO can grab tracking method here and send to cloud devom
 						if deviceInfo, err := job.db.GetDeviceInfoByAssetOrgID(ticket.DeviceID(), job.config.OrganizationID()); err == nil {
 
 							if deviceInfo != nil {
@@ -226,7 +227,32 @@ func (job *RescanQueueJob) processGroup(groupID string, tickets []domain.Ticket)
 		ticketTitles = append(ticketTitles, ticket.Title())
 	}
 
-	job.queueRescan(groupID, ticketTitles)
+	if job.shouldKickoffCloudDecommRescan(groupID) {
+		// TODO ips
+		createCloudDecommissionJob(job.id, job.db, job.lstream, job.config.OrganizationID(), groupID, ips)
+	} else {
+		job.queueRescan(groupID, ticketTitles)
+	}
+}
+
+func (job *RescanQueueJob) shouldKickoffCloudDecommRescan(groupID string) (shouldKickoffDecomm bool) {
+	if job.Payload.Type == domain.RescanDecommission {
+		if assetGroup, err := job.db.GetAssetGroupForOrgNoScanner(job.config.OrganizationID(), groupID); err == nil && assetGroup != nil {
+			if len(sord(assetGroup.CloudSourceID())) > 0 {
+				if scs, err := job.db.GetSourceConfigBySourceID(job.config.OrganizationID(), sord(assetGroup.CloudSourceID())); err == nil && len(scs) > 0 {
+					var cloudSourceConfig = scs[0]
+
+					if jobRegistration, err := job.db.GetJobsByStruct(cloudDecomJob); err == nil && jobRegistration != nil {
+						if jobConfig, err := job.db.GetJobConfigByOrgIDAndJobIDWithSC(job.config.OrganizationID(), jobRegistration.ID(), cloudSourceConfig.ID()); err == nil && len(jobConfig) > 0 {
+							shouldKickoffDecomm = true
+						}
+					}
+				}
+			}
+		}
+	}
+
+	return shouldKickoffDecomm
 }
 
 // creates the Payload for the rescan job, and creates a job history for a rescan job to kick off a scan on the provided tickets

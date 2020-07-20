@@ -179,7 +179,7 @@ func (job *ScanCloseJob) processScanDetections(engine integrations.TicketingEngi
 				// instead of doing traditional decommission scans against cloud agents, we use a CloudDecommissionJob to check the live cloud inventory
 				// for active IPs, and close out the tickets for the IPs that don't show in the live asset inventory
 				job.lstream.Send(log.Infof("Creating CloudDecommissionJob for [%s]", strings.Join(uniques, ",")))
-				job.createCloudDecommissionJob(uniques)
+				createCloudDecommissionJob(job.id, job.db, job.lstream, job.config.OrganizationID(), job.Payload.Group, uniques)
 			}
 		} else {
 			job.lstream.Send(log.Errorf(err, "error while gathering scan information"))
@@ -286,14 +286,14 @@ func (job *ScanCloseJob) getExceptionID(assetID string, deviceInDb domain.Device
 	return exceptionID, dontUpdateExceptionID
 }
 
-func (job *ScanCloseJob) createCloudDecommissionJob(ips []string) {
-	if assetGroup, err := job.db.GetAssetGroupForOrgNoScanner(job.config.OrganizationID(), job.Payload.Group); err == nil && assetGroup != nil {
+func createCloudDecommissionJob(parentJobID string, db domain.DatabaseConnection, lstream log.Logger, orgID string, groupID string, ips []string) {
+	if assetGroup, err := db.GetAssetGroupForOrgNoScanner(orgID, groupID); err == nil && assetGroup != nil {
 		if len(sord(assetGroup.CloudSourceID())) > 0 {
-			if scs, err := job.db.GetSourceConfigBySourceID(job.config.OrganizationID(), sord(assetGroup.CloudSourceID())); err == nil && len(scs) > 0 {
+			if scs, err := db.GetSourceConfigBySourceID(orgID, sord(assetGroup.CloudSourceID())); err == nil && len(scs) > 0 {
 				var cloudSourceConfig = scs[0]
 
-				if jobRegistration, err := job.db.GetJobsByStruct(cloudDecomJob); err == nil && jobRegistration != nil {
-					if jobConfig, err := job.db.GetJobConfigByOrgIDAndJobIDWithSC(job.config.OrganizationID(), jobRegistration.ID(), cloudSourceConfig.ID()); err == nil && len(jobConfig) > 0 {
+				if jobRegistration, err := db.GetJobsByStruct(cloudDecomJob); err == nil && jobRegistration != nil {
+					if jobConfig, err := db.GetJobConfigByOrgIDAndJobIDWithSC(orgID, jobRegistration.ID(), cloudSourceConfig.ID()); err == nil && len(jobConfig) > 0 {
 
 						var priority = jobRegistration.Priority()
 						if jobConfig[0].PriorityOverride() != nil {
@@ -302,7 +302,7 @@ func (job *ScanCloseJob) createCloudDecommissionJob(ips []string) {
 
 						payload := &CloudDecommissionPayload{OnlyCheckIPs: ips}
 						if payloadBody, err := json.Marshal(payload); err == nil {
-							_, _, err = job.db.CreateJobHistoryWithParentID(
+							_, _, err = db.CreateJobHistoryWithParentID(
 								jobRegistration.ID(),
 								jobConfig[0].ID(),
 								domain.JobStatusPending,
@@ -313,31 +313,31 @@ func (job *ScanCloseJob) createCloudDecommissionJob(ips []string) {
 								"",
 								time.Now().UTC(),
 								"",
-								job.id,
+								parentJobID,
 							)
 
 							if err == nil {
-								job.lstream.Send(log.Infof("queued a cloud decommission scan for ips [%v]", ips))
+								lstream.Send(log.Infof("queued a cloud decommission scan for ips [%v]", ips))
 							} else {
-								job.lstream.Send(log.Errorf(err, "error while queueing cloud decommission scan for ips [%v]", ips))
+								lstream.Send(log.Errorf(err, "error while queueing cloud decommission scan for ips [%v]", ips))
 							}
 						} else {
-							job.lstream.Send(log.Errorf(err, "error while creating payload for CloudDecommissionJob"))
+							lstream.Send(log.Errorf(err, "error while creating payload for CloudDecommissionJob"))
 						}
 					} else {
-						job.lstream.Send(log.Errorf(err, "error while loading job config for the CloudDecommissionJob"))
+						lstream.Send(log.Errorf(err, "error while loading job config for the CloudDecommissionJob"))
 					}
 				} else {
-					job.lstream.Send(log.Errorf(err, "error while loading CloudDecommissionJob registration from database"))
+					lstream.Send(log.Errorf(err, "error while loading CloudDecommissionJob registration from database"))
 				}
 			} else {
-				job.lstream.Send(log.Errorf(err, "failed to load cloud source config for cloud source ID [%s]", sord(assetGroup.CloudSourceID())))
+				lstream.Send(log.Errorf(err, "failed to load cloud source config for cloud source ID [%s]", sord(assetGroup.CloudSourceID())))
 			}
 		} else {
-			job.lstream.Send(log.Errorf(err, "wanted to create a cloud decommission scan for [%s], but it did not have the cloud source ID set", job.Payload.Group))
+			lstream.Send(log.Errorf(err, "wanted to create a cloud decommission scan for [%s], but it did not have the cloud source ID set", groupID))
 		}
 	} else {
-		job.lstream.Send(log.Errorf(err, "error while loading asset group information for [org|group|source] [%s|%s|%s]", job.config.OrganizationID(), job.Payload.Group, job.insource.SourceID()))
+		lstream.Send(log.Errorf(err, "error while loading asset group information for [org|group|source] [%s|%s]", orgID, groupID))
 	}
 }
 
