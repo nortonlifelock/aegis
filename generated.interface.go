@@ -115,6 +115,7 @@ type GeneratedDatabaseConnection interface {
 	GetOrganizationByCode(Code string) (Organization, error)
 	GetOrganizationByID(ID string) (Organization, error)
 	GetOrganizations() ([]Organization, error)
+	GetPendingActiveCloudDecomJob(_OrgID string) ([]JobHistory, error)
 	GetPendingActiveRescanJob(_OrgID string) ([]JobHistory, error)
 	GetPermissionByUserOrgID(_UserID string, _OrgID string) (Permission, error)
 	GetPermissionOfLeafOrgByUserID(_UserID string) (Permission, error)
