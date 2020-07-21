@@ -285,6 +285,25 @@ func (job *CloudDecommissionJob) closeTicketsForDecommissionedAssets(tickets <-c
 								}
 							}
 						}(tic)
+					} else if sord(tic.Status()) == ticketingEngine.GetStatusMap(domain.StatusResolvedDecom) {
+						// this block hits if we have a ticket that was marked as resolved-decommissioned, but was
+						// found in the cloud asset inventory
+
+						wg.Add(1)
+						go func(tic domain.Ticket) {
+							defer handleRoutinePanic(job.lstream)
+							defer wg.Done()
+
+							if err := ticketingEngine.Transition(
+								tic,
+								ticketingEngine.GetStatusMap(domain.StatusReopened),
+								"Ticket reopened as it was found in the cloud asset inventory",
+								sord(tic.AssignedTo())); err == nil {
+								job.lstream.Send(log.Infof("%v reopened as it's IP [%v] was in the AWS inventory", tic.Title(), sord(tic.IPAddress())))
+							} else {
+								job.lstream.Send(log.Errorf(err, "error while marking %v as reopened", tic.Title()))
+							}
+						}(tic)
 					}
 				} else {
 					return

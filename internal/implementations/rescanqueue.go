@@ -351,8 +351,8 @@ func (job *RescanQueueJob) cleanTickets(tickets <-chan domain.Ticket) (<-chan do
 		err = fmt.Errorf("error while getting asset groups for org [%s]", job.config.OrganizationID())
 	}
 
-	var tickMap map[string]bool
-	if tickMap, err = job.loadRescans(); err == nil {
+	var tickMap, ipMap map[string]bool
+	if tickMap, ipMap, err = job.loadRescans(); err == nil {
 
 		go func() {
 			defer handleRoutinePanic(job.lstream)
@@ -370,14 +370,16 @@ func (job *RescanQueueJob) cleanTickets(tickets <-chan domain.Ticket) (<-chan do
 						}
 					}
 
-					if !tickMap[ticket.Title()] && !skipRescanQueue && job.ticketIsReadyForRescan(ticket) {
+					if !tickMap[ticket.Title()] && !skipRescanQueue && job.agentTicketIsReadyForRescan(ticket) {
 						cleanedTickets <- ticket
 					} else if job.Payload.Type == domain.RescanDecommission && assetGroupUsesCloudDecomm[ticket.GroupID()] {
-						if groupIDToListOfIPsForCloudDecomm[ticket.GroupID()] == nil {
-							groupIDToListOfIPsForCloudDecomm[ticket.GroupID()] = make([]string, 0)
-						}
+						if !ipMap[sord(ticket.IPAddress())] {
+							if groupIDToListOfIPsForCloudDecomm[ticket.GroupID()] == nil {
+								groupIDToListOfIPsForCloudDecomm[ticket.GroupID()] = make([]string, 0)
+							}
 
-						groupIDToListOfIPsForCloudDecomm[ticket.GroupID()] = append(groupIDToListOfIPsForCloudDecomm[ticket.GroupID()], sord(ticket.IPAddress()))
+							groupIDToListOfIPsForCloudDecomm[ticket.GroupID()] = append(groupIDToListOfIPsForCloudDecomm[ticket.GroupID()], sord(ticket.IPAddress()))
+						}
 					} else if skipRescanQueue {
 						job.lstream.Send(log.Debugf("skipping queuing of [%s] as group [%s] in the AssetGroup table is marked to skip the RSQ", ticket.Title(), ticket.GroupID()))
 					}
@@ -401,7 +403,7 @@ var ticketTitleOrgIDToUpdatedTime = &sync.Map{}
 
 // this method is used to delay the Agent tickets from being scanned immediately as it takes several
 // hours for changes on such machines to reflect in their respective scanning engine
-func (job *RescanQueueJob) ticketIsReadyForRescan(ticket domain.Ticket) (readyForRescan bool) {
+func (job *RescanQueueJob) agentTicketIsReadyForRescan(ticket domain.Ticket) (readyForRescan bool) {
 	readyForRescan = true // if we can't discern the tracking method, rescan the ticket by default
 
 	if trackingMethod, err := job.db.GetTicketTrackingMethod(ticket.Title(), job.config.OrganizationID()); err == nil && trackingMethod != nil {
@@ -444,16 +446,44 @@ func (job *RescanQueueJob) ticketIsReadyForRescan(ticket domain.Ticket) (readyFo
 }
 
 // loads tickets that are currently being processed by another job so we don't rescan a ticket that is in the process of being scanned
-func (job *RescanQueueJob) loadRescans() (tickets map[string]bool, err error) {
+func (job *RescanQueueJob) loadRescans() (tickets map[string]bool, ips map[string]bool, err error) {
 	tickets = make(map[string]bool)
+	ips = make(map[string]bool)
 	job.lstream.Send(log.Debugf("Looking for existing rescans for Organization [%v]", job.config.OrganizationID()))
 
-	err = job.checkPendingRescans(tickets)
-	if err == nil {
-		err = job.checkUnfinishedScans(tickets)
+	if err = job.checkPendingRescans(tickets); err == nil {
+		if err = job.checkUnfinishedScans(tickets); err == nil {
+			err = job.checkPendingCloudDecomm(ips)
+		}
 	}
 
-	return tickets, err
+	return tickets, ips, err
+}
+
+func (job *RescanQueueJob) checkPendingCloudDecomm(ips map[string]bool) (err error) {
+	var jobs []domain.JobHistory
+	if jobs, err = job.db.GetPendingActiveCloudDecomJob(job.config.OrganizationID()); err == nil {
+
+		for jid := range jobs {
+			if len(jobs[jid].Payload()) > 0 {
+
+				var cdp = CloudDecommissionPayload{}
+				if err = json.Unmarshal([]byte(jobs[jid].Payload()), &cdp); err == nil {
+
+					for _, ip := range cdp.OnlyCheckIPs {
+						ips[ip] = true
+					}
+				} else {
+					job.lstream.Send(log.Error("error while parsing cloud decommission payload", err))
+				}
+			}
+		}
+
+	} else {
+		err = fmt.Errorf("error occurred while loading pending and active cloud decommission jobs for organization [%v] | [%s]", job.config.OrganizationID(), err)
+	}
+
+	return err
 }
 
 // discovers tickets that are currently being processed by pending rescan jobs

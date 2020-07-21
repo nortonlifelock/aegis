@@ -5231,6 +5231,83 @@ func (conn *dbconn) GetOrganizations() ([]domain.Organization, error) {
 	return retOrganization, err
 }
 
+// GetPendingActiveCloudDecomJob executes the stored procedure GetPendingActiveCloudDecomJob against the database and returns the read results
+func (conn *dbconn) GetPendingActiveCloudDecomJob(_OrgID string) ([]domain.JobHistory, error) {
+	var err error
+	var retJobHistory = make([]domain.JobHistory, 0)
+
+	conn.Read(&connection.Procedure{
+		Proc:       "GetPendingActiveCloudDecomJob",
+		Parameters: []interface{}{_OrgID},
+		Callback: func(results interface{}, dberr error) {
+			err = dberr
+
+			if err == nil {
+
+				err = conn.getRows(results,
+					func(rows *sql.Rows) (err error) {
+						if err = rows.Err(); err == nil {
+
+							var myID string
+							var myJobID int
+							var myConfigID string
+							var myStatusID int
+							var myParentJobID *string
+							var myIdentifier *string
+							var myPriority int
+							var myCurrentIteration *int
+							var myPayload string
+							var myThreadID *string
+							var myPulseDate *time.Time
+							var myCreatedDate time.Time
+							var myUpdatedDate *time.Time
+
+							if err = rows.Scan(
+
+								&myID,
+								&myJobID,
+								&myConfigID,
+								&myStatusID,
+								&myParentJobID,
+								&myIdentifier,
+								&myPriority,
+								&myCurrentIteration,
+								&myPayload,
+								&myThreadID,
+								&myPulseDate,
+								&myCreatedDate,
+								&myUpdatedDate,
+							); err == nil {
+
+								newJobHistory := &dal.JobHistory{
+									IDvar:               myID,
+									JobIDvar:            myJobID,
+									ConfigIDvar:         myConfigID,
+									StatusIDvar:         myStatusID,
+									ParentJobIDvar:      myParentJobID,
+									Identifiervar:       myIdentifier,
+									Priorityvar:         myPriority,
+									CurrentIterationvar: myCurrentIteration,
+									Payloadvar:          myPayload,
+									ThreadIDvar:         myThreadID,
+									PulseDatevar:        myPulseDate,
+									CreatedDatevar:      myCreatedDate,
+									UpdatedDatevar:      myUpdatedDate,
+								}
+
+								retJobHistory = append(retJobHistory, newJobHistory)
+							}
+						}
+
+						return err
+					})
+			}
+		},
+	})
+
+	return retJobHistory, err
+}
+
 // GetPendingActiveRescanJob executes the stored procedure GetPendingActiveRescanJob against the database and returns the read results
 func (conn *dbconn) GetPendingActiveRescanJob(_OrgID string) ([]domain.JobHistory, error) {
 	var err error
