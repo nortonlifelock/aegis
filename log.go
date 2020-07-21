@@ -76,6 +76,7 @@ type Log struct {
 
 	IsDebug bool `json:"isDebug"`
 	Slack   bool `json:"slack"`
+	SNS     bool `json:"send_sns"`
 }
 
 func newLog() Log {
@@ -104,6 +105,11 @@ func (log Log) Stack(stacktrace string) Log {
 func (log Log) Debug() Log {
 	log.IsDebug = true
 
+	return log
+}
+
+func (log Log) SendSNS() Log {
+	log.SNS = true
 	return log
 }
 

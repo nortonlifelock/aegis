@@ -33,6 +33,7 @@ type config interface {
 }
 
 type logStream struct {
+	ctx             context.Context
 	path            string
 	logs            chan Log
 	logToFile       bool
@@ -63,6 +64,7 @@ func NewLogStream(ctx context.Context, dbconn connection.DatabaseConnection, log
 	}
 
 	var logger = &logStream{
+		ctx:             ctx,
 		path:            logconfig.LogPath(),
 		logs:            lstream,
 		logToFile:       logconfig.LogFile(),
@@ -104,6 +106,28 @@ func NewLogStream(ctx context.Context, dbconn connection.DatabaseConnection, log
 	go logger.publish(ctx, logger.logs, logger.distribute)
 
 	return logger, err
+}
+
+func (stream *logStream) AddSNSClient(snsTopicID string) (err error) {
+	if len(snsTopicID) > 0 {
+		if stream.snsClient == nil && !stream.logToSNS {
+			var snsClient *SNSClient
+			if snsClient, err = NewSNSClient(stream.ctx, snsTopicID); err == nil {
+				stream.snsClient = snsClient
+				stream.logToSNS = true
+
+				go stream.publish(stream.ctx, stream.snsLogs, stream.sns)
+			} else {
+				err = fmt.Errorf("error while creating SNS client - %s", err.Error())
+			}
+		} else {
+			err = fmt.Errorf("SNS client already set")
+		}
+	} else {
+		err = fmt.Errorf("empty SNS topic ID")
+	}
+
+	return err
 }
 
 // Send pushes a log onto the log channel
@@ -172,7 +196,7 @@ func (stream *logStream) distribute(log Log) {
 }
 
 func (stream *logStream) sns(log Log) {
-	if log.Type == FatalSeverity || log.Type == CritSeverity {
+	if log.Type == FatalSeverity || log.Type == CritSeverity || log.SNS {
 		if stream.snsClient != nil {
 			stream.snsClient.PushMessage(log.ToConsoleString())
 		}
