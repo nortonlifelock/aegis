@@ -35,6 +35,8 @@ type LogConfig interface {
 	LogDB() bool
 	LogMQ() bool
 	DebugLogs() bool
+	SNSTopicID() string
+	SNSRegion() string
 	PreserveFileLogs() bool
 }
 
