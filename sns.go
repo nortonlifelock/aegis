@@ -32,7 +32,7 @@ func NewSNSClient(ctx context.Context, topicID string) (client *SNSClient, err e
 		var sess *session.Session
 		if sess, err = session.NewSessionWithOptions(session.Options{
 			Config:  aws.Config{Region: aws.String(regionUSEast1)},
-			Profile: "dev-account",
+			Profile: "default",
 		}); err == nil {
 			var messages = make(chan string, 100)
 			client = &SNSClient{
