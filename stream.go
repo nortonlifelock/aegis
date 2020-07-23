@@ -192,6 +192,13 @@ func (stream *logStream) distribute(log Log) {
 				stream.mqLogs <- log
 			}()
 		}
+
+		if stream.logToSNS {
+			go func() {
+				defer handle(stream.logs)
+				stream.snsLogs <- log
+			}()
+		}
 	}
 }
 
