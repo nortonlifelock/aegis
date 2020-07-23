@@ -22,8 +22,9 @@ import (
 // TicketingPayload decides which asset groups to ticket on, as well as defining the min date which is used to calculate the SLA if the calculated
 // due date is in the past
 type TicketingPayload struct {
-	MinDate *time.Time `json:"mindate,omitempty"`
-	Groups  []string   `json:"groups,omitempty"`
+	MinDate          *time.Time `json:"mindate,omitempty"`
+	Groups           []string   `json:"groups,omitempty"`
+	LastUpdatedAfter *time.Time `json:"last_updated_after,omitempty"`
 
 	// CorrelateByIPAndGroup controls how we check for duplicates
 	// If the field is not present, or holds a value of false, we check for duplicates based on the device ID
@@ -250,9 +251,9 @@ func (job *TicketingJob) Process(ctx context.Context, id string, appconfig domai
 													startTime := time.Now() // must be before we load the detections from the db
 
 													var detections []domain.Detection
-													if detections, err = job.db.GetDetectionForGroupAfter(after, job.config.OrganizationID(), groupID, job.Payload.TicketInactiveKernels); err == nil {
+													if detections, err = job.db.GetDetectionForGroupAfter(after, tord1970(job.Payload.LastUpdatedAfter), job.config.OrganizationID(), groupID, job.Payload.TicketInactiveKernels); err == nil {
 
-														job.processVulnerabilities(vscanner, pushDetectionsToChannel(job.ctx, detections))
+														job.processVulnerabilities(pushDetectionsToChannel(job.ctx, detections))
 
 														_, _, err = job.db.UpdateAssetGroupLastTicket(groupID, job.config.OrganizationID(), startTime)
 														if err != nil {
@@ -306,7 +307,7 @@ func (job *TicketingJob) Process(ctx context.Context, id string, appconfig domai
 // the first pipe in the pipeline is process vulnerability, and the final pipe is create ticket. each method takes an input
 // from a channel, performs some transformation on the input, and pushes the result on the output channel for the next method
 // to handle
-func (job *TicketingJob) processVulnerabilities(vscanner integrations.Vscanner, in <-chan domain.Detection) {
+func (job *TicketingJob) processVulnerabilities(in <-chan domain.Detection) {
 	job.createTicket(
 		job.prepareTicketCreation(
 			job.checkForExistingTicket(

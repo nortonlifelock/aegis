@@ -134,6 +134,8 @@ github.com/nortonlifelock/domain v1.0.1-0.20200721163200-7fcd62f9cbf2 h1:ceXLJJy
 github.com/nortonlifelock/domain v1.0.1-0.20200721163200-7fcd62f9cbf2/go.mod h1:znFyCnzgKqtnNcBVQ8XHKyPxMsMR7QDkyAApQ58Avuo=
 github.com/nortonlifelock/domain v1.0.1-0.20200722210842-4dddf20e0ddf h1:RrTMxZ4riWFqgu54Rb5TKSqYBepiaZxEVTtim7RtRWc=
 github.com/nortonlifelock/domain v1.0.1-0.20200722210842-4dddf20e0ddf/go.mod h1:znFyCnzgKqtnNcBVQ8XHKyPxMsMR7QDkyAApQ58Avuo=
+github.com/nortonlifelock/domain v1.0.1-0.20200723203544-89e90fad0277 h1:LrIpWbruBvnTslq3WjM0r3PTtZpCCzHkZQq1GbJNp58=
+github.com/nortonlifelock/domain v1.0.1-0.20200723203544-89e90fad0277/go.mod h1:znFyCnzgKqtnNcBVQ8XHKyPxMsMR7QDkyAApQ58Avuo=
 github.com/nortonlifelock/dome9 v1.0.0 h1:YtnBerL5djePwj/ufSunuLfgeL6owDlwxFNLYrkYw0Y=
 github.com/nortonlifelock/dome9 v1.0.0/go.mod h1:0c1bsMWR0hkuOBv2aKdhRPkJiyVCj6VQhB22/reZuCo=
 github.com/nortonlifelock/files v1.0.0 h1:AKhTO0ozZsznao9tgrDbNkjaILPFadyBqWIKqSK4ylg=
@@ -183,6 +185,8 @@ github.com/nortonlifelock/log v1.0.1-0.20200723174819-d5ab883390e7 h1:KSXpl3F6cJ
 github.com/nortonlifelock/log v1.0.1-0.20200723174819-d5ab883390e7/go.mod h1:3Br40PBUtJ8EwgLch9UF3LjoSDpxPdTB08e/qGoo054=
 github.com/nortonlifelock/log v1.0.1-0.20200723180819-574e8fe704ff h1:KQFk6QoVJ84xLV3b3XP2jbBUq+Jz7O+ORTNkKGdRbNw=
 github.com/nortonlifelock/log v1.0.1-0.20200723180819-574e8fe704ff/go.mod h1:3Br40PBUtJ8EwgLch9UF3LjoSDpxPdTB08e/qGoo054=
+github.com/nortonlifelock/log v1.0.1-0.20200723215351-a71254d3c335 h1:jC74QLNa3lkQJPtIL8H2Cx3OIBYT8zBIiNjyoAClLHA=
+github.com/nortonlifelock/log v1.0.1-0.20200723215351-a71254d3c335/go.mod h1:3Br40PBUtJ8EwgLch9UF3LjoSDpxPdTB08e/qGoo054=
 github.com/nortonlifelock/nexpose v1.0.1-0.20200127165511-e44b21ca3097/go.mod h1:vHBaEPR6HTx5FPmqmedevtxc41lVPydsjyLhSHgOKHQ=
 github.com/nortonlifelock/nexpose v1.0.1-0.20200127180156-5a974d158c2e h1:axC2DrozRavOoc5RZXm3fCcSPUKh5OWz1+dqe0MpSAA=
 github.com/nortonlifelock/nexpose v1.0.1-0.20200127180156-5a974d158c2e/go.mod h1:aurFSIEAFPgHHzv2cg/AOq8d08Vdtkzd25AUD3M0cyg=
