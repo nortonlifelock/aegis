@@ -24,6 +24,8 @@ type SNSClient struct {
 	writeMessages chan<- string
 }
 
+const snsWaitTime = 5 * time.Minute
+
 // NewSNSClient creates a client for creating emails VIA Amazon SNS using the [default] credentials stored in ~/.aws/credentials
 func NewSNSClient(ctx context.Context, topicID string) (client *SNSClient, err error) {
 	if len(topicID) > 0 {
@@ -46,7 +48,7 @@ func NewSNSClient(ctx context.Context, topicID string) (client *SNSClient, err e
 				defer client.sendMessages()
 
 				// TODO make configurable
-				tic := time.Tick(5 * time.Minute)
+				tic := time.Tick(snsWaitTime)
 
 				for {
 
@@ -99,8 +101,11 @@ func (client *SNSClient) sendMessages() {
 // PushMessage pushes the message to sns
 func (client *SNSClient) PushMessage(message string) {
 	go func() {
+		// the timeout is twice as long as the waiting period between SNS bursts
+		tic := time.Tick(2 * snsWaitTime)
+
 		select {
-		case <-client.ctx.Done():
+		case <-tic:
 			return
 		case client.writeMessages <- message:
 		}
