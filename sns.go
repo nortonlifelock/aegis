@@ -76,6 +76,7 @@ func (client *SNSClient) sendMessages() {
 		for {
 			select {
 			case message := <-client.readMessages:
+				fmt.Printf("read %s\n", message)
 				messages = append(messages, message)
 			default:
 				return
@@ -104,10 +105,12 @@ func (client *SNSClient) PushMessage(message string) {
 		// the timeout is twice as long as the waiting period between SNS bursts
 		tic := time.Tick(2 * snsWaitTime)
 
+		fmt.Printf("trying to write %s\n", message)
 		select {
 		case <-tic:
 			return
 		case client.writeMessages <- message:
+			fmt.Printf("wrote %s\n", message)
 		}
 	}()
 }
