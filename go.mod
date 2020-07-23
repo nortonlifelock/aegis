@@ -5,7 +5,6 @@ go 1.13
 require (
 	github.com/PuerkitoBio/goquery v1.5.0
 	github.com/benjivesterby/validator v1.0.1-0.20200101181545-cfd93a3612a2
-	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
 	github.com/gorilla/mux v1.7.4
 	github.com/gorilla/websocket v1.4.1
@@ -13,13 +12,13 @@ require (
 	github.com/nortonlifelock/azure v1.0.1-0.20200410175035-3861bf17d862
 	github.com/nortonlifelock/connection v1.0.1-0.20200116160344-4d492cf1f581
 	github.com/nortonlifelock/crypto v1.0.1-0.20200213175907-562e87a94143
-	github.com/nortonlifelock/domain v1.0.1-0.20200721163200-7fcd62f9cbf2
+	github.com/nortonlifelock/domain v1.0.1-0.20200722210842-4dddf20e0ddf
 	github.com/nortonlifelock/dome9 v1.0.0
 	github.com/nortonlifelock/files v1.0.1-0.20200127165427-5178f1323f54
 	github.com/nortonlifelock/jira v1.0.1-0.20200715164422-06a203866fa7
 	github.com/nortonlifelock/jira-tool v1.0.0
-	github.com/nortonlifelock/job v1.0.1-0.20200127165455-ca80a64d226c
-	github.com/nortonlifelock/log v1.0.1-0.20200129171320-c4a4dd839ed8
+	github.com/nortonlifelock/job v1.0.1-0.20200723165359-98431175f14c
+	github.com/nortonlifelock/log v1.0.1-0.20200723180819-574e8fe704ff
 	github.com/nortonlifelock/nexpose v1.0.1-0.20200716202017-2fd71616e68b
 	github.com/nortonlifelock/qualys v1.0.1-0.20200717223328-8fcb063ce98e
 	github.com/nortonlifelock/scaffold v1.0.1-0.20200128220520-41da8a42d6d5

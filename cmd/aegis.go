@@ -57,7 +57,7 @@ func main() {
 			var dbconn domain.DatabaseConnection
 			if dbconn, err = database.NewConnection(appConfig); err == nil {
 
-				var orgIDToOrgCode map[string]string
+				var orgIDToOrgCode map[string]domain.Organization
 				if orgIDToOrgCode, err = getOrgMap(dbconn); err == nil {
 					var logger log.Logger
 					if logger, err = log.NewLogStream(ctx, dbconn, appConfig); err == nil {
@@ -97,18 +97,18 @@ func main() {
 	}
 }
 
-func getOrgMap(dbconn domain.DatabaseConnection) (orgIDToCode map[string]string, err error) {
-	orgIDToCode = make(map[string]string)
+func getOrgMap(dbconn domain.DatabaseConnection) (orgIDToOrg map[string]domain.Organization, err error) {
+	orgIDToOrg = make(map[string]domain.Organization)
 	var orgs []domain.Organization
 	if orgs, err = dbconn.GetOrganizations(); err == nil {
 		for _, org := range orgs {
-			orgIDToCode[org.ID()] = org.Code()
+			orgIDToOrg[org.ID()] = org
 		}
 	} else {
 		err = fmt.Errorf("error while caching organizations - %s", err.Error())
 	}
 
-	return orgIDToCode, err
+	return orgIDToOrg, err
 }
 
 func populateAutoStartJobs(dbconn domain.DatabaseConnection) (err error) {
