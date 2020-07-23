@@ -17,12 +17,21 @@ type jobWrapper struct {
 	name      string
 	payload   string
 	orgCode   string
-	orgMap    map[string]string
+	orgMap    map[string]domain.Organization
 	job       domain.Job
 	ctx       context.Context
 	db        domain.DatabaseConnection
 	lstream   log.Logger
 	appconfig domain.Config
+}
+
+type snsAppConfig struct {
+	snsID string
+	domain.Config
+}
+
+func (s *snsAppConfig) SNSTopicID() string {
+	return s.snsID
 }
 
 // Send implements the logger interface on the job wrapper so whenever the job creates a log, the job name is appended to the log
@@ -76,7 +85,23 @@ func (wrapper *jobWrapper) Execute() (err error) {
 						var inSources []domain.SourceConfig
 						var outSources []domain.SourceConfig
 						if jobConfig, inSources, outSources, err = wrapper.loadConfigs(); err == nil {
-							wrapper.orgCode = wrapper.orgMap[jobConfig.OrganizationID()]
+							wrapper.orgCode = wrapper.orgMap[jobConfig.OrganizationID()].Code()
+							snsID, exists := grabSNSIDFromOrgPayloadIfPresent(wrapper.orgMap[jobConfig.OrganizationID()].Payload())
+							if exists {
+								wrapper.appconfig = &snsAppConfig{
+									snsID:  snsID,
+									Config: wrapper.appconfig,
+								}
+
+								// if there is an Organization specific SNS ID, we create a new logger for the wrapper to use
+								var lstream log.Logger
+								if lstream, err = log.NewLogStream(wrapper.ctx, wrapper.db, wrapper.appconfig); err == nil {
+									wrapper.lstream = lstream
+								} else {
+									wrapper.lstream.Send(log.Errorf(err, "error while creating SNS lstream wrapper"))
+								}
+							}
+
 							// Determine job start time
 							var startTime = time.Now().UTC()
 

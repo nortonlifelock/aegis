@@ -2,6 +2,7 @@ package job
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"reflect"
 	"runtime"
@@ -15,7 +16,7 @@ import (
 )
 
 // GetDBJobs pulls pending jobs from the job queue, as kicks of the threads for running scheduled jobs and processing running jobs
-func GetDBJobs(ctx context.Context, db domain.DatabaseConnection, lstream log.Logger, appconfig domain.Config, dispatcher Dispatcher, orgIDToOrgCode map[string]string, sleepInSecondsPendingJobs int, sleepInSecondsScheduledJobs int) (err error) {
+func GetDBJobs(ctx context.Context, db domain.DatabaseConnection, lstream log.Logger, appconfig domain.Config, dispatcher Dispatcher, orgIDToOrg map[string]domain.Organization, sleepInSecondsPendingJobs int, sleepInSecondsScheduledJobs int) (err error) {
 	// TODO: Set this up so that when it handles the panic it also closes the context for everything below then restarts it
 	defer handleRoutinePanic(lstream)
 
@@ -42,7 +43,7 @@ func GetDBJobs(ctx context.Context, db domain.DatabaseConnection, lstream log.Lo
 						for index := range pendingJobs {
 							if pendingJobs[index].MaxInstances() == 0 || configIDToInstanceCount[pendingJobs[index].ConfigID()] < pendingJobs[index].MaxInstances() {
 								configIDToInstanceCount[pendingJobs[index].ConfigID()]++
-								prepareJobForQueue(db, lstream, appconfig, pendingJobs[index], dispatcher, orgIDToOrgCode)
+								prepareJobForQueue(db, lstream, appconfig, pendingJobs[index], dispatcher, orgIDToOrg)
 							} else {
 								lstream.Send(log.Warningf(err, "Job Runner: waiting to start [%s] as its config currently has %d running instances which is its maximum", pendingJobs[index].ID(), configIDToInstanceCount[pendingJobs[index].ConfigID()]))
 							}
@@ -209,7 +210,7 @@ func createJobHistoryForSchedule(db domain.DatabaseConnection, schedules []domai
 	}
 }
 
-func prepareJobForQueue(db domain.DatabaseConnection, lstream log.Logger, appconfig domain.Config, jh domain.JobHistory, dispatcher Dispatcher, orgIDToOrgCode map[string]string) {
+func prepareJobForQueue(db domain.DatabaseConnection, lstream log.Logger, appconfig domain.Config, jh domain.JobHistory, dispatcher Dispatcher, orgIDToOrg map[string]domain.Organization) {
 	defer handleRoutinePanic(lstream)
 
 	var err error
@@ -236,7 +237,7 @@ func prepareJobForQueue(db domain.DatabaseConnection, lstream log.Logger, appcon
 					db:        db,
 					job:       job,
 					payload:   jh.Payload(),
-					orgMap:    orgIDToOrgCode,
+					orgMap:    orgIDToOrg,
 				}); err != nil {
 					lstream.Send(log.Error("Job Runner: Error while queuing", err))
 				}
@@ -247,6 +248,18 @@ func prepareJobForQueue(db domain.DatabaseConnection, lstream log.Logger, appcon
 	} else {
 		// TODO: nil job history
 	}
+}
+
+type snsClient struct {
+	SNSID string `json:"sns_id"`
+}
+
+func grabSNSIDFromOrgPayloadIfPresent(orgPayload string) (snsID string, exists bool) {
+	parse := &snsClient{}
+	_ = json.Unmarshal([]byte(orgPayload), parse)
+	snsID = parse.SNSID
+	exists = len(snsID) > 0
+	return snsID, exists
 }
 
 // JOB REGISTRY
