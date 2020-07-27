@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/nortonlifelock/aegis/internal/integrations"
 	"github.com/nortonlifelock/domain"
@@ -76,8 +77,17 @@ func (job *RescanJob) Process(ctx context.Context, id string, appconfig domain.C
 				if tickets, err = loadTickets(job.lstream, ticketing, job.Payload.Tickets); err == nil {
 					job.lstream.Send(log.Infof("Tickets Loaded [%s]", strings.Join(job.Payload.Tickets, ",")))
 
+					var scansCreated = 0
+
 					const batchSize = 400
 					for i := 0; i < len(tickets); i += batchSize {
+						scansCreated++
+						if scansCreated%20 == 0 {
+							job.lstream.Send(log.Infof("created 20 scans, waiting 15 minutes before continuing with next batches"))
+							time.Sleep(time.Minute * 15)
+							job.lstream.Send(log.Infof("finished waiting"))
+						}
+
 						if i+batchSize <= len(tickets) {
 							err = job.createAndMonitorScan(ticketToMatch(tickets[i:i+batchSize], job.Payload.Group), tickets[i:i+batchSize])
 						} else {
