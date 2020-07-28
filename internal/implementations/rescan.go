@@ -82,8 +82,8 @@ func (job *RescanJob) Process(ctx context.Context, id string, appconfig domain.C
 					const batchSize = 400
 					for i := 0; i < len(tickets); i += batchSize {
 						scansCreated++
-						if scansCreated%20 == 0 {
-							job.lstream.Send(log.Infof("created 20 scans, waiting 30 minutes before continuing with next batches"))
+						if scansCreated%10 == 0 {
+							job.lstream.Send(log.Infof("created 10 scans, waiting 30 minutes before continuing with next batches"))
 							time.Sleep(time.Minute * 30)
 							job.lstream.Send(log.Infof("finished waiting"))
 						}
