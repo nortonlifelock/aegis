@@ -4,13 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"strings"
-	"time"
-
 	"github.com/nortonlifelock/aegis/internal/integrations"
 	"github.com/nortonlifelock/domain"
 	"github.com/nortonlifelock/log"
 	"github.com/pkg/errors"
+	"strings"
 )
 
 // RescanPayload is used to parse the Payload from the job history table. The Payload is generated automatically from the rescan queue job which creates the
@@ -77,16 +75,8 @@ func (job *RescanJob) Process(ctx context.Context, id string, appconfig domain.C
 				if tickets, err = loadTickets(job.lstream, ticketing, job.Payload.Tickets); err == nil {
 					job.lstream.Send(log.Infof("Tickets Loaded [%s]", strings.Join(job.Payload.Tickets, ",")))
 
-					var scansCreated = 0
-
 					const batchSize = 400
 					for i := 0; i < len(tickets); i += batchSize {
-						scansCreated++
-						if scansCreated%10 == 0 {
-							job.lstream.Send(log.Infof("created 10 scans, waiting 30 minutes before continuing with next batches"))
-							time.Sleep(time.Minute * 30)
-							job.lstream.Send(log.Infof("finished waiting"))
-						}
 
 						if i+batchSize <= len(tickets) {
 							err = job.createAndMonitorScan(ticketToMatch(tickets[i:i+batchSize], job.Payload.Group), tickets[i:i+batchSize])
