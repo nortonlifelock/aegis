@@ -6,6 +6,7 @@ import (
 	"github.com/nortonlifelock/domain"
 	"github.com/nortonlifelock/log"
 	"github.com/nortonlifelock/qualys"
+	"regexp"
 	"strconv"
 	"strings"
 	"sync"
@@ -71,8 +72,25 @@ func (session *QsSession) createVulnerabilityScanForGroup(ctx context.Context, o
 	if len(bundle.ips) > 0 && len(bundle.vulns) > 0 {
 		if optionProfileID, searchListID, err = session.createOptionProfileWithSearchList(bundle.vulns, session.payload.OptionProfileID); err == nil {
 			var scanTitle = fmt.Sprintf(session.payload.ScanNameFormatString, time.Now().Format(time.RFC3339))
-			if _, scanRef, err = session.apiSession.CreateScan(scanTitle, optionProfileID, intArrayToStringArray(bundle.appliances), bundle.networkID, bundle.ips, bundle.external); err == nil {
 
+			_, scanRef, err = session.apiSession.CreateScan(scanTitle, optionProfileID, intArrayToStringArray(bundle.appliances), bundle.networkID, bundle.ips, bundle.external)
+			if err != nil {
+				var retries = 0
+				for errShowsThatScanLimitHit(err) {
+					retries++
+					select {
+					case <-ctx.Done():
+						return nil
+					default:
+					}
+
+					session.lstream.Send(log.Warningf(err, "scan limit hit while trying to create the scan, waiting 15 minutes before trying again - times tried [%d]", retries))
+					time.Sleep(time.Minute * 15)
+					_, scanRef, err = session.apiSession.CreateScan(scanTitle, optionProfileID, intArrayToStringArray(bundle.appliances), bundle.networkID, bundle.ips, bundle.external)
+				}
+			}
+
+			if err == nil {
 				scan := &scan{
 					Name:       scanTitle,
 					ScanID:     scanRef,
@@ -173,10 +191,6 @@ func (session *QsSession) createScanForDetections(ctx context.Context, detection
 	}
 }
 
-/*
-
- */
-
 func (session *QsSession) createDiscoveryScanForGroup(ctx context.Context, out chan<- domain.Scan, bundle *scanBundle, matches []domain.Match) (err error) {
 	if len(bundle.ips) > 0 {
 
@@ -236,9 +250,9 @@ func (session *QsSession) populateGroupVulnerabilityChecks(detections []domain.M
 
 		if !matchFound {
 			if len(match.GroupID()) > 0 {
-				err = fmt.Errorf("empty group ID for IP [%s]", match.IP())
+				err = fmt.Errorf("could not find a group for %v - check to see if there is an online appliance for its expected group - also check if the group ID is in the Qualys SourceConfig payload", match.IP())
 			} else {
-				err = fmt.Errorf("could not find a group for %v - check to see if there is an online appliance for its expected group", match.IP())
+				err = fmt.Errorf("empty group ID for IP [%s]", match.IP())
 			}
 
 			break
@@ -321,4 +335,16 @@ func (session *QsSession) isExternalGroup(groupID int) (val bool) {
 	}
 
 	return val
+}
+
+func errShowsThatScanLimitHit(err error) (scanLimitHit bool) {
+	if err != nil {
+		errContents := err.Error()
+		if len(errContents) > 0 {
+			scanLimitHit = regexp.MustCompile("You are allowed to run \\d+ concurrent scans").MatchString(errContents) &&
+				regexp.MustCompile("This limit has already been reached").MatchString(errContents)
+		}
+	}
+
+	return scanLimitHit
 }
