@@ -297,7 +297,7 @@ func getTicketsBelongingToMatches(matches []domain.Match, tickets []domain.Ticke
 		for _, ticket := range tickets {
 			if ticket.DeviceID() == match.Device() &&
 				strings.Contains(ticket.VulnerabilityID(), match.Vulnerability()) && // strings.Contains because there might be a version at the end of the ticket vuln ID
-				ticket.GroupID() == match.GroupID() {
+				(ticket.GroupID() == match.GroupID() || len(ticket.GroupID()) == 0) {
 				ticketsBelongingToMatches = append(ticketsBelongingToMatches, ticket.Title())
 				break
 			}
