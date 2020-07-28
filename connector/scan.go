@@ -80,7 +80,7 @@ func (session *QsSession) createVulnerabilityScanForGroup(ctx context.Context, o
 					retries++
 					select {
 					case <-ctx.Done():
-						return nil
+						return fmt.Errorf("context closed")
 					default:
 					}
 
