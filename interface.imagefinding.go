@@ -17,4 +17,5 @@ type ImageFinding interface {
 	Summary() *string
 	VendorReference() string
 	VulnerabilityID() string
+	VulnerabilityLocation() string
 }
