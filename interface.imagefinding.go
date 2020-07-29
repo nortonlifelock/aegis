@@ -7,6 +7,7 @@ type ImageFinding interface {
 	CVSS3() *float32
 	ImageName() string
 	ImageVersion() string
+	ImageTag() string
 	Registry() string
 	LastFound() *time.Time
 	FirstFound() *time.Time
