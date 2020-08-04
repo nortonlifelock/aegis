@@ -109,14 +109,14 @@ func (job *ImageRescanJob) processImageFindings(engine integrations.TicketingEng
 				ticketSlice := fanInChannel(tickets)
 				ticketSlice = getTicketsForImage(ticketSlice, image)
 
-				deviceIDToVulnIDToTicket := mapTicketsByDeviceIDVulnID(ticketSlice)
+				deviceIDToVulnIDToTicket := mapTicketsByDeviceIDVulnIDAndPort(ticketSlice)
 				deviceIDToVulnIDToFinding := mapImageFindingsByDeviceIDVulnID(findings)
 
 				for _, finding := range findings {
-
+					vulnID := fmt.Sprintf("%s;%s", finding.VulnerabilityID(), finding.VulnerabilityLocation())
 					if deviceIDToVulnIDToTicket[finding.ImageName()] != nil {
-						if deviceIDToVulnIDToTicket[finding.ImageName()][finding.VulnerabilityID()] != nil {
-							for _, tieTicketToFinding := range deviceIDToVulnIDToTicket[finding.ImageName()][finding.VulnerabilityID()] {
+						if deviceIDToVulnIDToTicket[finding.ImageName()][vulnID] != nil {
+							for _, tieTicketToFinding := range deviceIDToVulnIDToTicket[finding.ImageName()][vulnID] {
 								ticketsWithFindings = append(ticketsWithFindings, imageFindingTicketPair{
 									finding: finding,
 									ticket:  tieTicketToFinding,
@@ -132,7 +132,7 @@ func (job *ImageRescanJob) processImageFindings(engine integrations.TicketingEng
 
 				for _, ticket := range ticketSlice {
 					if deviceIDToVulnIDToFinding[ticket.DeviceID()] != nil {
-						if deviceIDToVulnIDToFinding[ticket.DeviceID()][ticket.VulnerabilityID()] == nil {
+						if deviceIDToVulnIDToFinding[ticket.DeviceID()][fmt.Sprintf("%s;%s", ticket.VulnerabilityID(), sord(ticket.ServicePorts()))] == nil {
 							ticketsWithoutFindings = append(ticketsWithoutFindings, ticket)
 						}
 					} else {
@@ -210,10 +210,10 @@ func (job *ImageRescanJob) updateTicketsWithStaleFindings(engine integrations.Ti
 					pair.ticket,
 					engine,
 				},
-				fmt.Sprintf("finding still detected by %s on [%s]", job.insource.Source(), time.Now().Format(time.RFC822)),
+				fmt.Sprintf("finding still detected in [%s] by %s on [%s]", pair.finding.ImageTag(), job.insource.Source(), time.Now().Format(time.RFC822)),
 			)
 			if err == nil {
-				job.lstream.Send(log.Infof("finding for %s still detected by %s", pair.ticket.Title(), job.insource.Source()))
+				job.lstream.Send(log.Infof("finding for %s still detected on [%s] by %s", pair.ticket.Title(), pair.finding.ImageTag(), job.insource.Source()))
 			} else {
 				job.lstream.Send(log.Errorf(err, "error while updating ticket [%s]", pair.ticket.Title()))
 			}
@@ -385,7 +385,8 @@ func (i *ImageFinding) LastChecked() (param *time.Time) {
 }
 
 func (i *ImageFinding) MacAddress() (param *string) {
-	return
+	val := i.finding.ImageTag()
+	return &val
 }
 
 func (i *ImageFinding) MethodOfDiscovery() (param *string) {
@@ -437,7 +438,8 @@ func (i *ImageFinding) ScanID() (param int) {
 }
 
 func (i *ImageFinding) ServicePorts() (param *string) {
-	return
+	val := i.finding.VulnerabilityLocation()
+	return &val
 }
 
 func (i *ImageFinding) Solution() (param *string) {
@@ -494,7 +496,7 @@ func mapImageFindingsByDeviceIDVulnID(findings []domain.ImageFinding) (entityIDT
 				entityIDToRuleHashToFinding[finding.ImageName()] = make(map[string]domain.ImageFinding)
 			}
 
-			entityIDToRuleHashToFinding[finding.ImageName()][finding.VulnerabilityID()] = finding
+			entityIDToRuleHashToFinding[finding.ImageName()][fmt.Sprintf("%s;%s", finding.VulnerabilityID(), finding.VulnerabilityLocation())] = finding
 		}
 	}
 
@@ -511,4 +513,22 @@ func getTicketsForImage(in []domain.Ticket, image string) (out []domain.Ticket) 
 	}
 
 	return out
+}
+
+func mapTicketsByDeviceIDVulnIDAndPort(tickets []domain.Ticket) (entityIDToRuleHashToTicket map[string]map[string][]domain.Ticket) {
+	entityIDToRuleHashToTicket = make(map[string]map[string][]domain.Ticket)
+	for _, ticket := range tickets {
+		vulnID := fmt.Sprintf("%s;%s", ticket.VulnerabilityID(), sord(ticket.ServicePorts()))
+		if entityIDToRuleHashToTicket[ticket.DeviceID()] == nil {
+			entityIDToRuleHashToTicket[ticket.DeviceID()] = make(map[string][]domain.Ticket)
+		}
+
+		if entityIDToRuleHashToTicket[ticket.DeviceID()][vulnID] == nil {
+			entityIDToRuleHashToTicket[ticket.DeviceID()][vulnID] = make([]domain.Ticket, 0)
+		}
+
+		entityIDToRuleHashToTicket[ticket.DeviceID()][vulnID] = append(entityIDToRuleHashToTicket[ticket.DeviceID()][vulnID], ticket)
+	}
+
+	return entityIDToRuleHashToTicket
 }

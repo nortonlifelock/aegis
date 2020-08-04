@@ -2,6 +2,7 @@ package aqua
 
 import (
 	"fmt"
+	"strings"
 	"time"
 )
 
@@ -15,6 +16,10 @@ func (vr *VulnerabilityResult) CVSS2() *float32 {
 func (vr *VulnerabilityResult) CVSS3() *float32 {
 	val := float32(vr.NvdCvss3Score)
 	return &val
+}
+
+func (vr *VulnerabilityResult) ImageTag() string {
+	return strings.Replace(vr.ImageNameVar, fmt.Sprintf("%s:", vr.ImageRepositoryName), "", 1)
 }
 
 func (vr *VulnerabilityResult) ImageName() string {
@@ -45,10 +50,16 @@ func (vr *VulnerabilityResult) LastUpdated() *time.Time {
 }
 
 func (vr *VulnerabilityResult) Patchable() *string {
+	//val := "No"
+	//if vr.VPatchStatus == "patch_available" {
+	//	val = "Yes"
+	//}
+
 	val := "No"
-	if vr.VPatchStatus == "patch_available" {
+	if len(vr.FixVersion) > 0 {
 		val = "Yes"
 	}
+
 	return &val
 }
 
@@ -61,13 +72,21 @@ func (vr *VulnerabilityResult) Summary() *string {
 }
 
 func (vr *VulnerabilityResult) VendorReference() string {
-	return vr.NvdURL
+	var ref = vr.NvdURL
+	if len(vr.VendorURL) > 0 {
+		ref = fmt.Sprintf("%s\n%s", ref, vr.VendorURL)
+	}
+	return ref
+}
+
+func (vr *VulnerabilityResult) VulnerabilityLocation() string {
+	if len(vr.Resource.Path) > 0 {
+		return vr.Resource.Path // for files
+	} else {
+		return vr.Resource.Cpe // for packages
+	}
 }
 
 func (vr *VulnerabilityResult) VulnerabilityID() string {
-	if len(vr.Resource.Path) > 0 {
-		return fmt.Sprintf("%s;%s", vr.Name, vr.Resource.Path) // for files
-	} else {
-		return fmt.Sprintf("%s;%s", vr.Name, vr.Resource.Cpe) // for packages
-	}
+	return vr.Name
 }
