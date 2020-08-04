@@ -24,4 +24,4 @@ SELECT
     Port,
     DueDate
 FROM `Ignore` O
-WHERE O.OrganizationID = _OrgID AND O.DeviceID IS NOT NULL AND O.Active = b'1';
+WHERE O.OrganizationID = _OrgID AND O.Active = b'1';
