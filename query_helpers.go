@@ -268,6 +268,8 @@ func (connector *ConnectorJira) getTicketsByStatusDueDateAscending(groupID strin
 				orderByAscend("due")
 
 			issues = connector.getSearchResults(q)
+
+			connector.lstream.Send(log.Warningf(err, q.JQL))
 		} else {
 			err = errors.New("zero length status slice passed to getTicketsByStatusDueDateAscending")
 		}
@@ -612,7 +614,11 @@ func (connector *ConnectorJira) runQueriesForScheduledScan(groupID string, metho
 						break
 					}
 				}
+			} else {
+				connector.lstream.Send(log.Errorf(err, "error while grabbing normal tickets for scheduled scans"))
 			}
+		} else {
+			connector.lstream.Send(log.Errorf(err, "error while grabbing decommission tickets for scheduled scans"))
 		}
 	}()
 
