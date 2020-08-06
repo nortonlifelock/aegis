@@ -169,6 +169,7 @@ type GeneratedDatabaseConnection interface {
 	HasExceptionOrFalsePositive(_sourceID string, _vulnID string, _devID string, _orgID string, _port string, _OS string) ([]Ignore, error)
 	HasIgnore(inSourceID string, inVulnID string, inDevID string, inOrgID string, inPort string, inMostCurrentDetection time.Time) (Ignore, error)
 	PulseJob(_JobHistoryID string) (id int, affectedRows int, err error)
+	RemoveExpiredIgnoreIDs(_OrgID string) (id int, affectedRows int, err error)
 	SaveAssignmentGroup(_SourceID string, _OrganizationID string, _IpAddress string, _GroupName string) (id int, affectedRows int, err error)
 	SaveIgnore(_SourceID string, _OrganizationID string, _TypeID int, _VulnerabilityID string, _DeviceID string, _DueDate time.Time, _Approval string, _Active bool, _port string) (id int, affectedRows int, err error)
 	SaveScanSummary(_ScanID string, _ScanStatus string) (id int, affectedRows int, err error)
