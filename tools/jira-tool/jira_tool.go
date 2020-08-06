@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"flag"
 	"fmt"
+	"github.com/nortonlifelock/aegis/tools/jira-tool/tool"
 	"os"
 	"os/signal"
 	"regexp"
@@ -16,7 +17,6 @@ import (
 	"github.com/nortonlifelock/aegis/internal/database"
 	"github.com/nortonlifelock/domain"
 	"github.com/nortonlifelock/files"
-	"github.com/nortonlifelock/jira-tool/tool"
 )
 
 var (

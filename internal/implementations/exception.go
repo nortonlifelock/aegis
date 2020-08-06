@@ -73,6 +73,10 @@ func (job *ExceptionJob) Process(ctx context.Context, id string, appconfig domai
 			}
 
 			job.updateCERFExpirationsInDB(eng)
+			_, _, err = job.db.RemoveExpiredIgnoreIDs(job.config.OrganizationID())
+			if err != nil {
+				job.lstream.Send(log.Errorf(err, "error while deleting outdated IgnoreIDs"))
+			}
 		} else {
 			job.lstream.Send(log.Error("Error while creating ticketing connection", err))
 		}

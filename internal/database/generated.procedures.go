@@ -8481,6 +8481,35 @@ func (conn *dbconn) PulseJob(_JobHistoryID string) (id int, affectedRows int, er
 	return id, affectedRows, err
 }
 
+// RemoveExpiredIgnoreIDs executes the stored procedure RemoveExpiredIgnoreIDs against the database
+func (conn *dbconn) RemoveExpiredIgnoreIDs(_OrgID string) (id int, affectedRows int, err error) {
+
+	conn.Exec(&connection.Procedure{
+		Proc:       "RemoveExpiredIgnoreIDs",
+		Parameters: []interface{}{_OrgID},
+		Callback: func(results interface{}, dberr error) {
+			err = dberr
+
+			if result, ok := results.(sql.Result); ok {
+				var idOut int64
+
+				// Get the id of the last inserted record
+				if idOut, err = result.LastInsertId(); err == nil {
+					id = int(idOut)
+				}
+
+				// Get the number of affected rows for the execution
+				if idOut, err = result.RowsAffected(); ok {
+					affectedRows = int(idOut)
+				}
+			}
+
+		},
+	})
+
+	return id, affectedRows, err
+}
+
 // SaveAssignmentGroup executes the stored procedure SaveAssignmentGroup against the database
 func (conn *dbconn) SaveAssignmentGroup(_SourceID string, _OrganizationID string, _IpAddress string, _GroupName string) (id int, affectedRows int, err error) {
 
