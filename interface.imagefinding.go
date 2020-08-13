@@ -18,4 +18,5 @@ type ImageFinding interface {
 	VendorReference() string
 	VulnerabilityID() string
 	VulnerabilityLocation() string
+	Exception() bool
 }
