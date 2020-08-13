@@ -28,14 +28,14 @@ func (cli *APIClient) RescanImage(ctx context.Context, repository string, regist
 
 				cli.lstream.Send(log.Infof("loading vulnerabilities for [%s:%s|%s]", repository, mostRecentTag, registry))
 
-				var unfilteredFindings []domain.ImageFinding
-				unfilteredFindings, err = cli.GetVulnerabilitiesForImage(ctx, fmt.Sprintf("%s:%s", repository, mostRecentTag), registry)
+				var findingsForImage []domain.ImageFinding
+				findingsForImage, err = cli.GetVulnerabilitiesForImage(ctx, fmt.Sprintf("%s:%s", repository, mostRecentTag), registry)
 
-				for _, unfilteredFinding := range unfilteredFindings {
-					if exceptionMap[getKeyForFinding(unfilteredFinding)] == nil {
-						findings = append(findings, unfilteredFinding)
+				for _, findingForImage := range findingsForImage {
+					if exceptionMap[getKeyForFinding(findingForImage)] == nil {
+						findings = append(findings, findingForImage)
 					} else {
-						cli.lstream.Send(log.Infof("skipping [%s] as it has an exception in Aqua", getKeyForFinding(unfilteredFinding)))
+						findings = append(findings, &exceptedFinding{findingForImage})
 					}
 				}
 			} else {
@@ -63,4 +63,12 @@ func mapFindingsByKey(findings []domain.ImageFinding) (keyToFinding map[string]d
 	}
 
 	return keyToFinding
+}
+
+type exceptedFinding struct {
+	domain.ImageFinding
+}
+
+func (e *exceptedFinding) Exception() bool {
+	return true
 }

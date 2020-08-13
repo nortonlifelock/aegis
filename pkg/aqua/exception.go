@@ -9,14 +9,6 @@ import (
 	"net/http"
 )
 
-/*
- CreateException POST /api/v2/risks/acknowledge
-
-*/
-
-// GetExceptions <-- prevent us from recreating exceptions (Aqua will be the source of truth for exceptions)
-// CreateException <-- when a ticket in JIRA is marked as closed-exception
-
 type createExceptionReq struct {
 	Issues  []ImageIssue `json:"issues"`
 	Comment string       `json:"comment"`

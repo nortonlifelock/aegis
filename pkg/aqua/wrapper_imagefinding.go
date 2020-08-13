@@ -90,3 +90,7 @@ func (vr *VulnerabilityResult) VulnerabilityLocation() string {
 func (vr *VulnerabilityResult) VulnerabilityID() string {
 	return vr.Name
 }
+
+func (vr *VulnerabilityResult) Exception() bool {
+	return false // we will override this method for exceptions
+}

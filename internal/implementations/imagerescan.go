@@ -223,6 +223,12 @@ func (job *ImageRescanJob) updateTicketsWithStaleFindings(engine integrations.Ti
 				if err != nil {
 					job.lstream.Send(log.Errorf(err, "error marking ticket as an exception in Aqua [%s]", pair.ticket.Title()))
 				}
+			} else if pair.finding.Exception() {
+				// close the ticket
+				err = engine.Transition(pair.ticket, engine.GetStatusMap(domain.StatusClosedException), fmt.Sprintf("Moving ticket to closed exception as it was acknowledged in %s", job.insource.Source()), "")
+				if err != nil {
+					job.lstream.Send(log.Errorf(err, "error while setting [%s] to Closed-Exception", pair.ticket.Title()))
+				}
 			}
 		}(ticketsWithFindings[index])
 	}
@@ -233,46 +239,50 @@ func (job *ImageRescanJob) createTicketsForUnticketedFindings(engine integration
 	wg := &sync.WaitGroup{}
 	for index := range findings {
 
-		if ford(findings[index].CVSS2()) >= job.orgPayload.LowestCVSS {
-			wg.Add(1)
-			go func(finding domain.ImageFinding) {
-				defer handleRoutinePanic(job.lstream)
-				defer wg.Done()
+		if !findings[index].Exception() {
+			if ford(findings[index].CVSS2()) >= job.orgPayload.LowestCVSS {
+				wg.Add(1)
+				go func(finding domain.ImageFinding) {
+					defer handleRoutinePanic(job.lstream)
+					defer wg.Done()
 
-				ignore, err := job.db.HasIgnore(job.insource.SourceID(), finding.VulnerabilityID(), finding.ImageName(), job.config.OrganizationID(), "", time.Now())
-				if err != nil {
-					job.lstream.Send(log.Errorf(err, "error while loading ignore for Aqua entry [%s|%s]", finding.ImageName(), finding.VulnerabilityID()))
-				}
-
-				if ignore == nil {
-					var priority string
-					var dueDate time.Time
-					if priority, dueDate, err = calculateSLAForImageFinding(finding, job.orgPayload); err == nil {
-						var ticket = &ImageFinding{
-							finding,
-							job.insource.Source(),
-							job.orgCode,
-							dueDate,
-							priority,
-						}
-
-						_, sourceKey, err := engine.CreateTicket(ticket)
-						if err == nil {
-							job.lstream.Send(log.Infof("Created ticket [%s] for image [%s] on vulnerability [%s]", sourceKey, finding.ImageName(), finding.VulnerabilityID()))
-						} else {
-							job.lstream.Send(log.Errorf(err, "error while creating ticket for image [%s] on vulnerability [%s]", finding.ImageName(), finding.VulnerabilityID()))
-						}
-					} else {
-						job.lstream.Send(log.Errorf(err, "error while calculating SLAs for Image/Vuln [%s|%s]", finding.ImageName(), finding.VulnerabilityID()))
+					ignore, err := job.db.HasIgnore(job.insource.SourceID(), finding.VulnerabilityID(), finding.ImageName(), job.config.OrganizationID(), "", time.Now())
+					if err != nil {
+						job.lstream.Send(log.Errorf(err, "error while loading ignore for Aqua entry [%s|%s]", finding.ImageName(), finding.VulnerabilityID()))
 					}
 
-				} else {
-					job.lstream.Send(log.Infof("SKIPPING ticket for [%s|%s] as it has an ignore entry", finding.ImageName(), finding.VulnerabilityID()))
-				}
+					if ignore == nil {
+						var priority string
+						var dueDate time.Time
+						if priority, dueDate, err = calculateSLAForImageFinding(finding, job.orgPayload); err == nil {
+							var ticket = &ImageFinding{
+								finding,
+								job.insource.Source(),
+								job.orgCode,
+								dueDate,
+								priority,
+							}
 
-			}(findings[index])
+							_, sourceKey, err := engine.CreateTicket(ticket)
+							if err == nil {
+								job.lstream.Send(log.Infof("Created ticket [%s] for image [%s] on vulnerability [%s]", sourceKey, finding.ImageName(), finding.VulnerabilityID()))
+							} else {
+								job.lstream.Send(log.Errorf(err, "error while creating ticket for image [%s] on vulnerability [%s]", finding.ImageName(), finding.VulnerabilityID()))
+							}
+						} else {
+							job.lstream.Send(log.Errorf(err, "error while calculating SLAs for Image/Vuln [%s|%s]", finding.ImageName(), finding.VulnerabilityID()))
+						}
+
+					} else {
+						job.lstream.Send(log.Infof("SKIPPING ticket for [%s|%s] as it has an ignore entry", finding.ImageName(), finding.VulnerabilityID()))
+					}
+
+				}(findings[index])
+			}
+		} else {
+			finding := findings[index]
+			job.lstream.Send(log.Infof("SKIPPING ticket for [%s|%s] as it was marked as an Exception in [%s]", finding.ImageName(), finding.VulnerabilityID(), job.insource.Source()))
 		}
-
 	}
 	wg.Wait()
 }
