@@ -9,6 +9,7 @@ import (
 
 type IScanner interface {
 	RescanImage(ctx context.Context, image string, groupID string) (findings []domain.ImageFinding, err error)
+	CreateException(finding domain.ImageFinding, comment string) (err error)
 }
 
 const (

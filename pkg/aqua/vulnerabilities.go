@@ -36,10 +36,6 @@ func (cli *APIClient) GetVulnerabilitiesForImage(ctx context.Context, image stri
 					} else {
 
 						for index := range vulnPage.Result {
-							//if vulnPage.Result[index].QualysIds != nil {
-							//	fmt.Println(vulnPage.Result[index].QualysIds)
-							//}
-
 							vulns = append(vulns, &vulnPage.Result[index])
 						}
 						page++

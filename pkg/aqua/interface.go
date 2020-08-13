@@ -21,49 +21,46 @@ func (cli *APIClient) RescanImage(ctx context.Context, repository string, regist
 		mostRecentTag := cli.getMostRecentImageTag(images)
 		if len(mostRecentTag) > 0 {
 
-			//cli.lstream.Send(log.Infof("Scanning %s:%s in registry %s", repository, mostRecentTag, registry))
-			//
-			//if err = cli.StartFullImageRescan(registry, repository); err == nil {
-			//	var status = queued
-			//	for status != finished {
-			//		select {
-			//		case <-ctx.Done():
-			//			return
-			//		default:
-			//		}
-			//
-			//		var scan *Scan
-			//		if scan, err = cli.GetScanSummaries(ctx, registry, fmt.Sprintf("%s:%s", repository, mostRecentTag)); scan != nil && err == nil {
-			//			status = scan.StatusVar
-			//			cli.lstream.Send(log.Infof("scan for [%s|%s] has a status [%s]", repository, registry, status))
-			//
-			//			if status == failed {
-			//				err = fmt.Errorf("scan failed")
-			//				break
-			//			} else if status != finished { // TODO what's the error status?
-			//				cli.lstream.Send(log.Debugf("waiting 30 seconds"))
-			//				time.Sleep(time.Second * 30)
-			//			}
-			//		} else {
-			//			err = fmt.Errorf("error while grabbing scan for [%s|%s] - %s", repository, registry, err.Error())
-			//			break
-			//		}
-			//	}
-			//
-			//	if err == nil && status == finished {
-			//		cli.lstream.Send(log.Infof("loading vulnerabilities for [%s:%s|%s]", repository, mostRecentTag, registry))
-			//		findings, err = cli.GetVulnerabilitiesForImage(ctx, fmt.Sprintf("%s:%s", repository, mostRecentTag), registry)
-			//	}
-			//} else {
-			//	err = fmt.Errorf("error while creating rescan for [%s|%s]", repository, registry)
-			//}
+			cli.lstream.Send(log.Infof("loading exceptions"))
+			var exceptions []domain.ImageFinding
+			if exceptions, err = cli.GetExceptions(ctx); err == nil {
+				exceptionMap := mapFindingsByKey(exceptions)
 
-			cli.lstream.Send(log.Infof("loading vulnerabilities for [%s:%s|%s]", repository, mostRecentTag, registry))
-			findings, err = cli.GetVulnerabilitiesForImage(ctx, fmt.Sprintf("%s:%s", repository, mostRecentTag), registry)
+				cli.lstream.Send(log.Infof("loading vulnerabilities for [%s:%s|%s]", repository, mostRecentTag, registry))
+
+				var unfilteredFindings []domain.ImageFinding
+				unfilteredFindings, err = cli.GetVulnerabilitiesForImage(ctx, fmt.Sprintf("%s:%s", repository, mostRecentTag), registry)
+
+				for _, unfilteredFinding := range unfilteredFindings {
+					if exceptionMap[getKeyForFinding(unfilteredFinding)] == nil {
+						findings = append(findings, unfilteredFinding)
+					} else {
+						cli.lstream.Send(log.Infof("skipping [%s] as it has an exception in Aqua", getKeyForFinding(unfilteredFinding)))
+					}
+				}
+			} else {
+				err = fmt.Errorf("error while loading exceptions - %s", err.Error())
+			}
 		} else {
-			err = fmt.Errorf("error while gathering the most recent tag for [%s|%s] - %s", repository, registry, err.Error())
+			err = fmt.Errorf("error while gathering the most recent tag for [%s|%s]", repository, registry)
 		}
 	}
 
 	return findings, err
+}
+
+func getKeyForFinding(finding domain.ImageFinding) (key string) {
+	key = fmt.Sprintf("%s;%s;%s;%s", finding.ImageName(), finding.Registry(), finding.VulnerabilityLocation(), finding.VulnerabilityID())
+	return key
+}
+
+func mapFindingsByKey(findings []domain.ImageFinding) (keyToFinding map[string]domain.ImageFinding) {
+	keyToFinding = make(map[string]domain.ImageFinding)
+
+	for index := range findings {
+		finding := findings[index]
+		keyToFinding[getKeyForFinding(finding)] = finding
+	}
+
+	return keyToFinding
 }

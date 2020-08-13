@@ -140,7 +140,7 @@ func (job *ImageRescanJob) processImageFindings(engine integrations.TicketingEng
 					}
 				}
 
-				job.updateTicketsAccordingToFindings(engine, findingsWithoutTickets, ticketsWithFindings, ticketsWithoutFindings)
+				job.updateTicketsAccordingToFindings(engine, scanner, findingsWithoutTickets, ticketsWithFindings, ticketsWithoutFindings)
 			}
 		}
 	} else {
@@ -150,7 +150,7 @@ func (job *ImageRescanJob) processImageFindings(engine integrations.TicketingEng
 	return err
 }
 
-func (job *ImageRescanJob) updateTicketsAccordingToFindings(engine integrations.TicketingEngine, findingsWithoutTickets []domain.ImageFinding, ticketsWithFindings []imageFindingTicketPair, ticketsWithoutFindings []domain.Ticket) {
+func (job *ImageRescanJob) updateTicketsAccordingToFindings(engine integrations.TicketingEngine, scanner integrations.IScanner, findingsWithoutTickets []domain.ImageFinding, ticketsWithFindings []imageFindingTicketPair, ticketsWithoutFindings []domain.Ticket) {
 	wg := &sync.WaitGroup{}
 	wg.Add(3)
 	go func() {
@@ -161,7 +161,7 @@ func (job *ImageRescanJob) updateTicketsAccordingToFindings(engine integrations.
 	go func() {
 		defer handleRoutinePanic(job.lstream)
 		defer wg.Done()
-		job.updateTicketsWithStaleFindings(engine, ticketsWithFindings)
+		job.updateTicketsWithStaleFindings(engine, scanner, ticketsWithFindings)
 	}()
 	go func() {
 		defer handleRoutinePanic(job.lstream)
@@ -197,7 +197,7 @@ func (job *ImageRescanJob) closeTicketsWithMissingFindings(engine integrations.T
 	wg.Wait()
 }
 
-func (job *ImageRescanJob) updateTicketsWithStaleFindings(engine integrations.TicketingEngine, ticketsWithFindings []imageFindingTicketPair) {
+func (job *ImageRescanJob) updateTicketsWithStaleFindings(engine integrations.TicketingEngine, scanner integrations.IScanner, ticketsWithFindings []imageFindingTicketPair) {
 	wg := &sync.WaitGroup{}
 	for index := range ticketsWithFindings {
 		wg.Add(1)
@@ -216,6 +216,13 @@ func (job *ImageRescanJob) updateTicketsWithStaleFindings(engine integrations.Ti
 				job.lstream.Send(log.Infof("finding for %s still detected on [%s] by %s", pair.ticket.Title(), pair.finding.ImageTag(), job.insource.Source()))
 			} else {
 				job.lstream.Send(log.Errorf(err, "error while updating ticket [%s]", pair.ticket.Title()))
+			}
+
+			if sord(pair.ticket.Status()) == engine.GetStatusMap(domain.StatusClosedException) {
+				err = scanner.CreateException(pair.finding, fmt.Sprintf("%s marked as Closed-Exception on %s", pair.ticket.Title(), time.Now().Format(time.RFC3339)))
+				if err != nil {
+					job.lstream.Send(log.Errorf(err, "error marking ticket as an exception in Aqua [%s]", pair.ticket.Title()))
+				}
 			}
 		}(ticketsWithFindings[index])
 	}

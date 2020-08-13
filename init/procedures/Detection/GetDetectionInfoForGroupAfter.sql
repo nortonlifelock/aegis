@@ -42,4 +42,6 @@ SELECT
 FROM Detection D
          JOIN DetectionStatus DS on D.DetectionStatusId = DS.Id
          JOIN Device Dev ON Dev.AssetID = D.DeviceID
-WHERE (ticketInactiveKernels OR D.ActiveKernel IS NULL OR D.ActiveKernel = 1) AND D.OrganizationID = _OrgID AND D.IgnoreID IS NULL AND (D.Updated > _LastUpdatedAfter OR D.Created > _LastUpdatedAfter) AND D.LastFound > _LastFoundAfter AND DS.Status != 'fixed' AND Dev.GroupID = inGroupID ORDER BY Dev.TrackingMethod, D.Created;
+WHERE (ticketInactiveKernels OR D.ActiveKernel IS NULL OR D.ActiveKernel = 1) AND D.OrganizationID = _OrgID
+  AND D.IgnoreID IS NULL AND (D.Updated > _LastUpdatedAfter OR D.Created > _LastUpdatedAfter)
+  AND D.LastFound > _LastFoundAfter AND DS.Status != 'fixed' AND Dev.GroupID = inGroupID ORDER BY Dev.TrackingMethod, D.Created;
