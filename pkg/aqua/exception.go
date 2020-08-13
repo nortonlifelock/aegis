@@ -60,7 +60,6 @@ func (cli *APIClient) CreateException(finding domain.ImageFinding, comment strin
 
 			var request *http.Request
 			if request, err = http.NewRequest(http.MethodPost, fmt.Sprintf("%s/%s", cli.baseURL, endpoint), bytes.NewReader(body)); err == nil {
-				var body []byte
 				if body, err = cli.executeRequest(request); err == nil {
 				} else {
 					err = fmt.Errorf("error while creating image scan - %s", err.Error())
