@@ -219,9 +219,11 @@ func (job *ImageRescanJob) updateTicketsWithStaleFindings(engine integrations.Ti
 			}
 
 			if sord(pair.ticket.Status()) == engine.GetStatusMap(domain.StatusClosedException) {
-				err = scanner.CreateException(pair.finding, fmt.Sprintf("%s marked as Closed-Exception on %s", pair.ticket.Title(), time.Now().Format(time.RFC3339)))
-				if err != nil {
-					job.lstream.Send(log.Errorf(err, "error marking ticket as an exception in Aqua [%s]", pair.ticket.Title()))
+				if !pair.finding.Exception() { // if the finding isn't already marked as an exception in Aqua, set it as an exception in Aqua
+					err = scanner.CreateException(pair.finding, fmt.Sprintf("%s marked as Closed-Exception on %s", pair.ticket.Title(), time.Now().Format(time.RFC3339)))
+					if err != nil {
+						job.lstream.Send(log.Errorf(err, "error marking ticket as an exception in Aqua [%s]", pair.ticket.Title()))
+					}
 				}
 			} else if pair.finding.Exception() {
 				// close the ticket
