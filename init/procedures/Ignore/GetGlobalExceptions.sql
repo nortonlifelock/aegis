@@ -23,5 +23,5 @@ FROM `Ignore` I
 WHERE
       I.OrganizationID = _OrgID AND
       (I.OSRegex IS NOT NULL OR I.HostnameRegex IS NOT NULL) AND
-      I.DeviceID IS NULL AND
+      I.DeviceID = '' AND
       I.Active = b'1';
