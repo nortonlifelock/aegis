@@ -287,7 +287,11 @@ func (m matchTicket) Vulnerability() string {
 
 // GroupID returns the group that the ticket belongs to. This is used to create the scan within the scanning engine
 func (m matchTicket) GroupID() string {
-	return m.groupID
+	if len(m.t.GroupID()) > 0 {
+		return m.t.GroupID()
+	} else {
+		return m.groupID
+	}
 }
 
 func getTicketsBelongingToMatches(matches []domain.Match, tickets []domain.Ticket) (ticketsBelongingToMatches []string) {
