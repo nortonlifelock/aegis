@@ -13,7 +13,7 @@ require (
 	github.com/nortonlifelock/connection v1.0.1-0.20200116160344-4d492cf1f581
 	github.com/nortonlifelock/crypto v1.0.1-0.20200213175907-562e87a94143
 	github.com/nortonlifelock/domain v1.0.1-0.20200813210922-48e9be4b1953
-	github.com/nortonlifelock/dome9 v1.0.0
+	github.com/nortonlifelock/dome9 v1.0.1-0.20200825204601-3b08f6faf258
 	github.com/nortonlifelock/files v1.0.1-0.20200127165427-5178f1323f54
 	github.com/nortonlifelock/jira v1.0.1-0.20200715164422-06a203866fa7
 	github.com/nortonlifelock/jira-tool v1.0.0
