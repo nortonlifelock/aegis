@@ -64,6 +64,11 @@ func (job *CloudSyncJob) Process(ctx context.Context, id string, appconfig domai
 
 			// first we handle IP tag mapping
 			for _, connection := range cloudConnections {
+				select {
+				case <-job.ctx.Done():
+					return err
+				default:
+				}
 				job.lstream.Send(log.Debug("Gathering IP-Tag mappings"))
 
 				// the first key for ipToKeyToValue is an ip which returns a map holding key-value pairs
@@ -101,6 +106,11 @@ func (job *CloudSyncJob) processTagsForDB(connection integrations.CloudServiceCo
 		job.lstream.Send(log.Info("Tag keys finished processing"))
 
 		for ip, keyToValue := range ipToKeyToValue {
+			select {
+			case <-job.ctx.Done():
+				return
+			default:
+			}
 
 			// a cloud IP may be attached to more than one device in the DB (can happen if a scanner duplicates a device in a different asset group)
 			var devices []domain.Device
