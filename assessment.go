@@ -11,8 +11,8 @@ import (
 func (client *Client) RescanBundle(bundleID int, cloudSubscriptionID string) (findings []domain.Finding, err error) {
 	findings = make([]domain.Finding, 0)
 
-	var vendor string
-	if vendor, err = client.determineCloudAccountTypeFromSubscriptionID(cloudSubscriptionID); err == nil {
+	var vendor, externalAccountNumber, cloudAccountName string
+	if vendor, externalAccountNumber, cloudAccountName, err = client.determineCloudAccountTypeFromSubscriptionID(cloudSubscriptionID); err == nil {
 		var assessmentResult *AssessmentResult
 		assessmentResult, err = client.RunAssessmentOnBundle(bundleID, cloudSubscriptionID, vendor)
 		if err == nil {
@@ -21,9 +21,11 @@ func (client *Client) RescanBundle(bundleID int, cloudSubscriptionID string) (fi
 
 				for _, vulnerableEntity := range test.EntityResults {
 					finding := &Finding{
-						assessmentID:   assessmentResult.ID,
-						bundleID:       bundleID,
-						CloudAccountID: cloudSubscriptionID,
+						assessmentID:             assessmentResult.ID,
+						bundleID:                 bundleID,
+						CloudAccountID:           cloudSubscriptionID,
+						externalCloudAccountID:   externalAccountNumber,
+						externalCloudAccountName: cloudAccountName,
 
 						EntityType:       vulnerableEntity.Obj.EntityType,
 						EntityName:       vulnerableEntity.Obj.Dome9ID,

@@ -27,7 +27,9 @@ type Finding struct {
 	//LastSeenTime time.Time `json:"lastSeenTime"`
 
 	//CloudAccountType string `json:"cloudAccountType"`
-	CloudAccountID string `json:"cloudAccountId"`
+	CloudAccountID           string `json:"cloudAccountId"`
+	externalCloudAccountID   string
+	externalCloudAccountName string
 
 	// bundleID is not returned by the API, but is populated by the api wrapper
 	bundleID int

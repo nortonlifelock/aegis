@@ -64,10 +64,14 @@ func (finding *Finding) getDescription() string {
 	
 		Solution: %solution
 
-		Cloud Account Id:   %accountId`
+		Cloud Account:               %cloudAccountName
+		Dome9 Cloud Account Id:      %dome9ID
+		External Cloud Account Id:   %externalCloudID`
 
 	//descriptionTemp = strings.Replace(descriptionTemp, "%accountType", finding.CloudAccountType, 1)
-	descriptionTemp = strings.Replace(descriptionTemp, "%accountId", finding.CloudAccountID, 1)
+	descriptionTemp = strings.Replace(descriptionTemp, "%dome9ID", finding.CloudAccountID, 1)
+	descriptionTemp = strings.Replace(descriptionTemp, "%externalCloudID", finding.externalCloudAccountID, 1)
+	descriptionTemp = strings.Replace(descriptionTemp, "%cloudAccountName", finding.externalCloudAccountName, 1)
 	descriptionTemp = strings.Replace(descriptionTemp, "%rulename", finding.RuleName, 1)
 	descriptionTemp = strings.Replace(descriptionTemp, "%rulehash", finding.RuleHash, 1)
 	descriptionTemp = strings.Replace(descriptionTemp, "%entityname", finding.EntityName, 1)
