@@ -16,16 +16,24 @@ type csvTicket struct {
 	descToIndex map[string]int
 }
 
+const (
+	yyTimeLayout   = "1/2/06"
+	yyyyTimeLayout = "1/2/2006"
+)
+
 func (t csvTicket) AlertDate() (param *time.Time) {
 	key := "alert date"
 
 	if keyIsInMap(key, t.descToIndex) && len(t.updateLine[t.descToIndex[key]]) > 0 {
 		if t.command == Create {
-			alertDate, err := time.Parse(TimeLayout, t.updateLine[t.descToIndex[key]])
-			if err == nil {
+			if alertDate, err := time.Parse(yyTimeLayout, t.updateLine[t.descToIndex[key]]); err == nil {
 				param = &alertDate
 			} else {
-				fmt.Println(fmt.Sprintf("Error while parsing alert date: %s", err.Error()))
+				if alertDate, err := time.Parse(yyyyTimeLayout, t.updateLine[t.descToIndex[key]]); err == nil {
+					param = &alertDate
+				} else {
+					fmt.Println(fmt.Sprintf("Error while parsing alert date: %s", err.Error()))
+				}
 			}
 		}
 	} else {
@@ -153,11 +161,14 @@ func (t csvTicket) DueDate() (param *time.Time) {
 	key := "due date"
 
 	if keyIsInMap(key, t.descToIndex) && len(t.updateLine[t.descToIndex[key]]) > 0 {
-		dueDate, err := time.Parse(TimeLayout, t.updateLine[t.descToIndex[key]])
-		if err == nil {
+		if dueDate, err := time.Parse(yyTimeLayout, t.updateLine[t.descToIndex[key]]); err == nil {
 			param = &dueDate
 		} else {
-			fmt.Println(fmt.Sprintf("Error while parsing due date: %s", err.Error()))
+			if dueDate, err := time.Parse(yyyyTimeLayout, t.updateLine[t.descToIndex[key]]); err == nil {
+				param = &dueDate
+			} else {
+				fmt.Println(fmt.Sprintf("Error while parsing due date: %s", err.Error()))
+			}
 		}
 	} else {
 		param = t.Ticket.DueDate()
@@ -271,11 +282,14 @@ func (t csvTicket) ResolutionDate() (param *time.Time) {
 	key := "resolution date"
 
 	if keyIsInMap(key, t.descToIndex) && len(t.updateLine[t.descToIndex[key]]) > 0 {
-		resolutionDate, err := time.Parse(TimeLayout, t.updateLine[t.descToIndex[key]])
-		if err == nil {
+		if resolutionDate, err := time.Parse(yyTimeLayout, t.updateLine[t.descToIndex[key]]); err == nil {
 			param = &resolutionDate
 		} else {
-			fmt.Println(fmt.Sprintf("Error while parsing resolution date: %s", err.Error()))
+			if resolutionDate, err := time.Parse(yyyyTimeLayout, t.updateLine[t.descToIndex[key]]); err == nil {
+				param = &resolutionDate
+			} else {
+				fmt.Println(fmt.Sprintf("Error while parsing resolution date: %s", err.Error()))
+			}
 		}
 	} else {
 		param = t.Ticket.ResolutionDate()
