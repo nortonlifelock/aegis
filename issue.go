@@ -228,6 +228,10 @@ func (ji *Issue) OSDetailed() (param *string) {
 	return ji.getStringPointer(backendOSDetailed)
 }
 
+func (ji *Issue) Category() (param *string) {
+	return ji.getStringPointer(backendCategory)
+}
+
 // MethodOfDiscovery gets the MethodOfDiscovery parameter from the Ticket struct
 func (ji *Issue) MethodOfDiscovery() (param *string) {
 	return ji.getStringPointer(backendMOD)

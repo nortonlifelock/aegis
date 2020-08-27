@@ -31,6 +31,7 @@ var MappableFields = []string{
 	backendCVEReferences,
 	backendVendorReferences,
 	backendOSDetailed,
+	backendCategory,
 	backendConfig,
 	backendLastChecked,
 	backendCloudID,
@@ -90,7 +91,6 @@ const (
 	backendPatchable        = "Patchable"
 	backendScanID           = "ScanID"
 	backendOrg              = "Org"
-	backendAutomationID     = "AutomationID"
 	backendSystemName       = "SystemName"
 	backendCERF             = "CERF"
 	backendCERFExpiration   = "Actual Expiration Date"
@@ -98,6 +98,7 @@ const (
 	backendVendorReferences = "VendorRef"
 	backendUpdated          = "Updated"
 	backendOSDetailed       = "OS_Detailed"
+	backendCategory         = "Category"
 	backendConfig           = "Config"
 	backendLastChecked      = "LastChecked"
 	backendCloudID          = "CloudID"
