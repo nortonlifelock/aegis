@@ -76,10 +76,10 @@ func (job *ExceptionJob) Process(ctx context.Context, id string, appconfig domai
 
 			// TODO this requires further testing - this is only required for detections that are no longer synced which have expired ignores
 			// TODO Synced detections have expired ignores removed
-			//_, _, err = job.db.RemoveExpiredIgnoreIDs(job.config.OrganizationID())
-			//if err != nil {
-			//	job.lstream.Send(log.Errorf(err, "error while deleting outdated IgnoreIDs"))
-			//}
+			_, _, err = job.db.RemoveExpiredIgnoreIDs(job.config.OrganizationID())
+			if err != nil {
+				job.lstream.Send(log.Errorf(err, "error while deleting outdated IgnoreIDs"))
+			}
 		} else {
 			job.lstream.Send(log.Error("Error while creating ticketing connection", err))
 		}
