@@ -68,6 +68,7 @@ type GeneratedDatabaseConnection interface {
 	GetCISAssignments(_OrganizationID string) ([]CISAssignments, error)
 	GetCancelledJobs() ([]JobHistory, error)
 	GetCategoryByName(_Name string) ([]Category, error)
+	GetCategoryRules(_OrgID string, _SourceID string) ([]CategoryRule, error)
 	GetDetectionInfo(_DeviceID string, _VulnerabilityID string, _Port int, _Protocol string) (DetectionInfo, error)
 	GetDetectionInfoAfter(_After time.Time, _OrgID string) ([]DetectionInfo, error)
 	GetDetectionInfoByID(_ID string, _OrgID string) (DetectionInfo, error)
