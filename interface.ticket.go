@@ -9,6 +9,7 @@ type Ticket interface {
 	AlertDate() (param *time.Time)
 	AssignedTo() (param *string)
 	AssignmentGroup() (param *string)
+	Category() (param *string)
 	CERF() (param string)
 	CERFExpirationDate() (param time.Time)
 	CVEReferences() (param *string)
