@@ -322,6 +322,10 @@ func (i *ImageFinding) AlertDate() (param *time.Time) {
 	return
 }
 
+func (i *ImageFinding) Category() (param *string) {
+	return
+}
+
 func (i *ImageFinding) AssignedTo() (param *string) {
 	return
 }

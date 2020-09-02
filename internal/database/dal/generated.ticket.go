@@ -24,6 +24,7 @@ type Ticket struct {
 	CERFExpirationDatevar time.Time
 	CVEReferencesvar      *string
 	CVSSvar               *float32
+	Categoryvar           *string
 	CloudIDvar            string
 	Configsvar            string
 	CreatedDatevar        *time.Time
@@ -78,6 +79,7 @@ func (myTicket Ticket) MarshalJSON() ([]byte, error) {
 		"CERFExpirationDate": myTicket.CERFExpirationDatevar,
 		"CVEReferences":      myTicket.CVEReferencesvar,
 		"CVSS":               myTicket.CVSSvar,
+		"Category":           myTicket.Categoryvar,
 		"CloudID":            myTicket.CloudIDvar,
 		"Configs":            myTicket.Configsvar,
 		"CreatedDate":        myTicket.CreatedDatevar,
@@ -152,6 +154,11 @@ func (myTicket *Ticket) CVEReferences() (param *string) {
 // CVSS returns the CVSS parameter from the Ticket struct
 func (myTicket *Ticket) CVSS() (param *float32) {
 	return myTicket.CVSSvar
+}
+
+// Category returns the Category parameter from the Ticket struct
+func (myTicket *Ticket) Category() (param *string) {
+	return myTicket.Categoryvar
 }
 
 // CloudID returns the CloudID parameter from the Ticket struct
@@ -362,6 +369,11 @@ func (myTicket *Ticket) SetCERF(val string) {
 // SetCVEReferences sets the CVEReferences parameter from the Ticket struct
 func (myTicket *Ticket) SetCVEReferences(val string) {
 	myTicket.CVEReferencesvar = &val
+}
+
+// SetCategory sets the Category parameter from the Ticket struct
+func (myTicket *Ticket) SetCategory(val string) {
+	myTicket.Categoryvar = &val
 }
 
 // SetCloudID sets the CloudID parameter from the Ticket struct

@@ -53,13 +53,11 @@ func (job *ExceptionJob) Process(ctx context.Context, id string, appconfig domai
 						case inTicket, ok := <-tix:
 							if ok {
 								wg.Add(1)
-
 								go func(ticket domain.Ticket) {
 									defer handleRoutinePanic(job.lstream)
 									defer wg.Done()
 									job.processExceptionOrFalsePositive(ticket)
 								}(inTicket)
-
 							} else {
 								return
 							}
@@ -135,6 +133,8 @@ func (job *ExceptionJob) processExceptionOrFalsePositive(ticket domain.Ticket) {
 			} else {
 				job.lstream.Send(log.Errorf(err, "Error while updating ticket %s: %s", ticket.Title(), err.Error()))
 			}
+		} else {
+			job.lstream.Send(log.Debugf("Skipping update for %s as it's CERF expired in the past (%s)", ticket.CERFExpirationDate().Format(time.RFC3339)))
 		}
 	} else {
 

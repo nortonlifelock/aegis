@@ -131,6 +131,7 @@ type TicketingJob struct {
 
 	cachedReportedBy string
 	assignmentRules  []assignmentRule
+	categoryRules    []domain.CategoryRule
 	tagMaps          []domain.TagMap
 }
 
@@ -214,67 +215,71 @@ func (job *TicketingJob) Process(ctx context.Context, id string, appconfig domai
 						// the organization Payload holds the SLA configuration
 						if err = job.buildOrgPayload(org); err == nil {
 							if job.assignmentRules, err = job.loadAssignmentRules(); err == nil {
-								if job.tagMaps, err = job.db.GetTagMapsByOrg(job.config.OrganizationID()); err == nil {
-									job.lstream.Send(log.Debug("Scanner connection initialized."))
+								if job.categoryRules, err = job.db.GetCategoryRules(job.config.OrganizationID(), job.insource.SourceID()); err == nil {
+									if job.tagMaps, err = job.db.GetTagMapsByOrg(job.config.OrganizationID()); err == nil {
+										job.lstream.Send(log.Debug("Scanner connection initialized."))
 
-									var groupsToRunTicketingAgainst = make([]string, 0)
+										var groupsToRunTicketingAgainst = make([]string, 0)
 
-									if len(job.Payload.Groups) == 0 {
-										// if there are no groups specified in the ticketing payload, we ticket all the groups that belong to the organization
-										var assetGroups []domain.AssetGroup
-										if assetGroups, err = job.db.GetAssetGroupsForOrg(job.config.OrganizationID()); err == nil {
-											for _, assetGroup := range assetGroups {
-												groupsToRunTicketingAgainst = append(groupsToRunTicketingAgainst, assetGroup.GroupID())
-											}
-										} else {
-											job.lstream.Send(log.Criticalf(err, "error while loading asset groups for ticketing"))
-										}
-									} else {
-										groupsToRunTicketingAgainst = job.Payload.Groups
-									}
-
-									for _, groupID := range groupsToRunTicketingAgainst {
-
-										if len(groupID) > 0 {
-											var assetGroup domain.AssetGroup
-											if assetGroup, err = job.db.GetAssetGroupForOrgNoScanner(job.config.OrganizationID(), groupID); err == nil {
-
-												if assetGroup != nil {
-													var after time.Time
-													if assetGroup.LastTicketing() == nil || assetGroup.LastTicketing().IsZero() {
-														after = tord1970(nil)
-													} else {
-														after = *assetGroup.LastTicketing()
-													}
-
-													job.lstream.Send(log.Infof("Pulling all detections for group [%s] since %s", groupID, after.String()))
-													startTime := time.Now() // must be before we load the detections from the db
-
-													var detections []domain.Detection
-													if detections, err = job.db.GetDetectionForGroupAfter(after, tord1970(job.Payload.LastUpdatedAfter), job.config.OrganizationID(), groupID, job.Payload.TicketInactiveKernels); err == nil {
-
-														job.processVulnerabilities(pushDetectionsToChannel(job.ctx, detections))
-
-														_, _, err = job.db.UpdateAssetGroupLastTicket(groupID, job.config.OrganizationID(), startTime)
-														if err != nil {
-															job.lstream.Send(log.Criticalf(err, "Error while updating the last ticketed date to %s", startTime.String()))
-														}
-													} else {
-														job.lstream.Send(log.Error("Error occurred while loading device vulnerability information", err))
-													}
-												} else {
-													job.lstream.Send(log.Errorf(err, "could not find asset group for org|group [%s|%s]", job.config.OrganizationID(), groupID))
+										if len(job.Payload.Groups) == 0 {
+											// if there are no groups specified in the ticketing payload, we ticket all the groups that belong to the organization
+											var assetGroups []domain.AssetGroup
+											if assetGroups, err = job.db.GetAssetGroupsForOrg(job.config.OrganizationID()); err == nil {
+												for _, assetGroup := range assetGroups {
+													groupsToRunTicketingAgainst = append(groupsToRunTicketingAgainst, assetGroup.GroupID())
 												}
 											} else {
-												err = fmt.Errorf("error while loading asset group for [%s] - %s", groupID, err.Error())
+												job.lstream.Send(log.Criticalf(err, "error while loading asset groups for ticketing"))
 											}
 										} else {
-											err = fmt.Errorf("empty group id in payload")
+											groupsToRunTicketingAgainst = job.Payload.Groups
 										}
-									}
 
+										for _, groupID := range groupsToRunTicketingAgainst {
+
+											if len(groupID) > 0 {
+												var assetGroup domain.AssetGroup
+												if assetGroup, err = job.db.GetAssetGroupForOrgNoScanner(job.config.OrganizationID(), groupID); err == nil {
+
+													if assetGroup != nil {
+														var after time.Time
+														if assetGroup.LastTicketing() == nil || assetGroup.LastTicketing().IsZero() {
+															after = tord1970(nil)
+														} else {
+															after = *assetGroup.LastTicketing()
+														}
+
+														job.lstream.Send(log.Infof("Pulling all detections for group [%s] since %s", groupID, after.String()))
+														startTime := time.Now() // must be before we load the detections from the db
+
+														var detections []domain.Detection
+														if detections, err = job.db.GetDetectionForGroupAfter(after, tord1970(job.Payload.LastUpdatedAfter), job.config.OrganizationID(), groupID, job.Payload.TicketInactiveKernels); err == nil {
+
+															job.processVulnerabilities(pushDetectionsToChannel(job.ctx, detections))
+
+															_, _, err = job.db.UpdateAssetGroupLastTicket(groupID, job.config.OrganizationID(), startTime)
+															if err != nil {
+																job.lstream.Send(log.Criticalf(err, "Error while updating the last ticketed date to %s", startTime.String()))
+															}
+														} else {
+															job.lstream.Send(log.Error("Error occurred while loading device vulnerability information", err))
+														}
+													} else {
+														job.lstream.Send(log.Errorf(err, "could not find asset group for org|group [%s|%s]", job.config.OrganizationID(), groupID))
+													}
+												} else {
+													err = fmt.Errorf("error while loading asset group for [%s] - %s", groupID, err.Error())
+												}
+											} else {
+												err = fmt.Errorf("empty group id in payload")
+											}
+										}
+
+									} else {
+										job.lstream.Send(log.Error("error while loading tag maps", err))
+									}
 								} else {
-									job.lstream.Send(log.Error("error while loading tag maps", err))
+									job.lstream.Send(log.Error("error while loading category rules", err))
 								}
 							} else {
 								job.lstream.Send(log.Errorf(err, "error while loading assignment rules"))
@@ -916,6 +921,7 @@ func (job *TicketingJob) payloadToTicket(payload *vulnerabilityPayload) (newtix 
 		if len(sord(payload.vuln.Patchable())) > 0 {
 			patchable = sord(payload.vuln.Patchable())
 		}
+		var category = getCategoryBasedOnRule(job.categoryRules, vulnerabilityTitle, sord(payload.vuln.Category()), "")
 
 		newtix = &dal.Ticket{
 			DeviceIDvar:          sord(payload.device.SourceID()),
@@ -924,6 +930,7 @@ func (job *TicketingJob) payloadToTicket(payload *vulnerabilityPayload) (newtix 
 			MethodOfDiscoveryvar: &methodOfDiscovery,
 
 			Descriptionvar:        &description,
+			Categoryvar:           &category,
 			Summaryvar:            &summary,
 			Solutionvar:           &solution,
 			VulnerabilityTitlevar: &vulnerabilityTitle,

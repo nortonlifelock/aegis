@@ -2,6 +2,7 @@
   GEN Ticket
   ID                  INT                     NOT
   OrganizationID      NVARCHAR(36)            NOT
+  Category            VARCHAR(300)            NULL
   ScanID              INT                     NOT
   DeviceID            VARCHAR(36)             NOT
   VulnerabilityID     NVARCHAR(250)           NOT

@@ -22,6 +22,7 @@ type CISRescanJob struct {
 	id         string
 	orgCode    string
 	orgPayload *OrgPayload
+	catRules   []domain.CategoryRule
 
 	payloadJSON string
 	ctx         context.Context
@@ -70,21 +71,25 @@ func (job *CISRescanJob) Process(ctx context.Context, id string, appconfig domai
 					var scanner integrations.CISScanner
 					if scanner, err = integrations.GetCISScanner(job.insource.Source(), job.db, job.insource, job.appconfig, job.lstream); err == nil {
 
-						wg := &sync.WaitGroup{}
-						for _, cloudID := range job.Payload.CloudAccountIDs {
-							wg.Add(1)
-							go func(cloudID string) {
-								defer handleRoutinePanic(job.lstream)
-								defer wg.Done()
+						if job.catRules, err = job.db.GetCategoryRules(job.config.OrganizationID(), job.insource.SourceID()); err == nil {
+							wg := &sync.WaitGroup{}
+							for _, cloudID := range job.Payload.CloudAccountIDs {
+								wg.Add(1)
+								go func(cloudID string) {
+									defer handleRoutinePanic(job.lstream)
+									defer wg.Done()
 
-								var err error // error is scoped intentionally
-								err = job.processBundleOnCloud(scanner, engine, job.Payload.BundleID, cloudID)
-								if err != nil {
-									job.lstream.Send(log.Errorf(err, "error while processing bundle ID [%d] for cloud account [%s]", job.Payload.BundleID, cloudID))
-								}
-							}(cloudID)
+									var err error // error is scoped intentionally
+									err = job.processBundleOnCloud(scanner, engine, job.Payload.BundleID, cloudID)
+									if err != nil {
+										job.lstream.Send(log.Errorf(err, "error while processing bundle ID [%d] for cloud account [%s]", job.Payload.BundleID, cloudID))
+									}
+								}(cloudID)
+							}
+							wg.Wait()
+						} else {
+							err = fmt.Errorf("error while loading category rules [%s]", err.Error())
 						}
-						wg.Wait()
 					} else {
 						err = fmt.Errorf("error while building scanning connection - %v", err)
 					}
@@ -244,6 +249,7 @@ func (job *CISRescanJob) createTicketsForUnticketedFindings(engine integrations.
 						finding,
 						job,
 						job.getAssignmentGroupForFinding(assignmentInformation, finding),
+						getCategoryBasedOnRule(job.catRules, finding.VulnerabilityTitle(), "", ""),
 					}
 
 					_, sourceKey, err := engine.CreateTicket(ticket)
@@ -489,6 +495,7 @@ type FindingWrapper struct {
 	domain.Finding
 	job *CISRescanJob
 	ag  string
+	cat string
 }
 
 // AlertDate returns the AlertDate of the ticket
@@ -499,6 +506,10 @@ func (wrapper *FindingWrapper) AlertDate() (param *time.Time) {
 // AssignedTo returns the AssignedTo of the ticket
 func (wrapper *FindingWrapper) AssignedTo() (param *string) {
 	return
+}
+
+func (wrapper *FindingWrapper) Category() (param *string) {
+	return &wrapper.cat
 }
 
 // AssignmentGroup returns the AssignmentGroup of the ticket

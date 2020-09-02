@@ -478,10 +478,14 @@ func (job *ScanCloseJob) modifyJiraTicketAccordingToVulnerabilityStatus(engine i
 			job.lstream.Send(log.Critical(fmt.Sprintf("Unrecognized scan type [%s]", job.Payload.Type), nil))
 		}
 	} else {
-		job.lstream.Send(log.Errorf(nil, "scan [%s] did not seem to cover the device %v - scanner did not report any data for device", job.Payload.ScanID, ticket.DeviceID()))
-		err := engine.Transition(ticket, engine.GetStatusMap(domain.StatusScanError), fmt.Sprintf("scan [%s] did not cover the device %v. Please make sure this asset is still in-	scope and associated with an asset group. If this asset is out of scope, please move this ticket to NOTAVRR status or alert the vulnerability management team.", job.Payload.ScanID, ticket.DeviceID()), sord(ticket.AssignedTo()))
-		if err != nil {
-			job.lstream.Send(log.Errorf(err, "error while marking ticket as ScanError [%s]", ticket.Title()))
+		if !statusIsAClosedStatus(engine, sord(ticket.Status())) {
+			job.lstream.Send(log.Errorf(nil, "scan [%s] did not seem to cover the device %v - scanner did not report any data for device", job.Payload.ScanID, ticket.DeviceID()))
+			err := engine.Transition(ticket, engine.GetStatusMap(domain.StatusScanError), fmt.Sprintf("scan [%s] did not cover the device %v. Please make sure this asset is still in-	scope and associated with an asset group. If this asset is out of scope, please move this ticket to NOTAVRR status or alert the vulnerability management team.", job.Payload.ScanID, ticket.DeviceID()), sord(ticket.AssignedTo()))
+			if err != nil {
+				job.lstream.Send(log.Errorf(err, "error while marking ticket as ScanError [%s]", ticket.Title()))
+			}
+		} else {
+			job.lstream.Send(log.Debugf("Not setting %s to Scan-Error as it is in a closed status [%s]", ticket.Title(), sord(ticket.Status())))
 		}
 	}
 }
@@ -622,10 +626,14 @@ func (job *ScanCloseJob) processTicketForNormalRescan(deadHostIPToProofMap map[s
 			job.lstream.Send(log.Errorf(err, "error while marking ticket as ResolvedDecomm %s", ticket.Title()))
 		}
 	} else if detection != nil && detection.LastUpdated() != nil && detection.LastUpdated().Before(scan.CreatedDate()) && !detection.LastUpdated().IsZero() && !scan.CreatedDate().IsZero() && trackingMethod != AgentDevice {
-		job.lstream.Send(log.Infof("the scan didn't check %s for vulnerability %s [%s before %s]", ticket.Title(), ticket.VulnerabilityID(), detection.LastUpdated().Format(time.RFC822), scan.CreatedDate().Format(time.RFC822)))
-		err = engine.Transition(ticket, engine.GetStatusMap(domain.StatusScanError), fmt.Sprintf("The scan did not check the device for the vulnerability likely due to authentication issues"), sord(ticket.AssignedTo()))
-		if err != nil {
-			job.lstream.Send(log.Errorf(err, "error while transitioning ticket %s", ticket.Title()))
+		if !statusIsAClosedStatus(engine, sord(ticket.Status())) {
+			job.lstream.Send(log.Infof("the scan didn't check %s for vulnerability %s [%s before %s]", ticket.Title(), ticket.VulnerabilityID(), detection.LastUpdated().Format(time.RFC822), scan.CreatedDate().Format(time.RFC822)))
+			err = engine.Transition(ticket, engine.GetStatusMap(domain.StatusScanError), fmt.Sprintf("The scan did not check the device for the vulnerability likely due to authentication issues"), sord(ticket.AssignedTo()))
+			if err != nil {
+				job.lstream.Send(log.Errorf(err, "error while transitioning ticket %s", ticket.Title()))
+			}
+		} else {
+			job.lstream.Send(log.Debugf("Not setting %s to Scan-Error as it is in a closed status [%s]", ticket.Title(), sord(ticket.Status())))
 		}
 	} else if detection == nil || status == domain.Fixed || status == domain.Potential {
 		// Non-decommission scan, the detection appears to be fixed, so close the ticket
@@ -822,4 +830,24 @@ func combineVulnerabilityIDAndServicePortDetection(det domain.Detection) (result
 		servicePort = fmt.Sprintf("%d %s", det.Port(), det.Protocol())
 	}
 	return fmt.Sprintf("%s;%s", det.VulnerabilityID(), servicePort)
+}
+
+func statusIsAClosedStatus(engine integrations.TicketingEngine, status string) (isClosedStatus bool) {
+	var closedStatuses = []string{
+		domain.StatusClosedRemediated,
+		domain.StatusClosedFalsePositive,
+		domain.StatusClosedDecommissioned,
+		domain.StatusClosedException,
+		domain.StatusClosedCerf,
+		domain.StatusClosedError,
+	}
+
+	for _, closedStatus := range closedStatuses {
+		if engine.GetStatusMap(closedStatus) == status {
+			isClosedStatus = true
+			break
+		}
+	}
+
+	return isClosedStatus
 }

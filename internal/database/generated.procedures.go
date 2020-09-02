@@ -2152,6 +2152,65 @@ func (conn *dbconn) GetCategoryByName(_Name string) ([]domain.Category, error) {
 	return retCategory, err
 }
 
+// GetCategoryRules executes the stored procedure GetCategoryRules against the database and returns the read results
+func (conn *dbconn) GetCategoryRules(_OrgID string, _SourceID string) ([]domain.CategoryRule, error) {
+	var err error
+	var retCategoryRule = make([]domain.CategoryRule, 0)
+
+	conn.Read(&connection.Procedure{
+		Proc:       "GetCategoryRules",
+		Parameters: []interface{}{_OrgID, _SourceID},
+		Callback: func(results interface{}, dberr error) {
+			err = dberr
+
+			if err == nil {
+
+				err = conn.getRows(results,
+					func(rows *sql.Rows) (err error) {
+						if err = rows.Err(); err == nil {
+
+							var myID string
+							var myOrganizationID string
+							var mySourceID string
+							var myVulnerabilityTitle *string
+							var myVulnerabilityCategory *string
+							var myVulnerabilityType *string
+							var myCategory string
+
+							if err = rows.Scan(
+
+								&myID,
+								&myOrganizationID,
+								&mySourceID,
+								&myVulnerabilityTitle,
+								&myVulnerabilityCategory,
+								&myVulnerabilityType,
+								&myCategory,
+							); err == nil {
+
+								newCategoryRule := &dal.CategoryRule{
+									IDvar:                    myID,
+									OrganizationIDvar:        myOrganizationID,
+									SourceIDvar:              mySourceID,
+									VulnerabilityTitlevar:    myVulnerabilityTitle,
+									VulnerabilityCategoryvar: myVulnerabilityCategory,
+									VulnerabilityTypevar:     myVulnerabilityType,
+									Categoryvar:              myCategory,
+								}
+
+								retCategoryRule = append(retCategoryRule, newCategoryRule)
+							}
+						}
+
+						return err
+					})
+			}
+		},
+	})
+
+	return retCategoryRule, err
+}
+
 // GetDetectionInfo executes the stored procedure GetDetectionInfo against the database and returns the read results
 func (conn *dbconn) GetDetectionInfo(_DeviceID string, _VulnerabilityID string, _Port int, _Protocol string) (domain.DetectionInfo, error) {
 	var err error

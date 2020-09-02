@@ -87,3 +87,34 @@ func getPermitThread(simultaneousCount int) (permit chan bool) {
 
 	return permit
 }
+
+func getCategoryBasedOnRule(rules []domain.CategoryRule, vulnTitle, vulnCategory, vulnType string) (category string) {
+	for _, rule := range rules {
+		var invalid bool
+
+		if rule.VulnerabilityTitle() != nil {
+			if sord(rule.VulnerabilityTitle()) != vulnTitle {
+				invalid = true
+			}
+		}
+
+		if rule.VulnerabilityCategory() != nil {
+			if sord(rule.VulnerabilityCategory()) != vulnCategory {
+				invalid = true
+			}
+		}
+
+		if rule.VulnerabilityType() != nil {
+			if sord(rule.VulnerabilityType()) != vulnType {
+				invalid = true
+			}
+		}
+
+		if !invalid {
+			category = rule.Category()
+			break
+		}
+	}
+
+	return category
+}
