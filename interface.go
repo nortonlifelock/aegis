@@ -20,6 +20,7 @@ type DatabaseConnection interface {
 	GetDetectionsForDevice(_DeviceID string) ([]Detection, error)
 	GetDetectionsAfter(after time.Time, orgID string) (detections []Detection, err error)
 	GetDetectionForGroupAfter(_LastUpdatedAfter time.Time, _LastFoundAfter time.Time, _OrgID string, inGroupID string, ticketInactiveKernels bool) ([]Detection, error)
+	GetDetectionForDeviceID(inDeviceID string, _OrgID string, ticketInactiveKernels bool) ([]Detection, error)
 
 	GetVulnReferences(vulnInfoID string, sourceID string) (references []VulnerabilityReference, err error)
 	GetVulnRef(vulnInfoID string, sourceID string, reference string) (existing VulnerabilityReference, err error)

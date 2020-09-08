@@ -73,6 +73,7 @@ type GeneratedDatabaseConnection interface {
 	GetDetectionInfoAfter(_After time.Time, _OrgID string) ([]DetectionInfo, error)
 	GetDetectionInfoByID(_ID string, _OrgID string) (DetectionInfo, error)
 	GetDetectionInfoBySourceVulnID(_SourceDeviceID string, _SourceVulnerabilityID string, _Port int, _Protocol string) (DetectionInfo, error)
+	GetDetectionInfoForDeviceID(inDeviceID string, _OrgID string, ticketInactiveKernels bool) ([]DetectionInfo, error)
 	GetDetectionInfoForGroupAfter(_LastUpdatedAfter time.Time, _LastFoundAfter time.Time, _OrgID string, inGroupID string, ticketInactiveKernels bool) ([]DetectionInfo, error)
 	GetDetectionStatusByID(_ID int) (DetectionStatus, error)
 	GetDetectionStatusByName(_Name string) (DetectionStatus, error)
