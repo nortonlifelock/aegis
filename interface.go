@@ -302,6 +302,7 @@ func (connector *ConnectorJira) UpdateTicket(ticket domain.Ticket, comment strin
 				if field != nil {
 					updateBlock.Fields.OWASP = &ValueField{}
 					updateBlock.Fields.OWASP.Value = *ticket.OWASP()
+					updateBlock.Fields.OWASP.ID = "0"
 					oldToNewFieldName["owasp"] = field.ID
 				}
 			}
