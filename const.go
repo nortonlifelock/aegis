@@ -20,6 +20,7 @@ var MappableFields = []string{
 	backendVulnerability,
 	backendCVSS,
 	backendVulnerabilityID,
+	backendOWASP,
 	backendGroupID,
 	backendSystemName,
 	backendPatchable,
@@ -86,6 +87,7 @@ const (
 	backendVulnerability    = "Vulnerablility" // typo is present in JIRA and intentional
 	backendCVSS             = "cvss_score"
 	backendVulnerabilityID  = "VulnerabilityID"
+	backendOWASP            = "OWASP"
 	backendGroupID          = "GroupID"
 	backendDeviceID         = "DeviceID"
 	backendPatchable        = "Patchable"

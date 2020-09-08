@@ -262,6 +262,11 @@ func (ji *Issue) VulnerabilityID() (param string) {
 	return ji.getString(backendVulnerabilityID)
 }
 
+// VulnerabilityID gets the VulnerabilityID parameter from the Ticket struct
+func (ji *Issue) OWASP() (param *string) {
+	return ji.getStringPointer(backendOWASP)
+}
+
 // ID gets the ID parameter from the Ticket struct
 func (ji *Issue) ID() (param int) {
 	return // DB field
