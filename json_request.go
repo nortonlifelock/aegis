@@ -96,7 +96,7 @@ type FieldList struct {
 	VulnerabilityTitle *string     `json:"vulnerabilitytitle,omitempty"`
 	CveReferences      *string     `json:"cve_references,omitempty"`
 	IPAddress          *string     `json:"ipaddress,omitempty"`
-	OWASP              *string     `json:"owasp,omitempty"`
+	OWASP              *ValueField `json:"owasp,omitempty"`
 	ID                 int32       `json:"id,omitempty"`
 	Title              string      `json:"title,omitempty"`
 	Status             *string     `json:"status,omitempty"`
