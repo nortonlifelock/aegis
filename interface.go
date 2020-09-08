@@ -297,12 +297,10 @@ func (connector *ConnectorJira) UpdateTicket(ticket domain.Ticket, comment strin
 				}
 			}
 
-			if ticket.OWASP() != nil {
-				field := connector.GetFieldMap(backendOWASP)
-				if field != nil {
-					updateBlock.Fields.OWASP = ticket.OWASP()
-					oldToNewFieldName["owasp"] = field.ID
-				}
+			field = connector.GetFieldMap(backendOWASP)
+			if field != nil {
+				updateBlock.Fields.OWASP = ticket.OWASP()
+				oldToNewFieldName["owasp"] = field.ID
 			}
 
 			if ticket.IPAddress() != nil {
