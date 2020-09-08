@@ -34,6 +34,7 @@ type Ticket interface {
 	OperatingSystem() (param *string)
 	OrgCode() (param *string)
 	OrganizationID() (param string)
+	OWASP() (param *string)
 	Patchable() (param *string)
 	Priority() (param *string)
 	Project() (param *string)
