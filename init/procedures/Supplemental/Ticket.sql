@@ -46,5 +46,6 @@
   OSDetailed          NVARCHAR(255)           NULL
   VendorReferences    TEXT                    NULL
   Patchable           VARCHAR(30)             NULL
+  OWASP               VARCHAR(300)            NULL
 */
 #BEGIN#

@@ -42,6 +42,7 @@ type Ticket struct {
 	MacAddressvar         *string
 	MethodOfDiscoveryvar  *string
 	OSDetailedvar         *string
+	OWASPvar              *string
 	OperatingSystemvar    *string
 	OrgCodevar            *string
 	OrganizationIDvar     string
@@ -97,6 +98,7 @@ func (myTicket Ticket) MarshalJSON() ([]byte, error) {
 		"MacAddress":         myTicket.MacAddressvar,
 		"MethodOfDiscovery":  myTicket.MethodOfDiscoveryvar,
 		"OSDetailed":         myTicket.OSDetailedvar,
+		"OWASP":              myTicket.OWASPvar,
 		"OperatingSystem":    myTicket.OperatingSystemvar,
 		"OrgCode":            myTicket.OrgCodevar,
 		"OrganizationID":     myTicket.OrganizationIDvar,
@@ -244,6 +246,11 @@ func (myTicket *Ticket) MethodOfDiscovery() (param *string) {
 // OSDetailed returns the OSDetailed parameter from the Ticket struct
 func (myTicket *Ticket) OSDetailed() (param *string) {
 	return myTicket.OSDetailedvar
+}
+
+// OWASP returns the OWASP parameter from the Ticket struct
+func (myTicket *Ticket) OWASP() (param *string) {
+	return myTicket.OWASPvar
 }
 
 // OperatingSystem returns the OperatingSystem parameter from the Ticket struct
@@ -424,6 +431,11 @@ func (myTicket *Ticket) SetMethodOfDiscovery(val string) {
 // SetOSDetailed sets the OSDetailed parameter from the Ticket struct
 func (myTicket *Ticket) SetOSDetailed(val string) {
 	myTicket.OSDetailedvar = &val
+}
+
+// SetOWASP sets the OWASP parameter from the Ticket struct
+func (myTicket *Ticket) SetOWASP(val string) {
+	myTicket.OWASPvar = &val
 }
 
 // SetOperatingSystem sets the OperatingSystem parameter from the Ticket struct

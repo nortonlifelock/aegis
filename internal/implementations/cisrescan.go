@@ -731,3 +731,7 @@ func (wrapper *FindingWrapper) VulnerabilityTitle() (param *string) {
 func (wrapper *FindingWrapper) SystemName() (param *string) {
 	return nil
 }
+
+func (wrapper *FindingWrapper) OWASP() (param *string) {
+	return nil
+}

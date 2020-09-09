@@ -133,6 +133,26 @@ func (conn *dbconn) GetDevicesByCloudSourceID(_CloudSourceID string, _OrgID stri
 	return devices, err
 }
 
+func (conn *dbconn) GetDetectionForDeviceID(inDeviceID string, _OrgID string, ticketInactiveKernels bool) ([]domain.Detection, error) {
+	var detections = make([]domain.Detection, 0)
+
+	var infos []domain.DetectionInfo
+	var err error
+	infos, err = conn.GetDetectionInfoForDeviceID(inDeviceID, _OrgID, ticketInactiveKernels)
+	if err == nil {
+		for _, info := range infos {
+			if info != nil {
+				detections = append(detections, &dal.Detection{
+					Conn: conn,
+					Info: info,
+				})
+			}
+		}
+	}
+
+	return detections, err
+}
+
 func (conn *dbconn) GetDetectionForGroupAfter(_After time.Time, _LastUpdatedAfter time.Time, _OrgID string, inGroupID string, ticketInactiveKernels bool) ([]domain.Detection, error) {
 	var detections = make([]domain.Detection, 0)
 

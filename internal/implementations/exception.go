@@ -46,16 +46,30 @@ func (job *ExceptionJob) Process(ctx context.Context, id string, appconfig domai
 				var wg = sync.WaitGroup{}
 				func() {
 
+					permit := getPermitThread(100)
 					for {
+
 						select {
 						case <-ctx.Done():
 							return
 						case inTicket, ok := <-tix:
 							if ok {
+								select {
+								case <-permit:
+								case <-job.ctx.Done():
+									return
+								}
 								wg.Add(1)
 								go func(ticket domain.Ticket) {
 									defer handleRoutinePanic(job.lstream)
 									defer wg.Done()
+									defer func() {
+										select {
+										case permit <- true:
+										case <-job.ctx.Done():
+										}
+									}()
+
 									job.processExceptionOrFalsePositive(ticket)
 								}(inTicket)
 							} else {
