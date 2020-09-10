@@ -60,7 +60,6 @@ type searchResult struct {
 // ValueField is a member of FieldList and must be exported in order to be marshaled
 type ValueField struct {
 	Value string `json:"value,omitempty"`
-	ID    string `json:"id,omitempty"`
 	Name  string `json:"name,omitempty"`
 }
 
@@ -96,6 +95,7 @@ type FieldList struct {
 	VulnerabilityTitle *string     `json:"vulnerabilitytitle,omitempty"`
 	CveReferences      *string     `json:"cve_references,omitempty"`
 	IPAddress          *string     `json:"ipaddress,omitempty"`
+	ExceptionDate      *time.Time  `json:"exceptiondate,omitempty"`
 	OWASP              *ValueField `json:"owasp,omitempty"`
 	ID                 int32       `json:"id,omitempty"`
 	Title              string      `json:"title,omitempty"`

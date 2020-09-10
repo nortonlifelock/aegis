@@ -267,6 +267,10 @@ func (ji *Issue) OWASP() (param *string) {
 	return ji.getStringPointer(backendOWASP)
 }
 
+func (ji *Issue) ExceptionDate() (param *time.Time) {
+	return ji.getTimePointer(backendExceptionDate)
+}
+
 // ID gets the ID parameter from the Ticket struct
 func (ji *Issue) ID() (param int) {
 	return // DB field

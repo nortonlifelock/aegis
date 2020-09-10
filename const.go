@@ -21,6 +21,7 @@ var MappableFields = []string{
 	backendCVSS,
 	backendVulnerabilityID,
 	backendOWASP,
+	backendExceptionDate,
 	backendGroupID,
 	backendSystemName,
 	backendPatchable,
@@ -88,6 +89,7 @@ const (
 	backendCVSS             = "cvss_score"
 	backendVulnerabilityID  = "VulnerabilityID"
 	backendOWASP            = "OWASP"
+	backendExceptionDate    = "Exception Date"
 	backendGroupID          = "GroupID"
 	backendDeviceID         = "DeviceID"
 	backendPatchable        = "Patchable"
