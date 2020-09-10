@@ -43,6 +43,7 @@ func (job *ExceptionJob) Process(ctx context.Context, id string, appconfig domai
 				// kick off a thread that pushes closed tickets onto a channel
 				var tix = eng.GetTicketsByClosedStatus(orgCode, methodOfDiscovery, tord1970(job.config.LastJobStart()).UTC())
 
+				seen := make(map[string]bool)
 				var wg = sync.WaitGroup{}
 				func() {
 
@@ -54,24 +55,33 @@ func (job *ExceptionJob) Process(ctx context.Context, id string, appconfig domai
 							return
 						case inTicket, ok := <-tix:
 							if ok {
-								select {
-								case <-permit:
-								case <-job.ctx.Done():
-									return
-								}
-								wg.Add(1)
-								go func(ticket domain.Ticket) {
-									defer handleRoutinePanic(job.lstream)
-									defer wg.Done()
-									defer func() {
-										select {
-										case permit <- true:
-										case <-job.ctx.Done():
-										}
-									}()
 
-									job.processExceptionOrFalsePositive(ticket)
-								}(inTicket)
+								if seen[inTicket.CERF()] {
+									wg.Add(1)
+									select {
+									case <-permit:
+									case <-job.ctx.Done():
+										return
+									}
+									go func(ticket domain.Ticket) {
+										defer handleRoutinePanic(job.lstream)
+										defer wg.Done()
+										defer func() {
+											select {
+											case permit <- true:
+											case <-job.ctx.Done():
+											}
+										}()
+
+										job.processExceptionOrFalsePositive(ticket)
+									}(inTicket)
+								} else {
+									seen[inTicket.CERF()] = true
+									job.lstream.Send(log.Debugf("Slow loading %s", inTicket.CERF()))
+									job.processExceptionOrFalsePositive(inTicket)
+									job.lstream.Send(log.Debugf("Done loading %s", inTicket.CERF()))
+								}
+
 							} else {
 								return
 							}
