@@ -22,6 +22,7 @@ type Ticket interface {
 	Description() (param *string)
 	DeviceID() (param string)
 	DueDate() (param *time.Time)
+	ExceptionDate() (param *time.Time)
 	GroupID() string
 	HostName() (param *string)
 	ID() (param int)
