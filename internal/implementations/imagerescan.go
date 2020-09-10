@@ -512,6 +512,10 @@ func (i *ImageFinding) OWASP() (param *string) {
 	return nil
 }
 
+func (i *ImageFinding) ExceptionDate() (param *time.Time) {
+	return nil
+}
+
 func mapImageFindingsByDeviceIDVulnID(findings []domain.ImageFinding) (entityIDToRuleHashToFinding map[string]map[string]domain.ImageFinding) {
 	// DeviceID = Image name
 	// VulnID = CVE

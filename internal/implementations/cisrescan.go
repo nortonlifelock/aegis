@@ -735,3 +735,7 @@ func (wrapper *FindingWrapper) SystemName() (param *string) {
 func (wrapper *FindingWrapper) OWASP() (param *string) {
 	return nil
 }
+
+func (wrapper *FindingWrapper) ExceptionDate() (param *time.Time) {
+	return nil
+}

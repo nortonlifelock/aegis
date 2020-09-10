@@ -47,5 +47,6 @@
   VendorReferences    TEXT                    NULL
   Patchable           VARCHAR(30)             NULL
   OWASP               VARCHAR(300)            NULL
+  ExceptionDate       DATETIME                NULL
 */
 #BEGIN#
