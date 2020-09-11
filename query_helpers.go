@@ -268,8 +268,6 @@ func (connector *ConnectorJira) getTicketsByStatusDueDateAscending(groupID strin
 				orderByAscend("due")
 
 			issues = connector.getSearchResults(q)
-
-			connector.lstream.Send(log.Warningf(err, q.JQL))
 		} else {
 			err = errors.New("zero length status slice passed to getTicketsByStatusDueDateAscending")
 		}
