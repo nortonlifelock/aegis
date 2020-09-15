@@ -40,3 +40,12 @@ func handleRoutinePanic(lstream log.Logger) {
 		lstream.Send(newLog)
 	}
 }
+
+func getPermitThread(simultaneousCount int) (permit chan bool) {
+	permit = make(chan bool, simultaneousCount)
+	for i := 0; i < simultaneousCount; i++ {
+		permit <- true
+	}
+
+	return permit
+}

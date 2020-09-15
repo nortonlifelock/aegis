@@ -3,8 +3,12 @@ package qualys
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/nortonlifelock/domain"
+	"github.com/nortonlifelock/log"
 	"io/ioutil"
 	"net/http"
+	"strings"
+	"sync"
 )
 
 type EvaluationResult struct {
@@ -146,9 +150,14 @@ type Pageable struct {
 	Unpaged    bool `json:"unpaged"`
 }
 
-func (session *Session) GetCloudViewFindings(accountID string) (err error) {
+func (session *Session) GetCloudViewFindings(accountID string) (findings []domain.Finding, err error) {
+	// TODO break this method up
+	// TODO this should only be responsible for calling apis, the caller should do all the processing
+
+	findings = make([]domain.Finding, 0)
 	accountEvaluation := &AccountEvaluationResponse{}
 
+	// TODO page/sort
 	var req *http.Request
 	req, err = http.NewRequest(http.MethodGet, session.Config.Address()+fmt.Sprintf("/cloudview-api/rest/v1/aws/evaluations/%s", accountID), nil)
 	if err == nil {
@@ -168,42 +177,131 @@ func (session *Session) GetCloudViewFindings(accountID string) (err error) {
 	}
 
 	if err == nil {
-		for _, val := range accountEvaluation.Content {
-			// TODO can page through results
 
-			evaluationResult := &EvaluationResult{}
-
-			req, err = http.NewRequest(http.MethodGet, session.Config.Address()+fmt.Sprintf("/cloudview-api/rest/v1/aws/evaluations/%s/resources/%s", accountID, val.ControlID), nil)
-			if err == nil {
-				err = session.makeRequest(req, func(resp *http.Response) (err error) {
-					var body []byte
-					body, err = ioutil.ReadAll(resp.Body)
-					if err == nil {
-						err = json.Unmarshal(body, evaluationResult)
-					} else {
-						err = fmt.Errorf("error while reading response body - %s", err.Error())
-					}
-
-					return err
-				})
-			} else {
-				err = fmt.Errorf("error while making request - %s", err.Error())
-			}
-
-			if err != nil {
-				break
-			}
-
-			for _, finding := range evaluationResult.Content {
-				fmt.Println(finding)
-			}
+		if !accountEvaluation.Last {
+			session.lstream.Send(log.Warningf(nil, "there were more evaluations to load for account %s", accountID))
 		}
+
+		var parentErr error
+		var wg sync.WaitGroup
+		var findingLock sync.Mutex
+		permit := getPermitThread(10)
+		for _, val := range accountEvaluation.Content {
+			// TODO page/sort
+
+			wg.Add(1)
+			select {
+			case <-permit:
+			case <-session.ctx.Done():
+				return
+			}
+
+			go func(val EvaluationContent) {
+				defer wg.Done()
+				defer func() {
+					permit <- true
+				}()
+
+				evaluationResult := &EvaluationResult{}
+
+				req, err = http.NewRequest(http.MethodGet, session.Config.Address()+fmt.Sprintf("/cloudview-api/rest/v1/aws/evaluations/%s/resources/%s", accountID, val.ControlID), nil)
+				if err == nil {
+					err = session.makeRequest(req, func(resp *http.Response) (err error) {
+						var body []byte
+						body, err = ioutil.ReadAll(resp.Body)
+						if err == nil {
+							err = json.Unmarshal(body, evaluationResult)
+						} else {
+							err = fmt.Errorf("error while reading response body - %s", err.Error())
+						}
+
+						return err
+					})
+				} else {
+					err = fmt.Errorf("error while making request - %s", err.Error())
+				}
+
+				if !evaluationResult.Last {
+					session.lstream.Send(log.Warningf(nil, "there were more evaluations to load for account %s/control %s", accountID, val.ControlID))
+				}
+
+				if err != nil {
+					parentErr = err
+				}
+
+				const (
+					fixedFinding = "PASS"
+				)
+
+				findingLock.Lock()
+				for _, finding := range evaluationResult.Content {
+					if finding.Result != fixedFinding {
+						findings = append(findings, &cloudViewFinding{
+							evaluationContent: finding,
+							accountContent:    val,
+						})
+					}
+				}
+				findingLock.Unlock()
+			}(val)
+		}
+
+		wg.Wait()
+		err = parentErr
 	}
 
-	/*
-			GET /rest/v1/aws/evaluations/{accountId}/resources/{controlId}
-		    GET /rest/v1/aws/evaluations/{accountID}
-				from awsAccountId
-	*/
-	return err
+	return findings, err
+}
+
+type cloudViewFinding struct {
+	evaluationContent EvaluationResultContent
+	accountContent    EvaluationContent
+}
+
+// ID corresponds to a vulnerability ID
+func (f *cloudViewFinding) ID() string {
+	return f.accountContent.ControlName
+}
+
+// DeviceID corresponds to the entity violating the rule
+func (f *cloudViewFinding) DeviceID() string {
+	return f.evaluationContent.ResourceID
+}
+
+// AccountID corresponds to the cloud account that the entity lies within
+func (f *cloudViewFinding) AccountID() string {
+	return f.evaluationContent.AccountID
+}
+
+// ScanID corresponds to the assessment that found the finding
+func (f *cloudViewFinding) ScanID() int {
+	return 0
+}
+
+func (f *cloudViewFinding) Summary() string {
+	return fmt.Sprintf("Aegis (%s) - %s", f.accountContent.ControlName, f.evaluationContent.ResourceID)
+}
+func (f *cloudViewFinding) VulnerabilityTitle() string {
+	return f.accountContent.ControlName
+}
+func (f *cloudViewFinding) Priority() string {
+	return strings.Title(f.accountContent.Criticality)
+}
+
+// String extracts relevant information from the finding
+func (f *cloudViewFinding) String() string {
+	var evidences string
+	for index, evidence := range f.evaluationContent.Evidences {
+		if index == 0 {
+			evidences = fmt.Sprintf("%s: %s", evidence.SettingName, evidence.ActualValue)
+		} else {
+			evidences = fmt.Sprintf("%s\n%s: %s", evidences, evidence.SettingName, evidence.ActualValue)
+		}
+	}
+	return fmt.Sprintf("Region: %s\nEvidence\n%s\nResource Type: %s\nPolicy: %s\nControl ID: %s", f.evaluationContent.Region, evidences, f.evaluationContent.ResourceType, strings.Join(f.accountContent.PolicyNames, ", "), f.accountContent.ControlID)
+}
+
+// not relevant to cloud view
+func (f *cloudViewFinding) BundleID() string {
+	return ""
 }
