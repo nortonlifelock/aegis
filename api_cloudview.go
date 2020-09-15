@@ -1,7 +1,9 @@
 package qualys
 
 import (
+	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 )
 
@@ -145,62 +147,57 @@ type Pageable struct {
 }
 
 func (session *Session) GetCloudViewFindings(accountID string) (err error) {
-	// /cloudview/rest/1.0/aws/connectors/list?limit=50&offset=0&query=
-	//
-
-	/*
-		/cloudview/rest/1.0/gcp/connectors/list
-		/cloudview/rest/1.0/azure/connectors/list
-		/cloudview/rest/1.0/aws/connectors/list
-	*/
-
-	gcpResp := &CloudConfigurationResp{}
-	err = session.httpCall(
-		http.MethodGet,
-		session.Config.Address()+"/cloudview/rest/1.0/gcp/connectors/list",
-		make(map[string]string),
-		nil,
-		gcpResp,
-	)
-
-	azureResp := &CloudConfigurationResp{}
-	err = session.httpCall(
-		http.MethodGet,
-		session.Config.Address()+"/cloudview/rest/1.0/azure/connectors/list",
-		make(map[string]string),
-		nil,
-		azureResp,
-	)
-
-	awsResp := &CloudConfigurationResp{}
-	err = session.httpCall(
-		http.MethodGet,
-		session.Config.Address()+"/cloudview/rest/1.0/aws/connectors/list",
-		make(map[string]string),
-		nil,
-		awsResp,
-	)
-
 	accountEvaluation := &AccountEvaluationResponse{}
-	err = session.httpCall(
-		http.MethodGet,
-		session.Config.Address()+fmt.Sprintf("/cloudview-api/rest/v1/aws/evaluations/%s", accountID),
-		make(map[string]string),
-		nil,
-		accountEvaluation,
-	)
 
-	for _, val := range accountEvaluation.Content {
-		// TODO can page through results
+	var req *http.Request
+	req, err = http.NewRequest(http.MethodGet, session.Config.Address()+fmt.Sprintf("/cloudview-api/rest/v1/aws/evaluations/%s", accountID), nil)
+	if err == nil {
+		err = session.makeRequest(req, func(resp *http.Response) (err error) {
+			var body []byte
+			body, err = ioutil.ReadAll(resp.Body)
+			if err == nil {
+				err = json.Unmarshal(body, accountEvaluation)
+			} else {
+				err = fmt.Errorf("error while reading response body - %s", err.Error())
+			}
 
-		evaluationResult := &EvaluationResult{}
-		err = session.httpCall(
-			http.MethodGet,
-			session.Config.Address()+fmt.Sprintf("/cloudview-api/rest/v1/aws/evaluations/%s/resources/%s", accountID, val.ControlID),
-			make(map[string]string),
-			nil,
-			evaluationResult,
-		)
+			return err
+		})
+	} else {
+		err = fmt.Errorf("error while making request - %s", err.Error())
+	}
+
+	if err == nil {
+		for _, val := range accountEvaluation.Content {
+			// TODO can page through results
+
+			evaluationResult := &EvaluationResult{}
+
+			req, err = http.NewRequest(http.MethodGet, session.Config.Address()+fmt.Sprintf("/cloudview-api/rest/v1/aws/evaluations/%s/resources/%s", accountID, val.ControlID), nil)
+			if err == nil {
+				err = session.makeRequest(req, func(resp *http.Response) (err error) {
+					var body []byte
+					body, err = ioutil.ReadAll(resp.Body)
+					if err == nil {
+						err = json.Unmarshal(body, evaluationResult)
+					} else {
+						err = fmt.Errorf("error while reading response body - %s", err.Error())
+					}
+
+					return err
+				})
+			} else {
+				err = fmt.Errorf("error while making request - %s", err.Error())
+			}
+
+			if err != nil {
+				break
+			}
+
+			for _, finding := range evaluationResult.Content {
+				fmt.Println(finding)
+			}
+		}
 	}
 
 	/*
