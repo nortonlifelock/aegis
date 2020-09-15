@@ -69,7 +69,7 @@ func (job *CISRescanJob) Process(ctx context.Context, id string, appconfig domai
 					job.lstream.Send(log.Debug("Establishing connection to CIS scanner..."))
 
 					var scanner integrations.CISScanner
-					if scanner, err = integrations.GetCISScanner(job.insource.Source(), job.db, job.insource, job.appconfig, job.lstream); err == nil {
+					if scanner, err = integrations.GetCISScanner(job.ctx, job.insource.Source(), job.db, job.insource, job.appconfig, job.lstream); err == nil {
 
 						if job.catRules, err = job.db.GetCategoryRules(job.config.OrganizationID(), job.insource.SourceID()); err == nil {
 							wg := &sync.WaitGroup{}

@@ -565,6 +565,7 @@ func (job *ScanCloseJob) closeTicketAccordingToDeviceType(ticket domain.Ticket, 
 			case <-job.ctx.Done():
 				return
 			case ipsForCloudDecommissionScan <- sord(ticket.IPAddress()):
+				job.lstream.Send(log.Infof("Queueing %s for a cloud decommission scan", ticket.Title()))
 			}
 		} else {
 			job.lstream.Send(log.Errorf(nil, "empty IP on ticket %s", ticket.Title()))
@@ -586,6 +587,7 @@ func (job *ScanCloseJob) processTicketForScheduledScan(ticket domain.Ticket, det
 			case <-job.ctx.Done():
 				return
 			case ipsForCloudDecommissionScan <- sord(ticket.IPAddress()):
+				job.lstream.Send(log.Infof("Queueing %s for a cloud decommission job", ticket.Title()))
 			}
 		} else {
 			job.lstream.Send(log.Errorf(err, "empty IP on ticket %s", ticket.Title()))

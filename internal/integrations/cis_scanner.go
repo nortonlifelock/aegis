@@ -1,13 +1,14 @@
 package integrations
 
 import (
+	"context"
 	"encoding/json"
 
-	"github.com/pkg/errors"
-
-	"github.com/nortonlifelock/domain"
 	"github.com/nortonlifelock/crypto"
+	"github.com/nortonlifelock/domain"
 	"github.com/nortonlifelock/dome9"
+	qualys "github.com/nortonlifelock/qualys/connector"
+	"github.com/pkg/errors"
 )
 
 const (
@@ -23,7 +24,7 @@ type CISScanner interface {
 }
 
 // GetCISScanner returns a struct that implements the TicketingEngine interface
-func GetCISScanner(scannerID string, ms domain.DatabaseConnection, sourceConfig domain.SourceConfig, appConfig config, lstream logger) (client CISScanner, err error) {
+func GetCISScanner(ctx context.Context, scannerID string, ms domain.DatabaseConnection, sourceConfig domain.SourceConfig, appConfig config, lstream logger) (client CISScanner, err error) {
 	var user, pass string
 	user, pass, err = getUsernameAndPasswordFromEncryptedSourceConfig(ms, sourceConfig, appConfig)
 
@@ -33,6 +34,13 @@ func GetCISScanner(scannerID string, ms domain.DatabaseConnection, sourceConfig 
 
 			case Dome9:
 				client, err = dome9.CreateClient(user, pass, sourceConfig.Address(), lstream)
+				break
+			case Qualys:
+				var decryptedConfig domain.SourceConfig
+				decryptedConfig, err = crypto.DecryptSourceConfig(ms, sourceConfig, appConfig)
+				if err == nil {
+					client, err = qualys.Connect(ctx, lstream, decryptedConfig)
+				}
 				break
 			default:
 				err = errors.Errorf("Unknown scanner type %s", scannerID)
