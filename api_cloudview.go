@@ -285,7 +285,7 @@ func (f *cloudViewFinding) VulnerabilityTitle() string {
 	return f.accountContent.ControlName
 }
 func (f *cloudViewFinding) Priority() string {
-	return strings.Title(f.accountContent.Criticality)
+	return strings.Title(strings.ToLower(f.accountContent.Criticality))
 }
 
 // String extracts relevant information from the finding
