@@ -260,7 +260,7 @@ type cloudViewFinding struct {
 
 // ID corresponds to a vulnerability ID
 func (f *cloudViewFinding) ID() string {
-	return f.accountContent.ControlName
+	return fmt.Sprintf("CV_%s", f.accountContent.ControlID)
 }
 
 // DeviceID corresponds to the entity violating the rule
@@ -298,7 +298,7 @@ func (f *cloudViewFinding) String() string {
 			evidences = fmt.Sprintf("%s\n%s: %s", evidences, evidence.SettingName, evidence.ActualValue)
 		}
 	}
-	return fmt.Sprintf("Region: %s\nEvidence\n%s\nResource Type: %s\nPolicy: %s\nControl ID: %s", f.evaluationContent.Region, evidences, f.evaluationContent.ResourceType, strings.Join(f.accountContent.PolicyNames, ", "), f.accountContent.ControlID)
+	return fmt.Sprintf("Region: %s\n\nEvidence\n%s\n\nResource Type: %s\n\nPolicy: %s\n\nControl ID: %s\n\nResourceID: %s\n\nAccountID: %s", f.evaluationContent.Region, evidences, f.evaluationContent.ResourceType, strings.Join(f.accountContent.PolicyNames, ", "), f.accountContent.ControlID, f.evaluationContent.ResourceID, f.evaluationContent.AccountID)
 }
 
 // not relevant to cloud view
