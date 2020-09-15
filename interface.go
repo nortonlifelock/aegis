@@ -312,6 +312,12 @@ func (connector *ConnectorJira) UpdateTicket(ticket domain.Ticket, comment strin
 					updateBlock.Fields.ExceptionDate = ticket.ExceptionDate()
 					oldToNewFieldName["exceptiondate"] = field.ID
 				}
+			} else {
+				field = connector.GetFieldMap(backendExceptionDate)
+				if field != nil {
+					updateBlock.Fields.ExceptionDate = nil
+					oldToNewFieldName["exceptiondate"] = field.ID
+				}
 			}
 
 			if ticket.IPAddress() != nil {
