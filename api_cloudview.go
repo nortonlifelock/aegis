@@ -253,6 +253,17 @@ func (session *Session) GetCloudViewFindings(accountID string) (findings []domai
 	return findings, err
 }
 
+func evidenceHasError(finding EvaluationResultContent) (hasError bool) {
+	for _, evidence := range finding.Evidences {
+		if strings.Contains(strings.ToLower(evidence.SettingName), "error") {
+			hasError = true
+			break
+		}
+	}
+
+	return hasError
+}
+
 type cloudViewFinding struct {
 	evaluationContent EvaluationResultContent
 	accountContent    EvaluationContent
@@ -298,7 +309,7 @@ func (f *cloudViewFinding) String() string {
 			evidences = fmt.Sprintf("%s\n%s: %s", evidences, evidence.SettingName, evidence.ActualValue)
 		}
 	}
-	return fmt.Sprintf("Region: %s\n\nEvidence\n%s\n\nResource Type: %s\n\nPolicy: %s\n\nControl ID: %s\n\nResourceID: %s\n\nAccountID: %s", f.evaluationContent.Region, evidences, f.evaluationContent.ResourceType, strings.Join(f.accountContent.PolicyNames, ", "), f.accountContent.ControlID, f.evaluationContent.ResourceID, f.evaluationContent.AccountID)
+	return fmt.Sprintf("Region: %s\n\nEvidence\n%s\n\nResource Type: %s\n\nPolicy: %s\n\nControl ID: %s", f.evaluationContent.Region, evidences, f.evaluationContent.ResourceType, strings.Join(f.accountContent.PolicyNames, ", "), f.accountContent.ControlID)
 }
 
 // not relevant to cloud view
