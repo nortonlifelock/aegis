@@ -493,11 +493,15 @@ func (job *ScanCloseJob) modifyJiraTicketAccordingToVulnerabilityStatus(engine i
 func (job *ScanCloseJob) processTicketForPassiveOrExceptionRescan(deadHostIPToProofMap map[string]string, ticket domain.Ticket, detection domain.Detection, engine integrations.TicketingEngine, status string, inactiveKernel bool, scan domain.ScanSummary) {
 	var err error
 	if (len(deadHostIPToProofMap[*ticket.IPAddress()]) > 0 && len(*ticket.IPAddress()) > 0) || (detection != nil && detection.Status() == domain.DeadHost) {
-		job.lstream.Send(log.Infof("the device for %s seems to be dead, but this is not a decommission scan", ticket.Title()))
-		err = engine.Transition(ticket, engine.GetStatusMap(domain.StatusResolvedDecom), fmt.Sprintf("The device could not be detected though a vulnerability rescan. It has been moved to a resolved decommission status and will be rescanned with another option profile to confirm\nPROOF:\n%s", deadHostIPToProofMap[sord(ticket.IPAddress())]), sord(ticket.AssignedTo()))
-		if err != nil {
-			job.lstream.Send(log.Errorf(err, "error while marking ticket as ResolvedDecomm %s", ticket.Title()))
+
+		if !statusIsAClosedStatus(engine, sord(ticket.Status())) {
+			job.lstream.Send(log.Infof("the device for %s seems to be dead, but this is not a decommission scan", ticket.Title()))
+			err = engine.Transition(ticket, engine.GetStatusMap(domain.StatusResolvedDecom), fmt.Sprintf("The device could not be detected though a vulnerability rescan. It has been moved to a resolved decommission status and will be rescanned with another option profile to confirm\nPROOF:\n%s", deadHostIPToProofMap[sord(ticket.IPAddress())]), sord(ticket.AssignedTo()))
+			if err != nil {
+				job.lstream.Send(log.Errorf(err, "error while marking ticket as ResolvedDecomm %s", ticket.Title()))
+			}
 		}
+
 	} else if detection == nil || status == domain.Fixed || status == domain.Potential {
 		// Non-decommission scan, the detection appears to be fixed, so close the ticket
 		var closeReason = closeComment
@@ -622,11 +626,15 @@ func (job *ScanCloseJob) processTicketForScheduledScan(ticket domain.Ticket, det
 func (job *ScanCloseJob) processTicketForNormalRescan(deadHostIPToProofMap map[string]string, ticket domain.Ticket, detection domain.Detection, engine integrations.TicketingEngine, status string, inactiveKernel bool, scan domain.ScanSummary, trackingMethod string) {
 	var err error
 	if (len(deadHostIPToProofMap[*ticket.IPAddress()]) > 0 && len(*ticket.IPAddress()) > 0) || (detection != nil && detection.Status() == domain.DeadHost) {
-		job.lstream.Send(log.Infof("the device for %s seems to be dead, but this is not a decommission scan", ticket.Title()))
-		err = engine.Transition(ticket, engine.GetStatusMap(domain.StatusResolvedDecom), fmt.Sprintf("The device could not be detected though a vulnerability rescan. It has been moved to a resolved decommission status and will be rescanned with another option profile to confirm\nPROOF:\n%s", deadHostIPToProofMap[sord(ticket.IPAddress())]), sord(ticket.AssignedTo()))
-		if err != nil {
-			job.lstream.Send(log.Errorf(err, "error while marking ticket as ResolvedDecomm %s", ticket.Title()))
+
+		if !statusIsAClosedStatus(engine, sord(ticket.Status())) {
+			job.lstream.Send(log.Infof("the device for %s seems to be dead, but this is not a decommission scan", ticket.Title()))
+			err = engine.Transition(ticket, engine.GetStatusMap(domain.StatusResolvedDecom), fmt.Sprintf("The device could not be detected though a vulnerability rescan. It has been moved to a resolved decommission status and will be rescanned with another option profile to confirm\nPROOF:\n%s", deadHostIPToProofMap[sord(ticket.IPAddress())]), sord(ticket.AssignedTo()))
+			if err != nil {
+				job.lstream.Send(log.Errorf(err, "error while marking ticket as ResolvedDecomm %s", ticket.Title()))
+			}
 		}
+
 	} else if detection != nil && detection.LastUpdated() != nil && detection.LastUpdated().Before(scan.CreatedDate()) && !detection.LastUpdated().IsZero() && !scan.CreatedDate().IsZero() && trackingMethod != AgentDevice {
 		if !statusIsAClosedStatus(engine, sord(ticket.Status())) {
 			job.lstream.Send(log.Infof("the scan didn't check %s for vulnerability %s [%s before %s]", ticket.Title(), ticket.VulnerabilityID(), detection.LastUpdated().Format(time.RFC822), scan.CreatedDate().Format(time.RFC822)))
@@ -839,7 +847,6 @@ func statusIsAClosedStatus(engine integrations.TicketingEngine, status string) (
 		domain.StatusClosedRemediated,
 		domain.StatusClosedFalsePositive,
 		domain.StatusClosedDecommissioned,
-		domain.StatusClosedException,
 		domain.StatusClosedCerf,
 		domain.StatusClosedError,
 	}
