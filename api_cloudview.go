@@ -4,11 +4,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/nortonlifelock/domain"
-	"github.com/nortonlifelock/log"
 	"io/ioutil"
 	"net/http"
 	"strings"
-	"sync"
 )
 
 type EvaluationResult struct {
@@ -46,18 +44,18 @@ type EvaluationResultContent struct {
 }
 
 type AccountEvaluationResponse struct {
-	Content          []EvaluationContent `json:"content"`
-	Pageable         Pageable            `json:"pageable"`
-	Last             bool                `json:"last"`
-	TotalPages       int                 `json:"totalPages"`
-	TotalElements    int                 `json:"totalElements"`
-	First            bool                `json:"first"`
-	Sort             Sort                `json:"sort"`
-	NumberOfElements int                 `json:"numberOfElements"`
-	Size             int                 `json:"size"`
-	Number           int                 `json:"number"`
+	Content          []AccountEvaluationContent `json:"content"`
+	Pageable         Pageable                   `json:"pageable"`
+	Last             bool                       `json:"last"`
+	TotalPages       int                        `json:"totalPages"`
+	TotalElements    int                        `json:"totalElements"`
+	First            bool                       `json:"first"`
+	Sort             Sort                       `json:"sort"`
+	NumberOfElements int                        `json:"numberOfElements"`
+	Size             int                        `json:"size"`
+	Number           int                        `json:"number"`
 }
-type EvaluationContent struct {
+type AccountEvaluationContent struct {
 	ControlName     string   `json:"controlName"`
 	PolicyNames     []string `json:"policyNames"`
 	Criticality     string   `json:"criticality"`
@@ -150,104 +148,85 @@ type Pageable struct {
 	Unpaged    bool `json:"unpaged"`
 }
 
-func (session *Session) GetCloudViewFindings(accountID string) (findings []domain.Finding, err error) {
-	// TODO break this method up
-	// TODO this should only be responsible for calling apis, the caller should do all the processing
-
-	findings = make([]domain.Finding, 0)
+func (session *Session) GetCloudAccountEvaluations(accountID string) (evaluations []AccountEvaluationContent, err error) {
+	evaluations = make([]AccountEvaluationContent, 0)
 	accountEvaluation := &AccountEvaluationResponse{}
 
-	// TODO page/sort
-	var req *http.Request
-	req, err = http.NewRequest(http.MethodGet, session.Config.Address()+fmt.Sprintf("/cloudview-api/rest/v1/aws/evaluations/%s", accountID), nil)
-	if err == nil {
-		err = session.makeRequest(req, func(resp *http.Response) (err error) {
-			var body []byte
-			body, err = ioutil.ReadAll(resp.Body)
-			if err == nil {
-				err = json.Unmarshal(body, accountEvaluation)
-			} else {
-				err = fmt.Errorf("error while reading response body - %s", err.Error())
-			}
+	var accPage = 0
+	var lastAccPage bool
 
-			return err
-		})
-	} else {
-		err = fmt.Errorf("error while making request - %s", err.Error())
+	for !lastAccPage {
+		var req *http.Request
+		req, err = http.NewRequest(http.MethodGet, session.Config.Address()+fmt.Sprintf("/cloudview-api/rest/v1/aws/evaluations/%s?pageNo=%d&sortOrder=asc", accountID, accPage), nil)
+		if err == nil {
+			err = session.makeRequest(req, func(resp *http.Response) (err error) {
+				var body []byte
+				body, err = ioutil.ReadAll(resp.Body)
+				if err == nil {
+					err = json.Unmarshal(body, accountEvaluation)
+				} else {
+					err = fmt.Errorf("error while reading response body - %s", err.Error())
+				}
+
+				return err
+			})
+		} else {
+			err = fmt.Errorf("error while making request - %s", err.Error())
+		}
+
+		if err == nil {
+			evaluations = append(evaluations, accountEvaluation.Content...)
+			lastAccPage = accountEvaluation.Last
+			accPage++
+		} else {
+			break
+		}
 	}
 
-	if err == nil {
+	return evaluations, err
+}
 
-		if !accountEvaluation.Last {
-			session.lstream.Send(log.Warningf(nil, "there were more evaluations to load for account %s", accountID))
-		}
+func (session *Session) GetCloudEvaluationFindings(accountID string, content AccountEvaluationContent) (findings []domain.Finding, err error) {
+	findings = make([]domain.Finding, 0)
+	var last bool
+	var page int
 
-		var parentErr error
-		var wg sync.WaitGroup
-		var findingLock sync.Mutex
-		permit := getPermitThread(10)
-		for _, val := range accountEvaluation.Content {
-			// TODO page/sort
+	for !last {
+		evaluationResult := &EvaluationResult{}
 
-			wg.Add(1)
-			select {
-			case <-permit:
-			case <-session.ctx.Done():
-				return
-			}
-
-			go func(val EvaluationContent) {
-				defer wg.Done()
-				defer func() {
-					permit <- true
-				}()
-
-				evaluationResult := &EvaluationResult{}
-
-				req, err = http.NewRequest(http.MethodGet, session.Config.Address()+fmt.Sprintf("/cloudview-api/rest/v1/aws/evaluations/%s/resources/%s", accountID, val.ControlID), nil)
+		var req *http.Request
+		req, err = http.NewRequest(http.MethodGet, session.Config.Address()+fmt.Sprintf("/cloudview-api/rest/v1/aws/evaluations/%s/resources/%s?pageNo=%d&sortOrder=asc", accountID, content.ControlID, page), nil)
+		if err == nil {
+			err = session.makeRequest(req, func(resp *http.Response) (err error) {
+				var body []byte
+				body, err = ioutil.ReadAll(resp.Body)
 				if err == nil {
-					err = session.makeRequest(req, func(resp *http.Response) (err error) {
-						var body []byte
-						body, err = ioutil.ReadAll(resp.Body)
-						if err == nil {
-							err = json.Unmarshal(body, evaluationResult)
-						} else {
-							err = fmt.Errorf("error while reading response body - %s", err.Error())
-						}
-
-						return err
-					})
+					err = json.Unmarshal(body, evaluationResult)
 				} else {
-					err = fmt.Errorf("error while making request - %s", err.Error())
+					err = fmt.Errorf("error while reading response body - %s", err.Error())
 				}
 
-				if !evaluationResult.Last {
-					session.lstream.Send(log.Warningf(nil, "there were more evaluations to load for account %s/control %s", accountID, val.ControlID))
-				}
-
-				if err != nil {
-					parentErr = err
-				}
-
-				const (
-					fixedFinding = "PASS"
-				)
-
-				findingLock.Lock()
-				for _, finding := range evaluationResult.Content {
-					if finding.Result != fixedFinding {
-						findings = append(findings, &cloudViewFinding{
-							evaluationContent: finding,
-							accountContent:    val,
-						})
-					}
-				}
-				findingLock.Unlock()
-			}(val)
+				return err
+			})
+		} else {
+			err = fmt.Errorf("error while making request - %s", err.Error())
 		}
 
-		wg.Wait()
-		err = parentErr
+		last = evaluationResult.Last
+		page++
+
+		const (
+			fixedFinding = "PASS"
+		)
+
+		for _, finding := range evaluationResult.Content {
+			if finding.Result != fixedFinding && !evidenceHasError(finding) {
+				findings = append(findings, &cloudViewFinding{
+					evaluationContent: finding,
+					accountContent:    content,
+				})
+			}
+		}
 	}
 
 	return findings, err
@@ -266,7 +245,7 @@ func evidenceHasError(finding EvaluationResultContent) (hasError bool) {
 
 type cloudViewFinding struct {
 	evaluationContent EvaluationResultContent
-	accountContent    EvaluationContent
+	accountContent    AccountEvaluationContent
 }
 
 // ID corresponds to a vulnerability ID
