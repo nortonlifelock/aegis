@@ -220,7 +220,7 @@ func (session *Session) GetCloudEvaluationFindings(accountID string, content Acc
 		)
 
 		for _, finding := range evaluationResult.Content {
-			if finding.Result != fixedFinding {
+			if finding.Result != fixedFinding && !evidenceHasError(finding) {
 				findings = append(findings, &cloudViewFinding{
 					evaluationContent: finding,
 					accountContent:    content,
