@@ -53,6 +53,12 @@ type QSPayload struct {
 
 	// WebAppOptionProfile holds the ID of the option profile that you'd like to use for web application scans (WAS - optional)
 	WebAppOptionProfile string `json:"web_app_option_profile"`
+
+	// EC2ScanSettings controls the parameters used to create the ec2 scans
+	EC2ScanSettings map[string]*struct {
+		ConnectorName string `json:"connector_name"`
+		ScannerName   string `json:"scanner_name"`
+	} `json:"ec2_scan_settings"`
 }
 
 // QsSession is the struct that is responsible for making Qualys API calls

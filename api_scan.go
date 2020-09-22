@@ -47,6 +47,44 @@ func (session *Session) GetScanByReference(scanReference string) (scan ScanQualy
 	return scan, err
 }
 
+func (session *Session) CreateEC2Scan(scanTitle string, optionProfileID string, instanceIDs []string, ec2Region string, connectorName string, scannerName string) (scanID int, scanRef string, err error) {
+	var fields = make(map[string]string)
+	fields["action"] = "launch"
+	fields["scan_title"] = scanTitle
+	fields["option_id"] = optionProfileID
+	fields["ec2_instance_ids"] = strings.Join(instanceIDs, ",")
+	fields["ec2_endpoint"] = ec2Region
+	fields["connector_name"] = connectorName
+	fields["iscanner_name"] = scannerName
+
+	var ret = &simpleReturn{}
+	if err = session.post(session.Config.Address()+qsVMScan, fields, ret); err == nil {
+
+		// Determine if there were items returned in the response
+		if len(ret.Response.Items) > 0 {
+
+			// Pull the ID from the list of items as well as the reference and setup the return values for the method
+			for _, item := range ret.Response.Items {
+
+				if item.Key == "ID" {
+					// Error if the ID of the scan cannot be parsed as an Integer
+					if scanID, err = strconv.Atoi(item.Value); err != nil {
+						err = fmt.Errorf("error occurred while converting Qualys scan Id to INT [%s]", err.Error())
+					}
+				} else if item.Key == "REFERENCE" {
+					scanRef = item.Value
+				}
+			}
+		} else {
+			err = fmt.Errorf("invalid item list returned from create search list in Qualys")
+		}
+	} else {
+		err = fmt.Errorf("error when executing call to Qualys to initialize scan | %s", err.Error())
+	}
+
+	return scanID, scanRef, err
+}
+
 // CreateScan executes the API call to Qualys to create the scan with all of the information required by the endpoint
 func (session *Session) CreateScan(scanTitle string, optionProfileID string, appliances []string, networkID int, ips []string, external bool) (scanID int, scanRef string, err error) {
 	// TODO: Move this

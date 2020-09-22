@@ -14,7 +14,7 @@ import (
 )
 
 type scanBundle struct {
-	groupID    int
+	groupID    string
 	networkID  int
 	appliances []int
 	external   bool
@@ -73,7 +73,14 @@ func (session *QsSession) createVulnerabilityScanForGroup(ctx context.Context, o
 		if optionProfileID, searchListID, err = session.createOptionProfileWithSearchList(bundle.vulns, session.payload.OptionProfileID); err == nil {
 			var scanTitle = fmt.Sprintf(session.payload.ScanNameFormatString, time.Now().Format(time.RFC3339))
 
-			_, scanRef, err = session.apiSession.CreateScan(scanTitle, optionProfileID, intArrayToStringArray(bundle.appliances), bundle.networkID, bundle.ips, bundle.external)
+			if session.payload.EC2ScanSettings[bundle.groupID] == nil {
+				_, scanRef, err = session.apiSession.CreateScan(scanTitle, optionProfileID, intArrayToStringArray(bundle.appliances), bundle.networkID, bundle.ips, bundle.external)
+			} else {
+				settings := session.payload.EC2ScanSettings[bundle.groupID]
+				// TODO
+				_, scanRef, err = session.apiSession.CreateEC2Scan(scanTitle, optionProfileID, []string{"instanceids"}, "", settings.ConnectorName, settings.ScannerName)
+			}
+
 			if err != nil {
 				var retries = 0
 				for errShowsThatScanLimitHit(err) {
@@ -96,7 +103,7 @@ func (session *QsSession) createVulnerabilityScanForGroup(ctx context.Context, o
 					ScanID:     scanRef,
 					TemplateID: fmt.Sprintf("%s%s%s", optionProfileID, templateDelimiter, searchListID),
 
-					AssetGroupID: strconv.Itoa(bundle.groupID),
+					AssetGroupID: bundle.groupID,
 					EngineIDs:    intArrayToStringArray(bundle.appliances),
 
 					Created: time.Now(),
@@ -208,7 +215,7 @@ func (session *QsSession) createDiscoveryScanForGroup(ctx context.Context, out c
 						ScanID:     scanRef,
 						TemplateID: optionProfileID,
 
-						AssetGroupID: strconv.Itoa(bundle.groupID),
+						AssetGroupID: bundle.groupID,
 						EngineIDs:    intArrayToStringArray(bundle.appliances),
 
 						Created: time.Now(),
@@ -279,7 +286,7 @@ func (session *QsSession) prepareIPsAndAGMapping(matches []domain.Match) (groupI
 
 					if len(group.OnlineAppliances) > 0 || externalGroup {
 						groupIDToScanBundle[strconv.Itoa(group.ID)] = &scanBundle{
-							groupID:    group.ID,
+							groupID:    strconv.Itoa(group.ID),
 							networkID:  group.NetworkID,
 							appliances: group.OnlineAppliances,
 							external:   externalGroup,
