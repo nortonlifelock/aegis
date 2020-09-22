@@ -211,7 +211,7 @@ func (session *QsSession) ScanResults(ctx context.Context, payload []byte) (<-ch
 		scanInfo := &scan{session: session}
 		if err := json.Unmarshal(payload, scanInfo); err == nil {
 
-			if !scanInfo.Scheduled {
+			if !scanInfo.Scheduled && session.payload.EC2ScanSettings[scanInfo.AssetGroupID] == nil {
 				if len(scanInfo.ScanID) > 0 {
 					if strings.Contains(scanInfo.ScanID, "scan") {
 						needToCloseDeadIPChannel = session.pushDetectionsByScanTarget(ctx, scanInfo, out, deadIPToProof)
