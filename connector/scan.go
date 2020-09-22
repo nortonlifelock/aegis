@@ -76,9 +76,26 @@ func (session *QsSession) createVulnerabilityScanForGroup(ctx context.Context, o
 			if session.payload.EC2ScanSettings[bundle.groupID] == nil {
 				_, scanRef, err = session.apiSession.CreateScan(scanTitle, optionProfileID, intArrayToStringArray(bundle.appliances), bundle.networkID, bundle.ips, bundle.external)
 			} else {
-				settings := session.payload.EC2ScanSettings[bundle.groupID]
-				// TODO
-				_, scanRef, err = session.apiSession.CreateEC2Scan(scanTitle, optionProfileID, []string{"instanceids"}, "", settings.ConnectorName, settings.ScannerName)
+				var instanceIDs []string
+				var region string
+				instanceIDs, region, err = session.getEC2ScanData(matches)
+
+				if err == nil {
+					const batchSize = 10 // Qualys allows only rescan of 10 instances at a time
+					for i := 0; i < len(instanceIDs); i += batchSize {
+						settings := session.payload.EC2ScanSettings[bundle.groupID]
+						if i+batchSize <= len(instanceIDs) {
+							_, scanRef, err = session.apiSession.CreateEC2Scan(scanTitle, optionProfileID, instanceIDs[i:i+batchSize], region, settings.ConnectorName, settings.ScannerName)
+						} else {
+							_, scanRef, err = session.apiSession.CreateEC2Scan(scanTitle, optionProfileID, instanceIDs[i:], region, settings.ConnectorName, settings.ScannerName)
+						}
+
+						if err != nil {
+							break
+						}
+					}
+
+				}
 			}
 
 			if err != nil {
@@ -126,6 +143,35 @@ func (session *QsSession) createVulnerabilityScanForGroup(ctx context.Context, o
 	}
 
 	return err
+}
+
+func (session *QsSession) getEC2ScanData(matches []domain.Match) (instanceIDs []string, region string, err error) {
+	instanceIDs = make([]string, 0)
+	var seen = make(map[string]bool) // TODO max out at 10 at a time
+	for _, match := range matches {
+		if len(match.InstanceID()) > 0 {
+			if !seen[match.InstanceID()] {
+				seen[match.InstanceID()] = true
+				instanceIDs = append(instanceIDs, match.InstanceID())
+			}
+		} else {
+			err = fmt.Errorf("empty instance ID found for device %s", match.Device())
+			break
+		}
+
+		if len(match.Region()) > 0 {
+			if len(region) == 0 {
+				region = match.Region()
+			} else if region != match.Region() {
+				err = fmt.Errorf("found multiple regions within same ec2 group [%s|%s]", region, match.Region())
+				break
+			}
+		} else {
+			err = fmt.Errorf("empty region found for device [%s]", match.Device())
+			break
+		}
+	}
+	return instanceIDs, region, err
 }
 
 func (session *QsSession) createScanForWebApplication(ctx context.Context, detections []domain.Match, out chan<- domain.Scan) {
@@ -244,26 +290,31 @@ func (session *QsSession) createDiscoveryScanForGroup(ctx context.Context, out c
 
 func (session *QsSession) populateGroupVulnerabilityChecks(detections []domain.Match, groupIDToScanBundle map[string]*scanBundle) (err error) {
 	for _, match := range detections {
-		var matchFound bool
+		var matchIsEc2DeviceThatHasSettingsInPayload = len(match.InstanceID()) > 0 && session.payload.EC2ScanSettings[match.InstanceID()] != nil
 
-		// check every group for each match to see which group it belongs to
-		for _, group := range groupIDToScanBundle {
-			if group.seenIP[match.IP()] {
-				matchFound = true
-				group.vulns = append(group.vulns, match.Vulnerability())
+		if !matchIsEc2DeviceThatHasSettingsInPayload {
+			var matchFound bool
+
+			// check every group for each match to see which group it belongs to
+			for _, group := range groupIDToScanBundle {
+				if group.seenIP[match.IP()] {
+					matchFound = true
+					group.vulns = append(group.vulns, match.Vulnerability())
+					break
+				}
+			}
+
+			if !matchFound {
+				if len(match.GroupID()) > 0 {
+					err = fmt.Errorf("could not find a group for %v - check to see if there is an online appliance for its expected group - also check if the group ID is in the Qualys SourceConfig payload", match.IP())
+				} else {
+					err = fmt.Errorf("empty group ID for IP [%s]", match.IP())
+				}
+
 				break
 			}
 		}
 
-		if !matchFound {
-			if len(match.GroupID()) > 0 {
-				err = fmt.Errorf("could not find a group for %v - check to see if there is an online appliance for its expected group - also check if the group ID is in the Qualys SourceConfig payload", match.IP())
-			} else {
-				err = fmt.Errorf("empty group ID for IP [%s]", match.IP())
-			}
-
-			break
-		}
 	}
 
 	return err
