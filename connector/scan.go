@@ -18,9 +18,9 @@ type scanBundle struct {
 	networkID  int
 	appliances []int
 	external   bool
-	ips        []string
+	devices    []string
 	vulns      []string
-	seenIP     map[string]bool
+	seenDevice map[string]bool
 	seenVuln   map[string]bool
 }
 
@@ -56,7 +56,7 @@ func getMatchesCoveredInScanBundle(bundle *scanBundle, matches []domain.Match) (
 	matchesCoveredByBundle = make([]domain.Match, 0)
 	if bundle != nil {
 		for _, match := range matches {
-			if bundle.seenIP[match.IP()] {
+			if bundle.seenDevice[match.IP()] {
 				matchesCoveredByBundle = append(matchesCoveredByBundle, match)
 			}
 		}
@@ -69,12 +69,12 @@ func (session *QsSession) createVulnerabilityScanForGroup(ctx context.Context, o
 	var scanRef string
 	var optionProfileID, searchListID string
 
-	if len(bundle.ips) > 0 && len(bundle.vulns) > 0 {
+	if len(bundle.devices) > 0 && len(bundle.vulns) > 0 {
 		if optionProfileID, searchListID, err = session.createOptionProfileWithSearchList(bundle.vulns, session.payload.OptionProfileID); err == nil {
 			var scanTitle = fmt.Sprintf(session.payload.ScanNameFormatString, time.Now().Format(time.RFC3339))
 
 			if session.payload.EC2ScanSettings[bundle.groupID] == nil {
-				_, scanRef, err = session.apiSession.CreateScan(scanTitle, optionProfileID, intArrayToStringArray(bundle.appliances), bundle.networkID, bundle.ips, bundle.external)
+				_, scanRef, err = session.apiSession.CreateScan(scanTitle, optionProfileID, intArrayToStringArray(bundle.appliances), bundle.networkID, bundle.devices, bundle.external)
 			} else {
 				var instanceIDs []string
 				var region string
@@ -110,7 +110,7 @@ func (session *QsSession) createVulnerabilityScanForGroup(ctx context.Context, o
 
 					session.lstream.Send(log.Warningf(err, "scan limit hit while trying to create the scan, waiting 15 minutes before trying again - times tried [%d]", retries))
 					time.Sleep(time.Minute * 15)
-					_, scanRef, err = session.apiSession.CreateScan(scanTitle, optionProfileID, intArrayToStringArray(bundle.appliances), bundle.networkID, bundle.ips, bundle.external)
+					_, scanRef, err = session.apiSession.CreateScan(scanTitle, optionProfileID, intArrayToStringArray(bundle.appliances), bundle.networkID, bundle.devices, bundle.external)
 				}
 			}
 
@@ -224,7 +224,7 @@ func (session *QsSession) createScanForDetections(ctx context.Context, detection
 					defer handleRoutinePanic(session.lstream)
 					defer wg.Done()
 
-					if len(bundle.ips) > 0 && len(bundle.vulns) > 0 {
+					if len(bundle.devices) > 0 && len(bundle.vulns) > 0 {
 						session.lstream.Send(log.Infof("Creating vulnerability scan for group %v", bundle.groupID))
 						// error intentionally scoped out
 						err := session.createVulnerabilityScanForGroup(ctx, out, bundle, detections)
@@ -245,7 +245,7 @@ func (session *QsSession) createScanForDetections(ctx context.Context, detection
 }
 
 func (session *QsSession) createDiscoveryScanForGroup(ctx context.Context, out chan<- domain.Scan, bundle *scanBundle, matches []domain.Match) (err error) {
-	if len(bundle.ips) > 0 {
+	if len(bundle.devices) > 0 {
 
 		if session.payload.DiscoveryOptionProfileID > 0 {
 			var scanRef string
@@ -254,7 +254,7 @@ func (session *QsSession) createDiscoveryScanForGroup(ctx context.Context, out c
 			if optionProfileID, err = session.createCopyOfOptionProfile(session.payload.DiscoveryOptionProfileID); err == nil {
 				var scanTitle = fmt.Sprintf(session.payload.ScanNameFormatString, time.Now().Format(time.RFC3339))
 
-				if _, scanRef, err = session.apiSession.CreateScan(scanTitle, optionProfileID, intArrayToStringArray(bundle.appliances), bundle.networkID, bundle.ips, bundle.external); err == nil {
+				if _, scanRef, err = session.apiSession.CreateScan(scanTitle, optionProfileID, intArrayToStringArray(bundle.appliances), bundle.networkID, bundle.devices, bundle.external); err == nil {
 
 					scan := &scan{
 						Name:       scanTitle,
@@ -290,14 +290,14 @@ func (session *QsSession) createDiscoveryScanForGroup(ctx context.Context, out c
 
 func (session *QsSession) populateGroupVulnerabilityChecks(detections []domain.Match, groupIDToScanBundle map[string]*scanBundle) (err error) {
 	for _, match := range detections {
-		var matchIsEc2DeviceThatHasSettingsInPayload = len(match.InstanceID()) > 0 && session.payload.EC2ScanSettings[match.InstanceID()] != nil
+		var matchIsEc2DeviceThatHasSettingsInPayload = len(match.InstanceID()) > 0 && session.payload.EC2ScanSettings[match.GroupID()] != nil
 
 		if !matchIsEc2DeviceThatHasSettingsInPayload {
 			var matchFound bool
 
 			// check every group for each match to see which group it belongs to
 			for _, group := range groupIDToScanBundle {
-				if group.seenIP[match.IP()] {
+				if group.seenDevice[match.IP()] {
 					matchFound = true
 					group.vulns = append(group.vulns, match.Vulnerability())
 					break
@@ -312,6 +312,30 @@ func (session *QsSession) populateGroupVulnerabilityChecks(detections []domain.M
 				}
 
 				break
+			}
+		} else {
+			// here we've found a match for an ec2 scan, and need to populate the information using the instanceID instead of the IP
+			if groupIDToScanBundle[match.GroupID()] == nil {
+				groupIDToScanBundle[match.GroupID()] = &scanBundle{
+					groupID:    match.GroupID(),
+					networkID:  0,
+					appliances: nil,
+					external:   false,
+					devices:    make([]string, 0),
+					vulns:      make([]string, 0),
+					seenDevice: make(map[string]bool),
+					seenVuln:   make(map[string]bool),
+				}
+
+				if !groupIDToScanBundle[match.GroupID()].seenDevice[match.InstanceID()] {
+					groupIDToScanBundle[match.GroupID()].seenDevice[match.InstanceID()] = true
+					groupIDToScanBundle[match.GroupID()].devices = append(groupIDToScanBundle[match.GroupID()].devices, match.InstanceID())
+				}
+
+				if !groupIDToScanBundle[match.GroupID()].seenVuln[match.Vulnerability()] {
+					groupIDToScanBundle[match.GroupID()].seenVuln[match.Vulnerability()] = true
+					groupIDToScanBundle[match.GroupID()].vulns = append(groupIDToScanBundle[match.GroupID()].vulns, match.Vulnerability())
+				}
 			}
 		}
 
@@ -341,9 +365,9 @@ func (session *QsSession) prepareIPsAndAGMapping(matches []domain.Match) (groupI
 							networkID:  group.NetworkID,
 							appliances: group.OnlineAppliances,
 							external:   externalGroup,
-							ips:        make([]string, 0),
+							devices:    make([]string, 0),
 							vulns:      make([]string, 0),
-							seenIP:     make(map[string]bool),
+							seenDevice: make(map[string]bool),
 							seenVuln:   make(map[string]bool),
 						}
 					}
@@ -357,9 +381,9 @@ func (session *QsSession) prepareIPsAndAGMapping(matches []domain.Match) (groupI
 				for _, ag := range ags {
 					if groupIDToScanBundle[ag] != nil {
 
-						if !groupIDToScanBundle[ag].seenIP[ip] {
-							groupIDToScanBundle[ag].seenIP[ip] = true
-							groupIDToScanBundle[ag].ips = append(groupIDToScanBundle[ag].ips, ip)
+						if !groupIDToScanBundle[ag].seenDevice[ip] {
+							groupIDToScanBundle[ag].seenDevice[ip] = true
+							groupIDToScanBundle[ag].devices = append(groupIDToScanBundle[ag].devices, ip)
 						}
 						found = true
 						break
