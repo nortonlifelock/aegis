@@ -37,15 +37,18 @@ func (session *QsSession) mapIPToAssetGroup(matches []domain.Match) (ipToAGs map
 	ipToAGs = make(map[string][]string)
 	for _, match := range matches {
 		if len(match.GroupID()) > 0 {
-			if ipToAGs[match.IP()] == nil {
-				ipToAGs[match.IP()] = make([]string, 0)
-			}
 
-			var key = fmt.Sprintf("%s;%s", match.IP(), match.GroupID())
-			if !seenIPAndGroup[key] {
-				seenIPAndGroup[key] = true
+			if session.payload.EC2ScanSettings[match.GroupID()] == nil { // the ec2 scan settings are in the Qualys payload and we don't need to load them from the API
+				if ipToAGs[match.IP()] == nil {
+					ipToAGs[match.IP()] = make([]string, 0)
+				}
 
-				ipToAGs[match.IP()] = append(ipToAGs[match.IP()], match.GroupID())
+				var key = fmt.Sprintf("%s;%s", match.IP(), match.GroupID())
+				if !seenIPAndGroup[key] {
+					seenIPAndGroup[key] = true
+
+					ipToAGs[match.IP()] = append(ipToAGs[match.IP()], match.GroupID())
+				}
 			}
 		} else {
 			session.lstream.Send(log.Errorf(nil, "Device with IP [%s] did not provide an associated GroupID", match.IP()))

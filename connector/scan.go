@@ -58,6 +58,8 @@ func getMatchesCoveredInScanBundle(bundle *scanBundle, matches []domain.Match) (
 		for _, match := range matches {
 			if bundle.seenDevice[match.IP()] {
 				matchesCoveredByBundle = append(matchesCoveredByBundle, match)
+			} else if bundle.seenDevice[match.InstanceID()] {
+				matchesCoveredByBundle = append(matchesCoveredByBundle, match)
 			}
 		}
 	}
