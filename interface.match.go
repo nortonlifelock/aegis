@@ -7,4 +7,8 @@ type Match interface {
 	Device() string
 	Vulnerability() string
 	GroupID() string
+
+	// these two fields are only used for findings that exist in a cloud device
+	InstanceID() string
+	Region() string
 }
