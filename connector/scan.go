@@ -73,68 +73,84 @@ func (session *QsSession) createVulnerabilityScanForGroup(ctx context.Context, o
 
 	if len(bundle.devices) > 0 && len(bundle.vulns) > 0 {
 		if optionProfileID, searchListID, err = session.createOptionProfileWithSearchList(bundle.vulns, session.payload.OptionProfileID); err == nil {
-			var scanTitle = fmt.Sprintf(session.payload.ScanNameFormatString, time.Now().Format(time.RFC3339))
+
+			var scanCreationFunctions = make([]func() (string, string, error), 0)
 
 			if session.payload.EC2ScanSettings[bundle.groupID] == nil {
-				_, scanRef, err = session.apiSession.CreateScan(scanTitle, optionProfileID, intArrayToStringArray(bundle.appliances), bundle.networkID, bundle.devices, bundle.external)
+				scanCreationFunctions = append(scanCreationFunctions, func() (string, string, error) {
+					var scanTitle = fmt.Sprintf(session.payload.ScanNameFormatString, time.Now().Format(time.RFC3339))
+					_, scanRef, err = session.apiSession.CreateScan(scanTitle, optionProfileID, intArrayToStringArray(bundle.appliances), bundle.networkID, bundle.devices, bundle.external)
+					return scanTitle, scanRef, err
+				})
 			} else {
 				var instanceIDs []string
 				var region string
 				instanceIDs, region, err = session.getEC2ScanData(matches)
-
 				if err == nil {
 					const batchSize = 10 // Qualys allows only rescan of 10 instances at a time
 					for i := 0; i < len(instanceIDs); i += batchSize {
+						i := i // scope the iterating variable so the outer loop doesn't overwrite it when the function is called at a later time
 						settings := session.payload.EC2ScanSettings[bundle.groupID]
+						var instancesCoveredInThisScan []string
 						if i+batchSize <= len(instanceIDs) {
-							_, scanRef, err = session.apiSession.CreateEC2Scan(scanTitle, optionProfileID, instanceIDs[i:i+batchSize], region, settings.ConnectorName, settings.ScannerName)
+							instancesCoveredInThisScan = instanceIDs[i : i+batchSize]
 						} else {
-							_, scanRef, err = session.apiSession.CreateEC2Scan(scanTitle, optionProfileID, instanceIDs[i:], region, settings.ConnectorName, settings.ScannerName)
+							instancesCoveredInThisScan = instanceIDs[i:]
 						}
 
-						if err != nil {
-							break
-						}
+						scanCreationFunctions = append(scanCreationFunctions, func() (string, string, error) {
+							var scanTitle = fmt.Sprintf(session.payload.ScanNameFormatString, time.Now().Format(time.RFC3339))
+							_, scanRef, err = session.apiSession.CreateEC2Scan(scanTitle, optionProfileID, instancesCoveredInThisScan, region, settings.ConnectorName, settings.ScannerName)
+							return scanTitle, scanRef, err
+						})
 					}
-
-				}
-			}
-
-			if err != nil {
-				var retries = 0
-				for errShowsThatScanLimitHit(err) {
-					retries++
-					select {
-					case <-ctx.Done():
-						return fmt.Errorf("context closed")
-					default:
-					}
-
-					session.lstream.Send(log.Warningf(err, "scan limit hit while trying to create the scan, waiting 15 minutes before trying again - times tried [%d]", retries))
-					time.Sleep(time.Minute * 15)
-					_, scanRef, err = session.apiSession.CreateScan(scanTitle, optionProfileID, intArrayToStringArray(bundle.appliances), bundle.networkID, bundle.devices, bundle.external)
+				} else {
+					session.lstream.Send(log.Errorf(err, "error while pulling ec2 data while creating scan for group [%s]", bundle.groupID))
 				}
 			}
 
 			if err == nil {
-				scan := &scan{
-					Name:       scanTitle,
-					ScanID:     scanRef,
-					TemplateID: fmt.Sprintf("%s%s%s", optionProfileID, templateDelimiter, searchListID),
+				for _, createScanFunction := range scanCreationFunctions {
+					scanTitle, scanRef, err := createScanFunction()
+					if err != nil {
+						var retries = 0
+						for errShowsThatScanLimitHit(err) {
+							retries++
+							select {
+							case <-ctx.Done():
+								return fmt.Errorf("context closed")
+							default:
+							}
 
-					AssetGroupID: bundle.groupID,
-					EngineIDs:    intArrayToStringArray(bundle.appliances),
+							session.lstream.Send(log.Warningf(err, "scan limit hit while trying to create the scan, waiting 15 minutes before trying again - times tried [%d]", retries))
+							time.Sleep(time.Minute * 15)
+							scanTitle, scanRef, err = createScanFunction()
+						}
+					}
 
-					Created: time.Now(),
-					matches: getMatchesCoveredInScanBundle(bundle, matches),
-				}
+					if err == nil {
+						scan := &scan{
+							Name:       scanTitle,
+							ScanID:     scanRef,
+							TemplateID: fmt.Sprintf("%s%s%s", optionProfileID, templateDelimiter, searchListID),
 
-				session.lstream.Send(log.Infof("scan %v created for group %v", scan.ScanID, bundle.groupID))
+							AssetGroupID: bundle.groupID,
+							EngineIDs:    intArrayToStringArray(bundle.appliances),
 
-				select {
-				case <-ctx.Done():
-					return
-				case out <- scan:
+							Created: time.Now(),
+							matches: getMatchesCoveredInScanBundle(bundle, matches),
+						}
+
+						session.lstream.Send(log.Infof("scan %v created for group %v", scan.ScanID, bundle.groupID))
+
+						select {
+						case <-ctx.Done():
+							return
+						case out <- scan:
+						}
+					} else {
+						session.lstream.Send(log.Errorf(err, "error while creating scan for group [%s]", bundle.groupID))
+					}
 				}
 			}
 		} else {
@@ -229,6 +245,7 @@ func (session *QsSession) createScanForDetections(ctx context.Context, detection
 					if len(bundle.devices) > 0 && len(bundle.vulns) > 0 {
 						session.lstream.Send(log.Infof("Creating vulnerability scan for group %v", bundle.groupID))
 						// error intentionally scoped out
+
 						err := session.createVulnerabilityScanForGroup(ctx, out, bundle, detections)
 						if err != nil {
 							session.lstream.Send(log.Errorf(err, "error while creating scan for group %v", bundle.groupID))
@@ -328,16 +345,16 @@ func (session *QsSession) populateGroupVulnerabilityChecks(detections []domain.M
 					seenDevice: make(map[string]bool),
 					seenVuln:   make(map[string]bool),
 				}
+			}
 
-				if !groupIDToScanBundle[match.GroupID()].seenDevice[match.InstanceID()] {
-					groupIDToScanBundle[match.GroupID()].seenDevice[match.InstanceID()] = true
-					groupIDToScanBundle[match.GroupID()].devices = append(groupIDToScanBundle[match.GroupID()].devices, match.InstanceID())
-				}
+			if !groupIDToScanBundle[match.GroupID()].seenDevice[match.InstanceID()] {
+				groupIDToScanBundle[match.GroupID()].seenDevice[match.InstanceID()] = true
+				groupIDToScanBundle[match.GroupID()].devices = append(groupIDToScanBundle[match.GroupID()].devices, match.InstanceID())
+			}
 
-				if !groupIDToScanBundle[match.GroupID()].seenVuln[match.Vulnerability()] {
-					groupIDToScanBundle[match.GroupID()].seenVuln[match.Vulnerability()] = true
-					groupIDToScanBundle[match.GroupID()].vulns = append(groupIDToScanBundle[match.GroupID()].vulns, match.Vulnerability())
-				}
+			if !groupIDToScanBundle[match.GroupID()].seenVuln[match.Vulnerability()] {
+				groupIDToScanBundle[match.GroupID()].seenVuln[match.Vulnerability()] = true
+				groupIDToScanBundle[match.GroupID()].vulns = append(groupIDToScanBundle[match.GroupID()].vulns, match.Vulnerability())
 			}
 		}
 
