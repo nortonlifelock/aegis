@@ -143,45 +143,50 @@ func (connection *ConnectionAzure) getIPTagsForSub(subID string, lock *sync.Mute
 	subWg := &sync.WaitGroup{}
 	subWg.Add(3)
 
-	var errChan = make(chan error, 3)
-
+	var err1, err2, err3 error
 	go func() {
-		defer close(errChan)
-
 		go func() {
 			defer subWg.Done()
-			connection.getIPTagsForVirtualMachines(subID, lock, ipToKeyToValue, errChan)
+			err1 = connection.getIPTagsForVirtualMachines(subID, lock, ipToKeyToValue)
 		}()
 
 		go func() {
 			defer subWg.Done()
-			connection.getIPTagsForApplicationGateways(subID, lock, ipToKeyToValue, errChan)
+			err2 = connection.getIPTagsForApplicationGateways(subID, lock, ipToKeyToValue)
 		}()
 
 		go func() {
 			defer subWg.Done()
-			connection.getIPTagsForLoadBalancers(subID, lock, ipToKeyToValue, errChan)
+			err3 = connection.getIPTagsForLoadBalancers(subID, lock, ipToKeyToValue)
 		}()
 	}()
 
 	subWg.Wait()
 
-	for {
-		if subErr, ok := <-errChan; ok {
-			if err == nil {
-				err = subErr
-			} else {
-				err = fmt.Errorf("%v,%v", err, subErr)
-			}
+	if err1 != nil {
+		err = err1
+	}
+
+	if err2 != nil {
+		if err != nil {
+			err = fmt.Errorf("%v,%v", err, err2)
 		} else {
-			break
+			err = err2
+		}
+	}
+
+	if err3 != nil {
+		if err != nil {
+			err = fmt.Errorf("%v,%v", err, err3)
+		} else {
+			err = err3
 		}
 	}
 
 	return err
 }
 
-func (connection *ConnectionAzure) getIPTagsForLoadBalancers(subID string, lock *sync.Mutex, ipToKeyToValue map[domain.CloudIP]map[string]string, errChan chan error) {
+func (connection *ConnectionAzure) getIPTagsForLoadBalancers(subID string, lock *sync.Mutex, ipToKeyToValue map[domain.CloudIP]map[string]string) (err error) {
 	lbTags, err := connection.loadBalancerTags(subID)
 	if err == nil {
 		for ip := range lbTags {
@@ -205,11 +210,12 @@ func (connection *ConnectionAzure) getIPTagsForLoadBalancers(subID string, lock 
 		}
 	} else {
 		connection.Send(log.Errorf(err, "error while gathering load balancer tags for subscription id [%s]", subID))
-		errChan <- err
 	}
+
+	return err
 }
 
-func (connection *ConnectionAzure) getIPTagsForApplicationGateways(subID string, lock *sync.Mutex, ipToKeyToValue map[domain.CloudIP]map[string]string, errChan chan error) {
+func (connection *ConnectionAzure) getIPTagsForApplicationGateways(subID string, lock *sync.Mutex, ipToKeyToValue map[domain.CloudIP]map[string]string) (err error) {
 	appTags, err := connection.applicationGatewayTags(subID)
 	if err == nil {
 		for ip := range appTags {
@@ -233,11 +239,12 @@ func (connection *ConnectionAzure) getIPTagsForApplicationGateways(subID string,
 		}
 	} else {
 		connection.Send(log.Errorf(err, "error while gathering application gateway tags for subscription id [%s]", subID))
-		errChan <- err
 	}
+
+	return err
 }
 
-func (connection *ConnectionAzure) getIPTagsForVirtualMachines(subID string, lock *sync.Mutex, ipToKeyToValue map[domain.CloudIP]map[string]string, errChan chan error) {
+func (connection *ConnectionAzure) getIPTagsForVirtualMachines(subID string, lock *sync.Mutex, ipToKeyToValue map[domain.CloudIP]map[string]string) (err error) {
 	vmTags, err := connection.virtualMachineNetworkInterfaceTags(subID)
 	if err == nil {
 		for ip := range vmTags {
@@ -262,8 +269,9 @@ func (connection *ConnectionAzure) getIPTagsForVirtualMachines(subID string, loc
 		}
 	} else {
 		connection.Send(log.Errorf(err, "error while gathering VM network tags for subscription id [%s]", subID))
-		errChan <- err
 	}
+
+	return err
 }
 
 // GetAllTagNames grabs a unique list of tag names
