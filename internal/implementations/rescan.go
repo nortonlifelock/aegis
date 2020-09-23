@@ -79,9 +79,9 @@ func (job *RescanJob) Process(ctx context.Context, id string, appconfig domain.C
 					for i := 0; i < len(tickets); i += batchSize {
 
 						if i+batchSize <= len(tickets) {
-							err = job.createAndMonitorScan(ticketToMatch(tickets[i:i+batchSize], job.Payload.Group), tickets[i:i+batchSize])
+							err = job.createAndMonitorScan(job.ticketToMatch(tickets[i:i+batchSize], job.Payload.Group), tickets[i:i+batchSize])
 						} else {
-							err = job.createAndMonitorScan(ticketToMatch(tickets[i:], job.Payload.Group), tickets[i:])
+							err = job.createAndMonitorScan(job.ticketToMatch(tickets[i:], job.Payload.Group), tickets[i:])
 						}
 
 						if err != nil {
@@ -176,44 +176,6 @@ func (job *RescanJob) createAndMonitorScan(matches []domain.Match, tickets []dom
 	return err
 }
 
-// takes an input slice of tickets, and returns a list of ip addresses and vulnerabilities associated with those tickets
-func (job *RescanJob) loadIPAddressesAndVulnerabilitiesFromTickets(tickets []domain.Ticket) (ipAddresses []string, vulnerabilities []string, err error) {
-	var ipsLoaded = make(map[string]bool)
-	ipAddresses = make([]string, 0)
-	vulnerabilities = make([]string, 0)
-
-	for index := range tickets {
-		select {
-		case <-job.ctx.Done():
-			return
-		default:
-
-			var ipAddress string
-			if ipAddress, err = job.getIPAddressFromTicket(tickets[index]); err == nil {
-				// TODO: We need to eventually verify the formatting of this IP to ensure that it's actually an IP address
-				if len(ipAddress) > 0 {
-
-					// Add the device to the list to be scanned if not already there
-					if !ipsLoaded[ipAddress] {
-
-						ipAddresses = append(ipAddresses, ipAddress)
-						ipsLoaded[ipAddress] = true
-					}
-
-					vulnerabilities = append(vulnerabilities, tickets[index].VulnerabilityID())
-
-				} else {
-					job.lstream.Send(log.Errorf(err, "Invalid Ip Address for ticket [%s]", tickets[index].Title()))
-				}
-			} else {
-				job.lstream.Send(log.Errorf(err, "Error while loading Ip Address for ticket [%s]", tickets[index].Title()))
-			}
-		}
-	}
-
-	return ipAddresses, vulnerabilities, err
-}
-
 func (job *RescanJob) createScanClosePayload(scan domain.Scan, matches []domain.Match, tickets []string) *ScanClosePayload {
 	var devices = make([]string, 0)
 	for _, match := range matches {
@@ -254,20 +216,44 @@ func (job *RescanJob) getIPAddressFromTicket(ticket domain.Ticket) (ip string, e
 	return ip, err
 }
 
-func ticketToMatch(t []domain.Ticket, groupID string) (m []domain.Match) {
+func (job *RescanJob) ticketToMatch(t []domain.Ticket, groupID string) (m []domain.Match) {
 	m = make([]domain.Match, 0)
+	deviceIDToInstanceID := make(map[string]*string)
+	deviceIDToRegion := make(map[string]*string)
 	for _, tic := range t {
+
+		// if this is the first time you've seen the device, try and load the relevant cloud information (if it exists)
+		// if it does not exist or it is not a cloud device, this will still only execute a single time
+		if deviceIDToInstanceID[tic.DeviceID()] == nil {
+			device, err := job.db.GetDeviceInfoByAssetOrgID(tic.DeviceID(), job.config.OrganizationID())
+			if err == nil {
+				instanceID := sord(device.InstanceID())
+				region := sord(device.Region())
+				deviceIDToInstanceID[tic.DeviceID()] = &instanceID
+				deviceIDToRegion[tic.DeviceID()] = &region
+			} else {
+				val := ""
+				deviceIDToInstanceID[tic.DeviceID()] = &val
+				deviceIDToRegion[tic.DeviceID()] = &val
+				job.lstream.Send(log.Errorf(err, "error while loading device match information for [%s]", tic.DeviceID()))
+			}
+		}
+
 		m = append(m, matchTicket{
-			t:       tic,
-			groupID: groupID,
+			t:          tic,
+			groupID:    groupID,
+			instanceID: sord(deviceIDToInstanceID[tic.DeviceID()]),
+			region:     sord(deviceIDToRegion[tic.DeviceID()]),
 		})
 	}
 	return m
 }
 
 type matchTicket struct {
-	t       domain.Ticket
-	groupID string
+	t          domain.Ticket
+	groupID    string
+	instanceID string
+	region     string
 }
 
 // IP returns the IP contained within the ticket
@@ -292,6 +278,14 @@ func (m matchTicket) GroupID() string {
 	} else {
 		return m.groupID
 	}
+}
+
+func (m matchTicket) Region() string {
+	return m.region
+}
+
+func (m matchTicket) InstanceID() string {
+	return m.instanceID
 }
 
 func getTicketsBelongingToMatches(matches []domain.Match, tickets []domain.Ticket) (ticketsBelongingToMatches []string) {

@@ -746,14 +746,16 @@ func (job *ScanCloseJob) shouldOpenTicket(ticketing integrations.TicketingEngine
 }
 
 func (job *ScanCloseJob) closeTicket(ticketing integrations.TicketingEngine, tix domain.Ticket, scan domain.ScanSummary, closeStatus string, closeReason string) (err error) {
-	// Remediated
-	job.lstream.Send(log.Debugf("TRANSITIONING Ticket [%s]", tix.Title()))
+	if !statusIsAClosedStatus(ticketing, sord(tix.Status())) {
+		// Remediated
+		job.lstream.Send(log.Debugf("TRANSITIONING Ticket [%s]", tix.Title()))
 
-	err = ticketing.Transition(tix, closeStatus, fmt.Sprintf("%s\n\nScan [Id: %v]", closeReason, sord(scan.SourceKey())), "Unassigned") //should this be closed?
-	if err == nil {
-		job.lstream.Send(log.Infof("Ticket [%s] Closed Vulnerability No Longer Exists", tix.Title()))
-	} else {
-		job.lstream.Send(log.Errorf(err, "Unable to transition ticket %s", tix.Title()))
+		err = ticketing.Transition(tix, closeStatus, fmt.Sprintf("%s\n\nScan [Id: %v]", closeReason, sord(scan.SourceKey())), "Unassigned") //should this be closed?
+		if err == nil {
+			job.lstream.Send(log.Infof("Ticket [%s] Closed Vulnerability No Longer Exists", tix.Title()))
+		} else {
+			job.lstream.Send(log.Errorf(err, "Unable to transition ticket %s", tix.Title()))
+		}
 	}
 
 	return err
