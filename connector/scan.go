@@ -145,7 +145,7 @@ func (session *QsSession) createVulnerabilityScanForGroup(ctx context.Context, o
 
 						select {
 						case <-ctx.Done():
-							return
+							return fmt.Errorf("context closed")
 						case out <- scan:
 						}
 					} else {
