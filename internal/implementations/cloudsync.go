@@ -219,7 +219,7 @@ func (job *CloudSyncJob) createOrUpdateDevice(ip domain.CloudIP, keyToValue map[
 		for _, device := range devices {
 			// device already exists but the instance id isn't set
 			// (likely occurred because asset was created by asset sync job)
-			if len(sord(device.InstanceID())) == 0 && len(keyToValue[instanceID]) > 0 {
+			if (len(sord(device.InstanceID())) == 0 && len(keyToValue[instanceID]) > 0) || (len(sord(device.Region())) == 0 && len(ip.Region()) > 0) {
 				_, _, err = job.db.UpdateInstanceIDOfDevice(device.ID(), keyToValue[instanceID], job.insources[0].SourceID(), ip.State(), ip.Region(), job.config.OrganizationID())
 				if err != nil {
 					err = fmt.Errorf("error while updating instance information for device [%s] - %s", device.ID(), err.Error())
