@@ -211,6 +211,8 @@ github.com/nortonlifelock/jira v1.0.1-0.20200915214440-b06baa29fb76 h1:fylKYNCdt
 github.com/nortonlifelock/jira v1.0.1-0.20200915214440-b06baa29fb76/go.mod h1:pIXlaiGfunUipgk4DcWhufN/1WRTKL2SEO6QxZ7KiyU=
 github.com/nortonlifelock/jira v1.0.1-0.20200916174256-99e404bd50f9 h1:5ESpKBqkzBFwL2aTywGZm6riX27kZeSnW64TyV+lndQ=
 github.com/nortonlifelock/jira v1.0.1-0.20200916174256-99e404bd50f9/go.mod h1:pIXlaiGfunUipgk4DcWhufN/1WRTKL2SEO6QxZ7KiyU=
+github.com/nortonlifelock/jira v1.0.1-0.20200924220205-ef6e83ed7d55 h1:1aiY2yQVmPWcclSx88Y0aWf/mHCRaF6UOF3/xWSAdVY=
+github.com/nortonlifelock/jira v1.0.1-0.20200924220205-ef6e83ed7d55/go.mod h1:pIXlaiGfunUipgk4DcWhufN/1WRTKL2SEO6QxZ7KiyU=
 github.com/nortonlifelock/jira-tool v1.0.0 h1:gxue0xy39eve1BchepLSxqfsqvfYFut74TSXJcQW1Rg=
 github.com/nortonlifelock/jira-tool v1.0.0/go.mod h1:/oHnPKmXd2vmw8qvJKtYpKb5fx0LwmFRuc2VGJn8QlU=
 github.com/nortonlifelock/job v1.0.1-0.20200127165455-ca80a64d226c h1:5xsHmrs+UO4CJQD+j0KPlMlhZyUfUDtaQOQ5V4Wrsb8=
@@ -335,6 +337,8 @@ github.com/nortonlifelock/qualys v1.0.1-0.20200923181652-e5de5965777f h1:xx67hUb
 github.com/nortonlifelock/qualys v1.0.1-0.20200923181652-e5de5965777f/go.mod h1:6JSVLleFtdDDRlhy/xE+P6zCgxpHUfWzfQ8ehm0QTVA=
 github.com/nortonlifelock/qualys v1.0.1-0.20200923183018-5cf211c99173 h1:T2n90SBpXHa2eJb8U1VYmScNsYKfMwQtGevvZBU7Jjk=
 github.com/nortonlifelock/qualys v1.0.1-0.20200923183018-5cf211c99173/go.mod h1:6JSVLleFtdDDRlhy/xE+P6zCgxpHUfWzfQ8ehm0QTVA=
+github.com/nortonlifelock/qualys v1.0.1-0.20200925165719-a9d9f9eaf05c h1:fN9WSCO6BYa9kEqRThEnIzwBtgI+/O+rldWh2sMDxIM=
+github.com/nortonlifelock/qualys v1.0.1-0.20200925165719-a9d9f9eaf05c/go.mod h1:6JSVLleFtdDDRlhy/xE+P6zCgxpHUfWzfQ8ehm0QTVA=
 github.com/nortonlifelock/scaffold v1.0.1-0.20200127165521-bf78a33de233/go.mod h1:W3Qq1Z8VA7UWsCTN3ERhXoVhKR3V3040TgSYHbZdgJk=
 github.com/nortonlifelock/scaffold v1.0.1-0.20200128220520-41da8a42d6d5 h1:cHtAHnaZyVmziV+kwLDbr3YexwSLbk7B0V04H3Mmt2w=
 github.com/nortonlifelock/scaffold v1.0.1-0.20200128220520-41da8a42d6d5/go.mod h1:b2DtRDRTFzZHPiyygHT9ZWGKG3JhxuUMNOKl576HjDU=
