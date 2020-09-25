@@ -99,6 +99,10 @@ func (session *QsSession) createVulnerabilityScanForGroup(ctx context.Context, o
 						}
 
 						scanCreationFunctions = append(scanCreationFunctions, func() (string, string, error) {
+							bundle.seenDevice = make(map[string]bool) // have each scan overwrite the devices that it covers so we can separate out the matches that each scan covers
+							for _, instanceID := range instancesCoveredInThisScan {
+								bundle.seenDevice[instanceID] = true
+							}
 							var scanTitle = fmt.Sprintf(session.payload.ScanNameFormatString, time.Now().Format(time.RFC3339))
 							_, scanRef, err = session.apiSession.CreateEC2Scan(scanTitle, optionProfileID, instancesCoveredInThisScan, region, settings.ConnectorName, settings.ScannerName)
 							return scanTitle, scanRef, err
