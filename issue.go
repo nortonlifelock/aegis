@@ -112,16 +112,16 @@ func (ji *Issue) CERFExpirationDate() (param time.Time) {
 	} else {
 		// the ticket has a referenced CERF, let's grab it's expiration
 		if len(ji.CERF()) > 0 {
+			ji.connector.CERFLock.Lock()
 			if val, exists := ji.connector.CERFs.Load(ji.CERF()); exists {
+				ji.connector.CERFLock.Unlock()
 				if cerf, ok := val.(domain.Ticket); ok {
 					cerfExpiration = cerf.CERFExpirationDate()
 				} else {
 					ji.connector.lstream.Send(log.Errorf(nil, "cerf [%v] failed to load from cache", ji.CERF()))
 				}
 			} else {
-				ji.connector.CERFLock.Lock()
 				if cerf, err := ji.connector.GetTicket(ji.CERF()); err == nil {
-					ji.connector.CERFLock.Unlock()
 					if cerf != nil {
 						cerfExpiration = cerf.CERFExpirationDate()
 						ji.connector.CERFs.Store(ji.CERF(), cerf)
@@ -129,9 +129,9 @@ func (ji *Issue) CERFExpirationDate() (param time.Time) {
 						ji.connector.lstream.Send(log.Errorf(err, "cerf [%v] returned nil from JIRA", ji.CERF()))
 					}
 				} else {
-					ji.connector.CERFLock.Unlock()
 					ji.connector.lstream.Send(log.Errorf(err, "cerf [%v] failed to load from JIRA", ji.CERF()))
 				}
+				ji.connector.CERFLock.Unlock()
 			}
 		}
 	}
