@@ -39,6 +39,7 @@ type ConnectorJira struct {
 
 	statusMap map[string]string
 	CERFs     sync.Map
+	CERFLock  sync.Mutex
 	//RequestChan chan *Request
 	funnelClient funnel.Client
 
