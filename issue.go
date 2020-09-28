@@ -355,7 +355,10 @@ func (ji *Issue) getString(key string) (param string) {
 
 func (ji *Issue) getTimePointer(key string) (param *time.Time) {
 	val := ji.getTime(key)
-	param = &val
+	if !val.IsZero() {
+		param = &val
+	}
+
 	return param
 }
 
