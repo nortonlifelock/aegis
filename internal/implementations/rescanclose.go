@@ -287,43 +287,49 @@ func (job *ScanCloseJob) getExceptionID(assetID string, deviceInDb domain.Device
 }
 
 func createCloudDecommissionJob(parentJobID string, db domain.DatabaseConnection, lstream log.Logger, orgID string, groupID string, ips []string) {
+	if jobRegistration, jobConfig, canCreate := canCreateCloudDecommJob(db, lstream, orgID, groupID); canCreate {
+		var priority = jobRegistration.Priority()
+		if jobConfig.PriorityOverride() != nil {
+			priority = iord(jobConfig.PriorityOverride())
+		}
+
+		payload := &CloudDecommissionPayload{OnlyCheckIPs: ips}
+		if payloadBody, err := json.Marshal(payload); err == nil {
+			_, _, err = db.CreateJobHistoryWithParentID(
+				jobRegistration.ID(),
+				jobConfig.ID(),
+				domain.JobStatusPending,
+				priority,
+				"",
+				0,
+				string(payloadBody),
+				"",
+				time.Now().UTC(),
+				"",
+				parentJobID,
+			)
+
+			if err == nil {
+				lstream.Send(log.Infof("queued a cloud decommission scan for ips [%v]", ips))
+			} else {
+				lstream.Send(log.Errorf(err, "error while queueing cloud decommission scan for ips [%v]", ips))
+			}
+		} else {
+			lstream.Send(log.Errorf(err, "error while creating payload for CloudDecommissionJob"))
+		}
+	}
+}
+
+func canCreateCloudDecommJob(db domain.DatabaseConnection, lstream log.Logger, orgID string, groupID string) (jobRegistration domain.JobRegistration, jobConfig domain.JobConfig, canCreate bool) {
 	if assetGroup, err := db.GetAssetGroupForOrgNoScanner(orgID, groupID); err == nil && assetGroup != nil {
 		if len(sord(assetGroup.CloudSourceID())) > 0 {
 			if scs, err := db.GetSourceConfigBySourceID(orgID, sord(assetGroup.CloudSourceID())); err == nil && len(scs) > 0 {
 				var cloudSourceConfig = scs[0]
 
-				if jobRegistration, err := db.GetJobsByStruct(cloudDecomJob); err == nil && jobRegistration != nil {
-					if jobConfig, err := db.GetJobConfigByOrgIDAndJobIDWithSC(orgID, jobRegistration.ID(), cloudSourceConfig.ID()); err == nil && len(jobConfig) > 0 {
-
-						var priority = jobRegistration.Priority()
-						if jobConfig[0].PriorityOverride() != nil {
-							priority = iord(jobConfig[0].PriorityOverride())
-						}
-
-						payload := &CloudDecommissionPayload{OnlyCheckIPs: ips}
-						if payloadBody, err := json.Marshal(payload); err == nil {
-							_, _, err = db.CreateJobHistoryWithParentID(
-								jobRegistration.ID(),
-								jobConfig[0].ID(),
-								domain.JobStatusPending,
-								priority,
-								"",
-								0,
-								string(payloadBody),
-								"",
-								time.Now().UTC(),
-								"",
-								parentJobID,
-							)
-
-							if err == nil {
-								lstream.Send(log.Infof("queued a cloud decommission scan for ips [%v]", ips))
-							} else {
-								lstream.Send(log.Errorf(err, "error while queueing cloud decommission scan for ips [%v]", ips))
-							}
-						} else {
-							lstream.Send(log.Errorf(err, "error while creating payload for CloudDecommissionJob"))
-						}
+				if jobRegistration, err = db.GetJobsByStruct(cloudDecomJob); err == nil && jobRegistration != nil {
+					if jobConfigs, err := db.GetJobConfigByOrgIDAndJobIDWithSC(orgID, jobRegistration.ID(), cloudSourceConfig.ID()); err == nil && len(jobConfigs) > 0 {
+						jobConfig = jobConfigs[0]
+						canCreate = true
 					} else {
 						lstream.Send(log.Errorf(err, "error while loading job config for the CloudDecommissionJob"))
 					}
@@ -339,6 +345,8 @@ func createCloudDecommissionJob(parentJobID string, db domain.DatabaseConnection
 	} else {
 		lstream.Send(log.Errorf(err, "error while loading asset group information for [org|group|source] [%s|%s]", orgID, groupID))
 	}
+
+	return jobRegistration, jobConfig, canCreate
 }
 
 func (job *ScanCloseJob) mapDetectionsAndDeadHosts(detections <-chan domain.Detection, deadHostIPToProof <-chan domain.KeyValue) (deviceIDToVulnIDToDetection map[string]map[string]domain.Detection, deadHostIPToProofMap map[string]string) {

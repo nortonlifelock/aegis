@@ -116,7 +116,14 @@ func (job *RescanJob) createAndMonitorScan(matches []domain.Match, tickets []dom
 
 		var scans <-chan domain.Scan
 		if job.Payload.Type == domain.RescanDecommission {
-			scans = vscanner.Discovery(job.ctx, matches)
+			if _, _, canCreate := canCreateCloudDecommJob(job.db, job.lstream, job.config.OrganizationID(), job.Payload.Group); canCreate {
+				createCloudDecommissionJob(job.id, job.db, job.lstream, job.config.OrganizationID(), job.Payload.Group, getIPsFromMatches(matches))
+				out := make(chan domain.Scan)
+				close(out)
+				scans = out
+			} else {
+				scans = vscanner.Discovery(job.ctx, matches)
+			}
 		} else {
 			scans, err = vscanner.Scan(job.ctx, matches)
 		}
@@ -286,6 +293,14 @@ func (m matchTicket) Region() string {
 
 func (m matchTicket) InstanceID() string {
 	return m.instanceID
+}
+
+func getIPsFromMatches(matches []domain.Match) (ips []string) {
+	ips = make([]string, 0)
+	for _, match := range matches {
+		ips = append(ips, match.IP())
+	}
+	return ips
 }
 
 func getTicketsBelongingToMatches(matches []domain.Match, tickets []domain.Ticket) (ticketsBelongingToMatches []string) {
