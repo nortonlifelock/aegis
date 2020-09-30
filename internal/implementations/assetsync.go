@@ -42,7 +42,8 @@ type AssetSyncJob struct {
 
 // AssetSyncPayload holds the asset groups to be synced by the job. loaded from the job history Payload
 type AssetSyncPayload struct {
-	GroupIDs []string `json:"groups"`
+	GroupIDs                           []string `json:"groups"`
+	GroupIDsExemptFromGlobalExceptions []string `json:"groups_exempt_from_global_exceptions"`
 }
 
 // buildPayload loads the Payload from the job history into the Payload object
@@ -207,7 +208,7 @@ func (job *AssetSyncJob) processGroup(vscanner integrations.Vscanner, groupIDs [
 
 							err = job.addDeviceInformationToDB(asset, strings.Join(groupIDs, ","))
 							if err == nil {
-								job.processAsset(deviceID, asset, detections, decomIgnoreID)
+								job.processAsset(asset, detections, decomIgnoreID)
 							} else {
 								job.lstream.Send(log.Errorf(err, "error while adding asset information to the database"))
 							}
@@ -262,7 +263,7 @@ func (job *AssetSyncJob) getDecommIgnoreEntryForAsset(deviceID string, scannerSo
 }
 
 // Only process the asset if it has not been processed by another group
-func (job *AssetSyncJob) processAsset(deviceID string, asset domain.Device, detections []domain.Detection, decomIgnoreID string) {
+func (job *AssetSyncJob) processAsset(asset domain.Device, detections []domain.Detection, decomIgnoreID string) {
 	var err error
 
 	if len(sord(asset.SourceID())) > 0 {
@@ -484,7 +485,7 @@ func (job *AssetSyncJob) getExceptionID(assetID string, deviceInDb domain.Device
 		}
 	}
 
-	if len(exceptionID) == 0 {
+	if len(exceptionID) == 0 && !stringInSlice(job.Payload.GroupIDsExemptFromGlobalExceptions, sord(deviceInDb.GroupID())) {
 		for _, globalException := range job.globalExceptions {
 
 			if globalException.osRegex != nil || globalException.hostnameRegex != nil {
@@ -579,7 +580,7 @@ func createOrUpdateDetection(db domain.DatabaseConnection, lstream log.Logger, d
 						lstream.Send(log.Errorf(err, "Error while updating detection for device/vuln [%v|%v]", assetID, vulnInfo.ID()))
 					}
 				} else {
-					lstream.Send(log.Infof("Skipping detection update for device/vuln [%v|%v] [%v after %v]", assetID, vulnInfo.ID(), detectionInDB.Updated(), *detectionFromScanner.LastUpdated()))
+					lstream.Send(log.Debugf("Skipping detection update for device/vuln [%v|%v] [%v after %v]", assetID, vulnInfo.ID(), detectionInDB.Updated(), *detectionFromScanner.LastUpdated()))
 				}
 			}
 		} else {
@@ -737,4 +738,15 @@ func (job *AssetSyncJob) preloadIgnores() (globals []compiledException, deviceID
 	}
 
 	return globals, deviceIDToVulnIDToException, err
+}
+
+func stringInSlice(vals []string, lookFor string) (inSlice bool) {
+	for _, val := range vals {
+		if val == lookFor {
+			inSlice = true
+			break
+		}
+	}
+
+	return inSlice
 }
