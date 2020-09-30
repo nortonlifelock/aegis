@@ -7,10 +7,12 @@ import (
 )
 
 func (session *QsSession) RescanBundle(bundleID int, cloudAccountID string) (findings []domain.Finding, err error) {
+	_ = bundleID // not necessary
 	findings = make([]domain.Finding, 0)
 
 	var evaluations []qualys.AccountEvaluationContent
-	if evaluations, err = session.apiSession.GetCloudAccountEvaluations(cloudAccountID); err == nil {
+	var cloudAccountType string
+	if evaluations, cloudAccountType, err = session.apiSession.GetCloudAccountEvaluations(cloudAccountID); err == nil {
 
 		var wg sync.WaitGroup
 		permit := getPermitThread(10)
@@ -25,7 +27,7 @@ func (session *QsSession) RescanBundle(bundleID int, cloudAccountID string) (fin
 					permit <- true
 				}()
 
-				if evaluationFindings, threadErr := session.apiSession.GetCloudEvaluationFindings(cloudAccountID, evaluation); threadErr == nil {
+				if evaluationFindings, threadErr := session.apiSession.GetCloudEvaluationFindings(cloudAccountID, evaluation, cloudAccountType); threadErr == nil {
 					lock.Lock()
 					findings = append(findings, evaluationFindings...)
 					lock.Unlock()

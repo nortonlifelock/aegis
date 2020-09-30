@@ -98,6 +98,7 @@ func (session *QsSession) createVulnerabilityScanForGroup(ctx context.Context, o
 							instancesCoveredInThisScan = instanceIDs[i:]
 						}
 
+						// TODO have this method return the matches that the scan covers?
 						scanCreationFunctions = append(scanCreationFunctions, func() (string, string, error) {
 							bundle.seenDevice = make(map[string]bool) // have each scan overwrite the devices that it covers so we can separate out the matches that each scan covers
 							for _, instanceID := range instancesCoveredInThisScan {

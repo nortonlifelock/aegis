@@ -66,18 +66,6 @@ type AccountEvaluationContent struct {
 	FailedResources int      `json:"failedResources"`
 }
 
-type CloudConfigurationResp struct {
-	Content          []Content `json:"content"`
-	Pageable         Pageable  `json:"pageable"`
-	Last             bool      `json:"last"`
-	TotalPages       int       `json:"totalPages"`
-	TotalElements    int       `json:"totalElements"`
-	First            bool      `json:"first"`
-	Sort             Sort      `json:"sort"`
-	NumberOfElements int       `json:"numberOfElements"`
-	Size             int       `json:"size"`
-	Number           int       `json:"number"`
-}
 type Regions struct {
 	UUID               interface{} `json:"uuid"`
 	CodeName           string      `json:"codeName"`
@@ -92,49 +80,7 @@ type RunFrequency struct {
 	Hours   int `json:"hours"`
 	Minutes int `json:"minutes"`
 }
-type Content struct {
-	CloudType           string        `json:"cloudType"`
-	UUID                string        `json:"uuid"`
-	ScanUUID            string        `json:"scanUuid"`
-	Name                string        `json:"name"`
-	Description         interface{}   `json:"description"`
-	IsGovCloud          bool          `json:"isGovCloud"`
-	IsChinaRegion       bool          `json:"isChinaRegion"`
-	Deleted             bool          `json:"deleted"`
-	GlobalErrorMessage  string        `json:"globalErrorMessage"`
-	ErrorDetails        interface{}   `json:"errorDetails"`
-	Message             interface{}   `json:"message"`
-	State               string        `json:"state"`
-	LastSynch           string        `json:"lastSynch"`
-	NextSynch           string        `json:"nextSynch"`
-	RegionsNotProtected int           `json:"regionsNotProtected"`
-	RegionsProtected    int           `json:"regionsProtected"`
-	TotalAssets         int           `json:"totalAssets"`
-	Modules             []string      `json:"modules"`
-	Disabled            interface{}   `json:"disabled"`
-	SynchType           interface{}   `json:"synchType"`
-	SynchFrequency      interface{}   `json:"synchFrequency"`
-	Regions             []Regions     `json:"regions"`
-	TotalRegions        interface{}   `json:"totalRegions"`
-	TotalErrors         interface{}   `json:"totalErrors"`
-	AssetsCount         interface{}   `json:"assetsCount"`
-	AssetsProtected     interface{}   `json:"assetsProtected"`
-	AssetsNotProtected  interface{}   `json:"assetsNotProtected"`
-	Groups              []interface{} `json:"groups"`
-	RunFrequency        RunFrequency  `json:"runFrequency"`
-	AwsAccountID        string        `json:"awsAccountId"`
-	AccountAlias        interface{}   `json:"accountAlias"`
-	BaseAccountID       interface{}   `json:"baseAccountId"`
-	AwsExternalID       string        `json:"awsExternalId"`
-	AwsArn              string        `json:"awsArn"`
-	PortalUUID          string        `json:"portalUuid"`
-	PortalConnector     bool          `json:"portalConnector"`
-	CustomerBaseAccount bool          `json:"customerBaseAccount"`
-	RegionUuids         interface{}   `json:"regionUuids"`
-	ResponseCode        interface{}   `json:"responseCode"`
-	TestResponse        interface{}   `json:"testResponse"`
-	ResponseMessage     interface{}   `json:"responseMessage"`
-}
+
 type Sort struct {
 	Sorted   bool `json:"sorted"`
 	Unsorted bool `json:"unsorted"`
@@ -148,7 +94,42 @@ type Pageable struct {
 	Unpaged    bool `json:"unpaged"`
 }
 
-func (session *Session) GetCloudAccountEvaluations(accountID string) (evaluations []AccountEvaluationContent, err error) {
+const (
+	AWS_CLOUD_ACCOUNT    = "aws"
+	AZURE_CLOUD_ACCOUNT  = "azure"
+	GOOGLE_CLOUD_ACCOUNT = "gcp"
+)
+
+func (session *Session) GetCloudAccountEvaluations(accountID string) (evaluations []AccountEvaluationContent, cloudAccountType string, err error) {
+	var possibleAccountTypes = []string{AWS_CLOUD_ACCOUNT, AZURE_CLOUD_ACCOUNT, GOOGLE_CLOUD_ACCOUNT}
+
+	// from looking at the API documentation, I don't see a way to find the cloud account type by using the cloud account ID alone
+	// so we just check all three and use one if it's present
+	for _, possibleCloudAccountType := range possibleAccountTypes {
+		var possibleEvals []AccountEvaluationContent
+
+		if possibleEvals, err = session.GetCloudAccountEvaluationsWithCloudAccountType(accountID, possibleCloudAccountType); err == nil {
+			for _, eval := range possibleEvals {
+				if eval.FailedResources > 0 || eval.PassedResources > 0 {
+					evaluations = possibleEvals
+					cloudAccountType = possibleCloudAccountType
+					break
+				}
+			}
+		} else {
+			err = fmt.Errorf("error while determining cloud account type for evaluation gathering [%s|%s]", accountID, possibleCloudAccountType)
+			break
+		}
+	}
+
+	if err == nil && len(cloudAccountType) == 0 {
+		err = fmt.Errorf("could not determine cloud account type for accountID [%s]", accountID)
+	}
+
+	return evaluations, cloudAccountType, err
+}
+
+func (session *Session) GetCloudAccountEvaluationsWithCloudAccountType(accountID string, cloudAccountType string) (evaluations []AccountEvaluationContent, err error) {
 	evaluations = make([]AccountEvaluationContent, 0)
 	accountEvaluation := &AccountEvaluationResponse{}
 
@@ -157,7 +138,7 @@ func (session *Session) GetCloudAccountEvaluations(accountID string) (evaluation
 
 	for !lastAccPage {
 		var req *http.Request
-		req, err = http.NewRequest(http.MethodGet, session.Config.Address()+fmt.Sprintf("/cloudview-api/rest/v1/aws/evaluations/%s?pageNo=%d&sortOrder=asc", accountID, accPage), nil)
+		req, err = http.NewRequest(http.MethodGet, session.Config.Address()+fmt.Sprintf("/cloudview-api/rest/v1/%s/evaluations/%s?pageNo=%d&sortOrder=asc", cloudAccountType, accountID, accPage), nil)
 		if err == nil {
 			err = session.makeRequest(req, func(resp *http.Response) (err error) {
 				var body []byte
@@ -186,7 +167,7 @@ func (session *Session) GetCloudAccountEvaluations(accountID string) (evaluation
 	return evaluations, err
 }
 
-func (session *Session) GetCloudEvaluationFindings(accountID string, content AccountEvaluationContent) (findings []domain.Finding, err error) {
+func (session *Session) GetCloudEvaluationFindings(accountID string, content AccountEvaluationContent, cloudAccountType string) (findings []domain.Finding, err error) {
 	findings = make([]domain.Finding, 0)
 	var last bool
 	var page int
@@ -195,7 +176,7 @@ func (session *Session) GetCloudEvaluationFindings(accountID string, content Acc
 		evaluationResult := &EvaluationResult{}
 
 		var req *http.Request
-		req, err = http.NewRequest(http.MethodGet, session.Config.Address()+fmt.Sprintf("/cloudview-api/rest/v1/aws/evaluations/%s/resources/%s?pageNo=%d&sortOrder=asc", accountID, content.ControlID, page), nil)
+		req, err = http.NewRequest(http.MethodGet, session.Config.Address()+fmt.Sprintf("/cloudview-api/rest/v1/%s/evaluations/%s/resources/%s?pageNo=%d&sortOrder=asc", cloudAccountType, accountID, content.ControlID, page), nil)
 		if err == nil {
 			err = session.makeRequest(req, func(resp *http.Response) (err error) {
 				var body []byte
