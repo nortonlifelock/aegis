@@ -180,7 +180,10 @@ func (connector *ConnectorJira) UpdateTicket(ticket domain.Ticket, comment strin
 			if len(sord(ticket.Category())) > 0 {
 				field := connector.GetFieldMap(backendCategory)
 				if field != nil {
-					updateBlock.Fields.Category = ticket.Category()
+					updateBlock.Fields.Category = &ValueField{
+						Value: sord(ticket.Category()),
+						Name:  "",
+					}
 					oldToNewFieldName["category"] = field.ID
 				}
 			}
