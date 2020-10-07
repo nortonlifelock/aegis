@@ -250,7 +250,7 @@ func (f *cloudViewFinding) ScanID() int {
 }
 
 func (f *cloudViewFinding) Summary() string {
-	return fmt.Sprintf("Aegis (%s) - %s", f.accountContent.ControlName, f.evaluationContent.ResourceID)
+	return fmt.Sprintf("Aegis (%s)", f.accountContent.ControlName)
 }
 func (f *cloudViewFinding) VulnerabilityTitle() string {
 	return f.accountContent.ControlName
@@ -269,7 +269,7 @@ func (f *cloudViewFinding) String() string {
 			evidences = fmt.Sprintf("%s\n%s: %s", evidences, evidence.SettingName, evidence.ActualValue)
 		}
 	}
-	return fmt.Sprintf("Region: %s\n\nEvidence\n%s\n\nResource Type: %s\n\nPolicy: %s\n\nControl ID: %s", f.evaluationContent.Region, evidences, f.evaluationContent.ResourceType, strings.Join(f.accountContent.PolicyNames, ", "), f.accountContent.ControlID)
+	return fmt.Sprintf("Resource: %s\n\nRegion: %s\n\nEvidence\n%s\n\nResource Type: %s\n\nPolicy: %s\n\nControl ID: %s", f.evaluationContent.ResourceID, f.evaluationContent.Region, evidences, f.evaluationContent.ResourceType, strings.Join(f.accountContent.PolicyNames, ", "), f.accountContent.ControlID)
 }
 
 // not relevant to cloud view
