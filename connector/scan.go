@@ -189,11 +189,13 @@ func (session *QsSession) getEC2ScanData(matches []domain.Match) (instanceIDs []
 				err = fmt.Errorf("found multiple regions within same ec2 group [%s|%s]", region, match.Region())
 				break
 			}
-		} else {
-			err = fmt.Errorf("empty region found for device [%s]", match.Device())
-			break
 		}
 	}
+
+	if err == nil && len(region) == 0 {
+		err = fmt.Errorf("could not determine region for any of the instance IDs [%s]", strings.Join(instanceIDs, ","))
+	}
+
 	return instanceIDs, region, err
 }
 
