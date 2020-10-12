@@ -188,6 +188,17 @@ func (connector *ConnectorJira) UpdateTicket(ticket domain.Ticket, comment strin
 				}
 			}
 
+			if len(sord(ticket.ApplicationName())) > 0 {
+				field := connector.GetFieldMap(backendApplicationName)
+				if field != nil {
+					updateBlock.Fields.ApplicationName = &ValueField{
+						Value: sord(ticket.ApplicationName()),
+						Name:  "",
+					}
+					oldToNewFieldName["applicationname"] = field.ID
+				}
+			}
+
 			if ticket.LastChecked() != nil && !ticket.LastChecked().IsZero() {
 				field := connector.GetFieldMap(backendLastChecked)
 				if field != nil {

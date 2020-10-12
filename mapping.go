@@ -101,6 +101,7 @@ func (connector *ConnectorJira) mapDalTicketToJiraIssue(ticket domain.Ticket) (j
 		setJIField(connector, ji, backendAssignmentGroup, ticket.AssignmentGroup())
 		setJIField(connector, ji, backendOSDetailed, ticket.OSDetailed())
 		setJIField(connector, ji, backendCategory, ticket.Category())
+		setJIField(connector, ji, backendApplicationName, ticket.ApplicationName())
 		setJIField(connector, ji, backendConfig, ticket.Configs())
 		setJIField(connector, ji, backendOrg, ticket.OrgCode())
 		setJIField(connector, ji, backendSolution, ticket.Solution())

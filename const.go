@@ -34,6 +34,7 @@ var MappableFields = []string{
 	backendVendorReferences,
 	backendOSDetailed,
 	backendCategory,
+	backendApplicationName,
 	backendConfig,
 	backendLastChecked,
 	backendCloudID,
@@ -106,4 +107,5 @@ const (
 	backendConfig           = "Config"
 	backendLastChecked      = "LastChecked"
 	backendCloudID          = "CloudID"
+	backendApplicationName  = "Application Name"
 )
