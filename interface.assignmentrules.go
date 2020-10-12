@@ -3,6 +3,7 @@ package domain
 type AssignmentRules interface {
 	AssignmentGroup() *string
 	Assignee() *string
+	ApplicationName() *string
 	OrganizationID() string
 	GroupID() *string
 	VulnTitleRegex() *string
