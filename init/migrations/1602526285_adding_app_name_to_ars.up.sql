@@ -1,0 +1,1 @@
+ALTER TABLE AssignmentRules ADD COLUMN ApplicationName VARCHAR(300) NULL AFTER Assignee;

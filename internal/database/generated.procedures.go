@@ -1828,6 +1828,7 @@ func (conn *dbconn) GetAssignmentRulesByOrg(_OrganizationID string) ([]domain.As
 
 							var myAssignmentGroup *string
 							var myAssignee *string
+							var myApplicationName *string
 							var myOrganizationID string
 							var myGroupID *string
 							var myVulnTitleRegex *string
@@ -1845,6 +1846,7 @@ func (conn *dbconn) GetAssignmentRulesByOrg(_OrganizationID string) ([]domain.As
 
 								&myAssignmentGroup,
 								&myAssignee,
+								&myApplicationName,
 								&myOrganizationID,
 								&myGroupID,
 								&myVulnTitleRegex,
@@ -1862,6 +1864,7 @@ func (conn *dbconn) GetAssignmentRulesByOrg(_OrganizationID string) ([]domain.As
 								newAssignmentRules := &dal.AssignmentRules{
 									AssignmentGroupvar:       myAssignmentGroup,
 									Assigneevar:              myAssignee,
+									ApplicationNamevar:       myApplicationName,
 									OrganizationIDvar:        myOrganizationID,
 									GroupIDvar:               myGroupID,
 									VulnTitleRegexvar:        myVulnTitleRegex,

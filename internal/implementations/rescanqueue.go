@@ -425,7 +425,7 @@ func (job *RescanQueueJob) agentTicketIsReadyForRescan(ticket domain.Ticket) (re
 					time.Since(*updatedDateVal) < timeToWaitToKickoffRescanForAgentTickets {
 					readyForRescan = false
 
-					job.lstream.Send(log.Infof("Skipping rescan of [%s], waiting until [%s] as it is an agent ticket",
+					job.lstream.Send(log.Debugf("Skipping rescan of [%s], waiting until [%s] as it is an agent ticket",
 						ticket.Title(),
 						updatedDateVal.Add(timeToWaitToKickoffRescanForAgentTickets).Format(time.RFC822)),
 					)

@@ -302,9 +302,9 @@ func (job *AssetSyncJob) processAsset(asset domain.Device, detections []domain.D
 func (job *AssetSyncJob) addDeviceInformationToDB(asset domain.Device, groupID string) (err error) {
 	var ostFromDb domain.OperatingSystemType
 	if len(asset.OS()) > 0 {
-		ostFromDb, err = job.grabAndCreateOsType(asset.OS())
+		ostFromDb, err = grabAndCreateOsType(job.db, asset.OS())
 	} else {
-		ostFromDb, err = job.grabAndCreateOsType(unknown)
+		ostFromDb, err = grabAndCreateOsType(job.db, unknown)
 	}
 
 	// this updates asset's OST to the same OST but w/ populated db id
@@ -643,9 +643,9 @@ func getDetectionStatus(detectionStatuses []domain.DetectionStatus, status strin
 
 // This method creates an entry in the database for the operating system type. It then returns the entry so that the id of the OST
 // may be used for foreign key references
-func (job *AssetSyncJob) grabAndCreateOsType(operatingSystem string) (output domain.OperatingSystemType, err error) {
+func grabAndCreateOsType(db domain.DatabaseConnection, operatingSystem string) (output domain.OperatingSystemType, err error) {
 	if len(operatingSystem) > 0 {
-		output, err = job.db.GetOperatingSystemType(operatingSystem)
+		output, err = db.GetOperatingSystemType(operatingSystem)
 		if err == nil {
 			if output == nil {
 				err = fmt.Errorf("could not discern operating system type of [%s]", operatingSystem)

@@ -65,7 +65,7 @@ func (job *TicketSyncJob) updateTicketsInDB(tics <-chan domain.Ticket) {
 					wg.Add(1)
 					go func(tic domain.Ticket) {
 						defer wg.Done()
-						job.processTicket(tic, orgID)
+						processTicket(job.db, job.lstream, tic, orgID)
 					}(tic)
 				} else {
 					wg.Wait()
@@ -82,8 +82,8 @@ func (job *TicketSyncJob) updateTicketsInDB(tics <-chan domain.Ticket) {
 	}
 }
 
-func (job *TicketSyncJob) processTicket(tic domain.Ticket, orgID string) {
-	existingDBTicket, err := job.db.GetTicketByTitle(tic.Title(), orgID)
+func processTicket(db domain.DatabaseConnection, lstream log.Logger, tic domain.Ticket, orgID string) {
+	existingDBTicket, err := db.GetTicketByTitle(tic.Title(), orgID)
 	if err == nil {
 		if existingDBTicket == nil {
 
@@ -97,23 +97,23 @@ func (job *TicketSyncJob) processTicket(tic domain.Ticket, orgID string) {
 					portString = portProtocol[0]
 					protocol = portProtocol[1]
 					if portInt, err = strconv.Atoi(portString); err != nil {
-						job.lstream.Send(log.Errorf(err, "failed to parse port [%s] as integer", portString))
+						lstream.Send(log.Errorf(err, "failed to parse port [%s] as integer", portString))
 					}
 				} else {
 					err = fmt.Errorf("port formatting error")
-					job.lstream.Send(log.Errorf(err, "[%s] could not be broken into two", sord(tic.ServicePorts())))
+					lstream.Send(log.Errorf(err, "[%s] could not be broken into two", sord(tic.ServicePorts())))
 				}
 			}
 
 			if err == nil {
 				var detection domain.Detection
-				if detection, err = job.getDetection(tic.DeviceID(), tic.VulnerabilityID(), portInt, protocol); err == nil {
+				if detection, err = getDetection(db, tic.DeviceID(), tic.VulnerabilityID(), portInt, protocol); err == nil {
 
-					_, _, err = job.db.CreateTicket(
+					_, _, err = db.CreateTicket(
 						tic.Title(),
 						sord(tic.Status()),
 						detection.ID(),
-						job.config.OrganizationID(),
+						orgID,
 						tord1970(tic.DueDate()),
 						tord1970(tic.UpdatedDate()),
 						tord1970(tic.ResolutionDate()),
@@ -122,18 +122,18 @@ func (job *TicketSyncJob) processTicket(tic domain.Ticket, orgID string) {
 					)
 
 					if err != nil {
-						job.lstream.Send(log.Errorf(err, "error while creating database ticket for [%v]", tic.Title()))
+						lstream.Send(log.Errorf(err, "error while creating database ticket for [%v]", tic.Title()))
 					}
 				} else {
-					job.lstream.Send(log.Errorf(err, "error while loading detection for [%v]", tic.Title()))
+					lstream.Send(log.Errorf(err, "error while loading detection for [%v]", tic.Title()))
 				}
 			}
 
 		} else {
-			_, _, err = job.db.UpdateTicket(
+			_, _, err = db.UpdateTicket(
 				tic.Title(),
 				sord(tic.Status()),
-				job.config.OrganizationID(),
+				orgID,
 				sord(tic.AssignmentGroup()),
 				sord(tic.AssignedTo()),
 				tord1970(tic.DueDate()),
@@ -145,17 +145,17 @@ func (job *TicketSyncJob) processTicket(tic domain.Ticket, orgID string) {
 			)
 
 			if err != nil {
-				job.lstream.Send(log.Errorf(err, "error while updating database ticket [%v]", tic.Title()))
+				lstream.Send(log.Errorf(err, "error while updating database ticket [%v]", tic.Title()))
 			}
 		}
 	} else {
-		job.lstream.Send(log.Errorf(err, "error while loading existing ticket from database for [%v]", tic.Title()))
+		lstream.Send(log.Errorf(err, "error while loading existing ticket from database for [%v]", tic.Title()))
 	}
 }
 
-func (job *TicketSyncJob) getDetection(deviceID string, vulnID string, port int, protocol string) (detection domain.Detection, err error) {
+func getDetection(db domain.DatabaseConnection, deviceID string, vulnID string, port int, protocol string) (detection domain.Detection, err error) {
 	if len(deviceID) > 0 && len(vulnID) > 0 {
-		if detection, err = job.db.GetDetectionBySourceVulnID(deviceID, vulnID, port, protocol); err == nil {
+		if detection, err = db.GetDetectionBySourceVulnID(deviceID, vulnID, port, protocol); err == nil {
 			if detection == nil {
 				err = fmt.Errorf("could not find detection for [%v|%v]", deviceID, vulnID)
 			}

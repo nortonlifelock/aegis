@@ -20,7 +20,7 @@
 
 DROP PROCEDURE IF EXISTS `GetDetectionInfoBySourceVulnID`;
 
-CREATE PROCEDURE `GetDetectionInfoBySourceVulnID` (_SourceDeviceID VARCHAR(36), _SourceVulnerabilityID VARCHAR(36), _Port INT, _Protocol VARCHAR(36))
+CREATE PROCEDURE `GetDetectionInfoBySourceVulnID` (_SourceDeviceID VARCHAR(360), _SourceVulnerabilityID VARCHAR(36), _Port INT, _Protocol VARCHAR(36))
     #BEGIN#
 SELECT
     D.ID,

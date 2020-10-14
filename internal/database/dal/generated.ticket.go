@@ -18,6 +18,7 @@ import (
 // Ticket defines the struct that implements the Ticket interface
 type Ticket struct {
 	AlertDatevar          *time.Time
+	ApplicationNamevar    *string
 	AssignedTovar         *string
 	AssignmentGroupvar    *string
 	CERFvar               string
@@ -75,6 +76,7 @@ type Ticket struct {
 func (myTicket Ticket) MarshalJSON() ([]byte, error) {
 	return json.Marshal(map[string]interface{}{
 		"AlertDate":          myTicket.AlertDatevar,
+		"ApplicationName":    myTicket.ApplicationNamevar,
 		"AssignedTo":         myTicket.AssignedTovar,
 		"AssignmentGroup":    myTicket.AssignmentGroupvar,
 		"CERF":               myTicket.CERFvar,
@@ -128,6 +130,11 @@ func (myTicket Ticket) MarshalJSON() ([]byte, error) {
 // AlertDate returns the AlertDate parameter from the Ticket struct
 func (myTicket *Ticket) AlertDate() (param *time.Time) {
 	return myTicket.AlertDatevar
+}
+
+// ApplicationName returns the ApplicationName parameter from the Ticket struct
+func (myTicket *Ticket) ApplicationName() (param *string) {
+	return myTicket.ApplicationNamevar
 }
 
 // AssignedTo returns the AssignedTo parameter from the Ticket struct
@@ -363,6 +370,11 @@ func (myTicket *Ticket) VulnerabilityID() (param string) {
 // VulnerabilityTitle returns the VulnerabilityTitle parameter from the Ticket struct
 func (myTicket *Ticket) VulnerabilityTitle() (param *string) {
 	return myTicket.VulnerabilityTitlevar
+}
+
+// SetApplicationName sets the ApplicationName parameter from the Ticket struct
+func (myTicket *Ticket) SetApplicationName(val string) {
+	myTicket.ApplicationNamevar = &val
 }
 
 // SetAssignedTo sets the AssignedTo parameter from the Ticket struct

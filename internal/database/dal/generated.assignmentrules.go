@@ -16,6 +16,7 @@ import (
 
 // AssignmentRules defines the struct that implements the AssignmentRules interface
 type AssignmentRules struct {
+	ApplicationNamevar       *string
 	Assigneevar              *string
 	AssignmentGroupvar       *string
 	CategoryRegexvar         *string
@@ -39,6 +40,7 @@ type AssignmentRules struct {
 // MarshalJSON marshals the struct by converting it to a map
 func (myAssignmentRules AssignmentRules) MarshalJSON() ([]byte, error) {
 	return json.Marshal(map[string]interface{}{
+		"ApplicationName":       myAssignmentRules.ApplicationNamevar,
 		"Assignee":              myAssignmentRules.Assigneevar,
 		"AssignmentGroup":       myAssignmentRules.AssignmentGroupvar,
 		"CategoryRegex":         myAssignmentRules.CategoryRegexvar,
@@ -54,6 +56,11 @@ func (myAssignmentRules AssignmentRules) MarshalJSON() ([]byte, error) {
 		"TagKeyRegex":           myAssignmentRules.TagKeyRegexvar,
 		"VulnTitleRegex":        myAssignmentRules.VulnTitleRegexvar,
 	})
+}
+
+// ApplicationName returns the ApplicationName parameter from the AssignmentRules struct
+func (myAssignmentRules *AssignmentRules) ApplicationName() (param *string) {
+	return myAssignmentRules.ApplicationNamevar
 }
 
 // Assignee returns the Assignee parameter from the AssignmentRules struct
@@ -124,6 +131,11 @@ func (myAssignmentRules *AssignmentRules) TagKeyRegex() (param *string) {
 // VulnTitleRegex returns the VulnTitleRegex parameter from the AssignmentRules struct
 func (myAssignmentRules *AssignmentRules) VulnTitleRegex() (param *string) {
 	return myAssignmentRules.VulnTitleRegexvar
+}
+
+// SetApplicationName sets the ApplicationName parameter from the AssignmentRules struct
+func (myAssignmentRules *AssignmentRules) SetApplicationName(val string) {
+	myAssignmentRules.ApplicationNamevar = &val
 }
 
 // SetAssignee sets the Assignee parameter from the AssignmentRules struct

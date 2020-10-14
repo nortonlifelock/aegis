@@ -14,7 +14,7 @@
 
 DROP PROCEDURE IF EXISTS `GetDeviceInfoByAssetOrgID`;
 
-CREATE PROCEDURE `GetDeviceInfoByAssetOrgID`(inAssetID VARCHAR(36), inOrgID VARCHAR(36))
+CREATE PROCEDURE `GetDeviceInfoByAssetOrgID`(inAssetID VARCHAR(360), inOrgID VARCHAR(36))
   #BEGIN#
   SELECT
     D.ID,

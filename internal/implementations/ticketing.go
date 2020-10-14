@@ -1274,6 +1274,7 @@ type assignedTicket struct {
 	domain.Ticket
 	assignee        string
 	assignmentGroup string
+	applicationName string
 }
 
 func (t *assignedTicket) AssignedTo() *string {
@@ -1292,8 +1293,16 @@ func (t *assignedTicket) AssignmentGroup() (param *string) {
 	}
 }
 
+func (t *assignedTicket) ApplicationName() (param *string) {
+	if len(t.applicationName) > 0 {
+		return &t.applicationName
+	} else {
+		return nil
+	}
+}
+
 func (job *TicketingJob) getAssignmentInformation(tagsForDevice []domain.Tag, payload *vulnerabilityPayload) {
-	var assignmentGroup, assignee string
+	var assignmentGroup, assignee, applicationName string
 
 	for _, rule := range job.assignmentRules {
 		var match = true
@@ -1362,6 +1371,7 @@ func (job *TicketingJob) getAssignmentInformation(tagsForDevice []domain.Tag, pa
 		if match {
 			assignmentGroup = sord(rule.AssignmentGroup())
 			assignee = sord(rule.Assignee())
+			applicationName = sord(rule.ApplicationName())
 			break // the rules are pulled highest-priority first, so the first match found should be the match taken
 		}
 	}
@@ -1381,6 +1391,7 @@ func (job *TicketingJob) getAssignmentInformation(tagsForDevice []domain.Tag, pa
 		Ticket:          payload.ticket,
 		assignee:        assignee,
 		assignmentGroup: assignmentGroup,
+		applicationName: applicationName,
 	}
 }
 

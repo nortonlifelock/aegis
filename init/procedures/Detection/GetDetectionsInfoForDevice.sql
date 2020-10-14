@@ -20,7 +20,7 @@
 
 DROP PROCEDURE IF EXISTS `GetDetectionsInfoForDevice`;
 
-CREATE PROCEDURE `GetDetectionsInfoForDevice` (_DeviceID VARCHAR(36))
+CREATE PROCEDURE `GetDetectionsInfoForDevice` (_DeviceID VARCHAR(360))
     #BEGIN#
 SELECT
     D.ID,

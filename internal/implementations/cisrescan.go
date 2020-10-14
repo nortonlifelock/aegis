@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"regexp"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -133,7 +134,7 @@ func getOrgInfo(db domain.DatabaseConnection, orgID string) (orgCode string, org
 }
 
 type findingTicketPair struct {
-	finding domain.Finding
+	finding domain.Ticket
 	ticket  domain.Ticket
 }
 
@@ -146,43 +147,78 @@ func (job *CISRescanJob) processBundleOnCloud(scanner integrations.CISScanner, e
 		var tickets <-chan domain.Ticket
 		tickets, err = engine.GetOpenTicketsByGroupID(job.insource.Source(), job.orgCode, cloudAccountID)
 		if err == nil {
-			job.processFindingsAndTickets(engine, fanInChannel(tickets), findings)
+
+			assignmentInformation, err := job.db.GetCISAssignments(job.config.OrganizationID())
+			if err != nil {
+				job.lstream.Send(log.Errorf(err, "error while loading assignment group information"))
+			}
+
+			var findingsAsTickets = make([]domain.Ticket, 0)
+			for index := range findings {
+				finding := findings[index]
+
+				findingTic := &FindingWrapper{
+					finding,
+					job,
+					job.getAssignmentGroupForFinding(assignmentInformation, finding),
+					getCategoryBasedOnRule(job.catRules, finding.VulnerabilityTitle(), "", ""),
+				}
+
+				if len(findingTic.DeviceID()) > 0 && len(findingTic.VulnerabilityID()) > 0 {
+					findingsAsTickets = append(findingsAsTickets, findingTic)
+				}
+			}
+
+			var assessmentID int
+			if len(findings) > 0 {
+				assessmentID = findings[0].ScanID()
+			}
+
+			processFindingsAndTickets(
+				job.lstream,
+				job.db,
+				job.config.OrganizationID(),
+				job.insource.SourceID(),
+				engine,
+				fanInChannel(tickets),
+				findingsAsTickets,
+				fmt.Sprintf("finding was NOT by %s in assessment [%d]", job.insource.Source(), assessmentID),
+				fmt.Sprintf("finding still detected by %s in assessment [%d]", job.insource.Source(), assessmentID),
+				func(ticket domain.Ticket) string {
+					return fmt.Sprintf("%s;%s", ticket.DeviceID(), ticket.VulnerabilityID())
+				},
+				func(ticket domain.Ticket) bool {
+					return sord(ticket.Priority()) != "low"
+				},
+			)
 		}
 	}
 
 	return err
 }
 
-func (job *CISRescanJob) processFindingsAndTickets(engine integrations.TicketingEngine, tickets []domain.Ticket, findings []domain.Finding) {
+func processFindingsAndTickets(lstream log.Logger, db domain.DatabaseConnection, orgID string, sourceID string, engine integrations.TicketingEngine, tickets []domain.Ticket, findings []domain.Ticket, closingComment, updatingComment string, getKey func(ticket domain.Ticket) string, shouldCreateTicket func(ticket domain.Ticket) bool) (findingsWithoutTickets []domain.Ticket, ticketsWithoutFindings []domain.Ticket, ticketsWithFindings []findingTicketPair) {
 	// findings without tickets need tickets created for  them
-	var findingsWithoutTickets = make([]domain.Finding, 0)
+	findingsWithoutTickets = make([]domain.Ticket, 0)
 
 	// tickets without findings may be closed
-	var ticketsWithoutFindings = make([]domain.Ticket, 0)
+	ticketsWithoutFindings = make([]domain.Ticket, 0)
 
 	// tickets with findings can have their last seen date updated and should be reopened
-	var ticketsWithFindings = make([]findingTicketPair, 0)
+	ticketsWithFindings = make([]findingTicketPair, 0)
 
-	var entityIDToRuleHashToTicket = mapTicketsByDeviceIDVulnID(tickets)
-	var entityIDToRuleHashToFinding = mapFindingsByDeviceIDVulnID(findings)
-
-	var assessmentID = -1
+	var deviceIDToVulnIDToTicket = mapTicketsByDeviceIDVulnID(tickets, getKey)
+	var deviceIDToVulnIDToFinding = mapTicketsByDeviceIDVulnID(findings, getKey)
 
 	for _, finding := range findings {
-		if assessmentID == -1 {
-			assessmentID = finding.ScanID()
-		}
+		key := getKey(finding)
 
-		if entityIDToRuleHashToTicket[finding.DeviceID()] != nil {
-			if entityIDToRuleHashToTicket[finding.DeviceID()][finding.ID()] != nil {
-				for _, tieTicketToFinding := range entityIDToRuleHashToTicket[finding.DeviceID()][finding.ID()] {
-					ticketsWithFindings = append(ticketsWithFindings, findingTicketPair{
-						finding: finding,
-						ticket:  tieTicketToFinding,
-					})
-				}
-			} else {
-				findingsWithoutTickets = append(findingsWithoutTickets, finding)
+		if deviceIDToVulnIDToTicket[key] != nil {
+			for _, tieTicketToFinding := range deviceIDToVulnIDToTicket[key] {
+				ticketsWithFindings = append(ticketsWithFindings, findingTicketPair{
+					finding: finding,
+					ticket:  tieTicketToFinding,
+				})
 			}
 		} else {
 			findingsWithoutTickets = append(findingsWithoutTickets, finding)
@@ -190,76 +226,236 @@ func (job *CISRescanJob) processFindingsAndTickets(engine integrations.Ticketing
 	}
 
 	for _, ticket := range tickets {
-		if entityIDToRuleHashToFinding[ticket.DeviceID()] != nil {
-			if entityIDToRuleHashToFinding[ticket.DeviceID()][ticket.VulnerabilityID()] == nil {
-				ticketsWithoutFindings = append(ticketsWithoutFindings, ticket)
-			}
-		} else {
+		key := getKey(ticket)
+		if deviceIDToVulnIDToFinding[key] == nil {
 			ticketsWithoutFindings = append(ticketsWithoutFindings, ticket)
 		}
 	}
 
-	job.updateTicketsAccordingToFindings(engine, findingsWithoutTickets, ticketsWithFindings, ticketsWithoutFindings, assessmentID)
+	findingDetectionCreation(lstream, db, orgID, sourceID, findings)
+	updateTicketsAccordingToFindings(
+		lstream,
+		db,
+		orgID,
+		sourceID,
+		engine,
+		findingsWithoutTickets,
+		ticketsWithFindings,
+		ticketsWithoutFindings,
+		closingComment,
+		updatingComment,
+		shouldCreateTicket,
+	)
+
+	return findingsWithoutTickets, ticketsWithoutFindings, ticketsWithFindings
 }
 
-func (job *CISRescanJob) updateTicketsAccordingToFindings(engine integrations.TicketingEngine, findingsWithoutTickets []domain.Finding, ticketsWithFindings []findingTicketPair, ticketsWithoutFindings []domain.Ticket, assessmentID int) {
+func findingDetectionCreation(lstream log.Logger, db domain.DatabaseConnection, orgID string, sourceID string, findings []domain.Ticket) {
+	var createdOrFoundDeviceID = make(map[string]bool)
+	var vulnIDToVulnInfo = make(map[string]domain.VulnerabilityInfo)
+	if vulnerableStatus, err := db.GetDetectionStatusByName(domain.Vulnerable); err == nil {
+		if unknownOST, err := grabAndCreateOsType(db, unknown); err == nil {
+			for _, finding := range findings {
+				if len(finding.DeviceID()) > 0 && len(finding.VulnerabilityID()) > 0 {
+					if !createdOrFoundDeviceID[finding.DeviceID()] {
+						deviceInfo, err := db.GetDeviceInfoByAssetOrgID(finding.DeviceID(), orgID)
+						if err == nil {
+
+							if deviceInfo == nil {
+								_, _, err = db.CreateDevice(
+									finding.DeviceID(),
+									sourceID,
+									sord(finding.IPAddress()),
+									sord(finding.HostName()),
+									finding.CloudID(),
+									sord(finding.MacAddress()),
+									finding.GroupID(),
+									orgID,
+									sord(finding.OperatingSystem()),
+									unknownOST.ID(),
+									"",
+								)
+
+								if err == nil {
+									createdOrFoundDeviceID[finding.DeviceID()] = true
+								} else {
+									lstream.Send(log.Errorf(err, "error while creating device [%s]", finding.DeviceID()))
+								}
+							} else {
+								createdOrFoundDeviceID[finding.DeviceID()] = true
+							}
+						} else {
+							lstream.Send(log.Errorf(err, "error while pulling device [%s]", finding.DeviceID()))
+						}
+					}
+
+					var vulnInfo domain.VulnerabilityInfo
+					var err error
+					if vulnIDToVulnInfo[finding.VulnerabilityID()] == nil {
+						vulnInfo, err = createAndGetVulnInfoForFinding(lstream, db, sourceID, finding)
+					} else {
+						vulnInfo = vulnIDToVulnInfo[finding.VulnerabilityID()]
+					}
+
+					if err == nil {
+						var port, protocol string
+						var portInt int
+						if len(sord(finding.ServicePorts())) > 0 {
+							port = strings.Split(sord(finding.ServicePorts()), " ")[0]
+							protocol = strings.Split(sord(finding.ServicePorts()), " ")[1]
+							portInt, _ = strconv.Atoi(port)
+						}
+
+						detectionInfo, err := db.GetDetectionInfo(finding.DeviceID(), finding.VulnerabilityID(), portInt, protocol)
+						if err == nil {
+							var ignoreID string
+							ignore, err := db.HasIgnore(sourceID, finding.VulnerabilityID(), finding.DeviceID(), orgID, "", time.Now())
+							if err != nil {
+								lstream.Send(log.Errorf(err, "error while loading ignore entry [%s|%s]", finding.DeviceID(), finding.VulnerabilityID()))
+							}
+							if ignore != nil {
+								ignoreID = ignore.ID()
+							}
+
+							if detectionInfo == nil {
+								_, _, err = db.CreateDetection(
+									orgID,
+									sourceID,
+									finding.DeviceID(),
+									vulnInfo.ID(),
+									ignoreID,
+									time.Now(), // alert date
+									tord1970(nil),
+									tord1970(finding.LastChecked()),
+									"",
+									portInt,
+									protocol,
+									0,
+									vulnerableStatus.ID(),
+									0,
+									tord1970(nil),
+								)
+
+								if err != nil {
+									lstream.Send(log.Errorf(err, "error while creating detection for [%s|%s]", finding.DeviceID(), finding.VulnerabilityID()))
+								}
+							} else {
+								if sord(detectionInfo.IgnoreID()) != ignoreID {
+									_, _, err = db.UpdateDetectionIgnore(
+										finding.DeviceID(),
+										finding.VulnerabilityID(),
+										portInt,
+										protocol,
+										ignoreID,
+									)
+
+									if err != nil {
+										lstream.Send(log.Errorf(err, "error while updating detection for [%s|%s]", finding.DeviceID(), finding.VulnerabilityID()))
+									}
+								}
+
+							}
+						} else {
+							lstream.Send(log.Errorf(err, "error while gathering detection info for [%s|%s]", finding.DeviceID(), finding.VulnerabilityID()))
+						}
+					}
+				}
+			}
+		} else {
+			lstream.Send(log.Errorf(err, ""))
+		}
+	} else {
+		lstream.Send(log.Errorf(err, "error while loading vulnerable detection status"))
+	}
+}
+
+func createAndGetVulnInfoForFinding(lstream log.Logger, db domain.DatabaseConnection, sourceID string, finding domain.Ticket) (vulnInfo domain.VulnerabilityInfo, err error) {
+	vulnInfo, err = db.GetVulnInfoBySourceVulnID(finding.VulnerabilityID())
+	if err == nil {
+		if vulnInfo == nil {
+			_, _, err = db.CreateVulnInfo(
+				finding.VulnerabilityID(),
+				sord(finding.VulnerabilityTitle()),
+				sourceID,
+				ford(finding.CVSS()),
+				0.0,
+				sord(finding.Description()),
+				"",
+				sord(finding.Solution()),
+				"",
+				sord(finding.Patchable()),
+				sord(finding.Category()),
+				"",
+			)
+
+			if err == nil {
+				vulnInfo, err = db.GetVulnInfoBySourceVulnID(finding.VulnerabilityID())
+				if err == nil && vulnInfo == nil {
+					err = fmt.Errorf("attempted and failed to create vuln info for [%s]", finding.VulnerabilityID())
+				}
+			} else {
+				lstream.Send(log.Errorf(err, "error while creating vuln info for [%s]", finding.VulnerabilityID()))
+			}
+		}
+	} else {
+		lstream.Send(log.Errorf(err, "error while pulling vuln info for [%s]", finding.VulnerabilityID()))
+	}
+
+	return vulnInfo, err
+}
+
+func updateTicketsAccordingToFindings(lstream log.Logger, db domain.DatabaseConnection, orgID string, sourceID string, engine integrations.TicketingEngine, findingsWithoutTickets []domain.Ticket, ticketsWithFindings []findingTicketPair, ticketsWithoutFindings []domain.Ticket, closingComment, updatingComment string, shouldCreateTicket func(ticket domain.Ticket) bool) {
 	wg := &sync.WaitGroup{}
 	wg.Add(3)
 	go func() {
-		defer handleRoutinePanic(job.lstream)
+		defer handleRoutinePanic(lstream)
 		defer wg.Done()
-		job.createTicketsForUnticketedFindings(engine, findingsWithoutTickets)
+		createTicketsForUnticketedFindings(db, lstream, orgID, sourceID, engine, findingsWithoutTickets, shouldCreateTicket)
 	}()
 	go func() {
-		defer handleRoutinePanic(job.lstream)
+		defer handleRoutinePanic(lstream)
 		defer wg.Done()
-		job.updateTicketsWithStaleFindings(engine, ticketsWithFindings, assessmentID)
+		updateTicketsWithStaleFindings(db, lstream, engine, ticketsWithFindings, updatingComment, orgID)
 	}()
 	go func() {
-		defer handleRoutinePanic(job.lstream)
+		defer handleRoutinePanic(lstream)
 		defer wg.Done()
-		job.closeTicketsWithMissingFindings(engine, ticketsWithoutFindings, assessmentID)
+		closeTicketsWithMissingFindings(lstream, engine, ticketsWithoutFindings, closingComment)
 	}()
 	wg.Wait()
 }
 
-func (job *CISRescanJob) createTicketsForUnticketedFindings(engine integrations.TicketingEngine, findings []domain.Finding) {
-	assignmentInformation, err := job.db.GetCISAssignments(job.config.OrganizationID())
-	if err != nil {
-		job.lstream.Send(log.Errorf(err, "error while loading assignment group information"))
-	}
-
+func createTicketsForUnticketedFindings(db domain.DatabaseConnection, lstream log.Logger, orgID string, sourceID string, engine integrations.TicketingEngine, findings []domain.Ticket, shouldCreateTicket func(ticket domain.Ticket) bool) {
 	wg := &sync.WaitGroup{}
 	for index := range findings {
-
-		// TODO attach this to the MinCVSS field in the org payload
-		if strings.ToLower(findings[index].Priority()) != "low" {
+		if shouldCreateTicket(findings[index]) {
 			wg.Add(1)
-			go func(finding domain.Finding) {
-				defer handleRoutinePanic(job.lstream)
+			go func(finding domain.Ticket) {
+				defer handleRoutinePanic(lstream)
 				defer wg.Done()
 
-				ignore, err := job.db.HasIgnore(job.insource.SourceID(), finding.ID(), finding.DeviceID(), job.config.OrganizationID(), "", time.Now())
+				ignore, err := db.HasIgnore(sourceID, finding.VulnerabilityID(), finding.DeviceID(), orgID, "", time.Now())
 				if err != nil {
-					job.lstream.Send(log.Errorf(err, "error while loading ignore for Dome9 entry [%s|%s]", finding.DeviceID(), finding.ID()))
+					lstream.Send(log.Errorf(err, "error while loading ignore entry [%s|%s]", finding.DeviceID(), finding.VulnerabilityID()))
 				}
 
 				if ignore == nil {
-					var ticket = &FindingWrapper{
-						finding,
-						job,
-						job.getAssignmentGroupForFinding(assignmentInformation, finding),
-						getCategoryBasedOnRule(job.catRules, finding.VulnerabilityTitle(), "", ""),
+
+					_, sourceKey, err := engine.CreateTicket(finding)
+					if err == nil {
+						lstream.Send(log.Infof("Created ticket [%s] for device [%s] with vulnerability [%s]", sourceKey, finding.DeviceID(), finding.VulnerabilityID()))
+					} else {
+						lstream.Send(log.Errorf(err, "error while creating ticket for device [%s] with vulnerability [%s]", finding.DeviceID(), finding.VulnerabilityID()))
 					}
 
-					_, sourceKey, err := engine.CreateTicket(ticket)
+					recentlyCreatedTicket, err := engine.GetTicket(sourceKey)
 					if err == nil {
-						job.lstream.Send(log.Infof("Created ticket [%s] for bundle [%d] for entity [%s] on rule [%s]", sourceKey, job.Payload.BundleID, finding.DeviceID(), finding.ID()))
+						processTicket(db, lstream, recentlyCreatedTicket, orgID)
 					} else {
-						job.lstream.Send(log.Errorf(err, "error while creating ticket for bundle [%d] for entity [%s] on rule [%s]", job.Payload.BundleID, finding.DeviceID(), finding.ID()))
+						lstream.Send(log.Errorf(err, "error while gathering recently created ticket"))
 					}
 				} else {
-					job.lstream.Send(log.Infof("SKIPPING ticket for [%s|%s] as it has an ignore entry", finding.DeviceID(), finding.ID()))
+					lstream.Send(log.Infof("SKIPPING ticket for [%s|%s] as it has an ignore entry", finding.DeviceID(), finding.VulnerabilityID()))
 				}
 
 			}(findings[index])
@@ -379,12 +575,12 @@ func (t *staleTicket) Status() (val *string) {
 	return val
 }
 
-func (job *CISRescanJob) updateTicketsWithStaleFindings(engine integrations.TicketingEngine, pairs []findingTicketPair, assessmentID int) {
+func updateTicketsWithStaleFindings(db domain.DatabaseConnection, lstream log.Logger, engine integrations.TicketingEngine, pairs []findingTicketPair, updatingComment string, orgID string) {
 	wg := &sync.WaitGroup{}
 	for index := range pairs {
 		wg.Add(1)
 		go func(pair findingTicketPair) {
-			defer handleRoutinePanic(job.lstream)
+			defer handleRoutinePanic(lstream)
 			defer wg.Done()
 
 			_, _, err := engine.UpdateTicket(
@@ -392,13 +588,15 @@ func (job *CISRescanJob) updateTicketsWithStaleFindings(engine integrations.Tick
 					pair.ticket,
 					engine,
 				},
-				fmt.Sprintf("finding still detected by %s in assessment [%d]", job.insource.Source(), assessmentID),
+				updatingComment,
 			)
 			if err == nil {
-				job.lstream.Send(log.Infof("finding for %s still detected by %s in assessment [%d]", pair.ticket.Title(), job.insource.Source(), assessmentID))
+				lstream.Send(log.Infof("finding for %s still detected", pair.ticket.Title()))
 			} else {
-				job.lstream.Send(log.Errorf(err, "error while updating for bundle [%d] for ticket [%s]", job.Payload.BundleID, pair.ticket.Title()))
+				lstream.Send(log.Errorf(err, "error while updating ticket [%s]", pair.ticket.Title()))
 			}
+
+			processTicket(db, lstream, pair.ticket, orgID)
 		}(pairs[index])
 	}
 	wg.Wait()
@@ -415,12 +613,12 @@ func (c closedTicket) Status() *string {
 	return &val
 }
 
-func (job *CISRescanJob) closeTicketsWithMissingFindings(engine integrations.TicketingEngine, tickets []domain.Ticket, assessmentID int) {
+func closeTicketsWithMissingFindings(lstream log.Logger, engine integrations.TicketingEngine, tickets []domain.Ticket, closingComment string) {
 	wg := &sync.WaitGroup{}
 	for index := range tickets {
 		wg.Add(1)
 		go func(ticket domain.Ticket) {
-			defer handleRoutinePanic(job.lstream)
+			defer handleRoutinePanic(lstream)
 			defer wg.Done()
 
 			_, _, err := engine.UpdateTicket(
@@ -428,52 +626,32 @@ func (job *CISRescanJob) closeTicketsWithMissingFindings(engine integrations.Tic
 					ticket,
 					engine,
 				},
-				fmt.Sprintf("finding was NOT by %s in assessment [%d]", job.insource.Source(), assessmentID),
+				closingComment,
 			)
 
 			if err == nil {
-				job.lstream.Send(log.Infof("finding for %s was NOT by %s in assessment [%d], closing ticket...", ticket.Title(), job.insource.Source(), assessmentID))
+				lstream.Send(log.Infof("finding for %s was NOT in assessment, closing ticket...", ticket.Title()))
 			} else {
-				job.lstream.Send(log.Errorf(err, "error while updating for bundle [%d] for ticket [%s]", job.Payload.BundleID, ticket.Title()))
+				lstream.Send(log.Errorf(err, "error while updating ticket [%s]", ticket.Title()))
 			}
 		}(tickets[index])
 	}
 	wg.Wait()
 }
 
-func mapTicketsByDeviceIDVulnID(tickets []domain.Ticket) (entityIDToRuleHashToTicket map[string]map[string][]domain.Ticket) {
-	entityIDToRuleHashToTicket = make(map[string]map[string][]domain.Ticket)
+func mapTicketsByDeviceIDVulnID(tickets []domain.Ticket, getKey func(ticket domain.Ticket) string) (entityIDToRuleHashToTicket map[string][]domain.Ticket) {
+	entityIDToRuleHashToTicket = make(map[string][]domain.Ticket)
+
 	for _, ticket := range tickets {
-		if entityIDToRuleHashToTicket[ticket.DeviceID()] == nil {
-			entityIDToRuleHashToTicket[ticket.DeviceID()] = make(map[string][]domain.Ticket)
+		key := getKey(ticket)
+		if entityIDToRuleHashToTicket[key] == nil {
+			entityIDToRuleHashToTicket[key] = make([]domain.Ticket, 0)
 		}
 
-		if entityIDToRuleHashToTicket[ticket.DeviceID()][ticket.VulnerabilityID()] == nil {
-			entityIDToRuleHashToTicket[ticket.DeviceID()][ticket.VulnerabilityID()] = make([]domain.Ticket, 0)
-		}
-
-		entityIDToRuleHashToTicket[ticket.DeviceID()][ticket.VulnerabilityID()] = append(entityIDToRuleHashToTicket[ticket.DeviceID()][ticket.VulnerabilityID()], ticket)
+		entityIDToRuleHashToTicket[key] = append(entityIDToRuleHashToTicket[key], ticket)
 	}
 
 	return entityIDToRuleHashToTicket
-}
-
-func mapFindingsByDeviceIDVulnID(findings []domain.Finding) (entityIDToRuleHashToFinding map[string]map[string]domain.Finding) {
-	// DeviceID = EntityID
-	// ID = RuleHash/VulnerabilityID
-
-	entityIDToRuleHashToFinding = make(map[string]map[string]domain.Finding)
-	for _, finding := range findings {
-		if len(finding.DeviceID()) > 0 {
-			if entityIDToRuleHashToFinding[finding.DeviceID()] == nil {
-				entityIDToRuleHashToFinding[finding.DeviceID()] = make(map[string]domain.Finding)
-			}
-
-			entityIDToRuleHashToFinding[finding.DeviceID()][finding.ID()] = finding
-		}
-	}
-
-	return entityIDToRuleHashToFinding
 }
 
 // fanInChannel is useful because we want to reuse the ticket information, so we store it in a slice
@@ -737,5 +915,9 @@ func (wrapper *FindingWrapper) OWASP() (param *string) {
 }
 
 func (wrapper *FindingWrapper) ExceptionDate() (param *time.Time) {
+	return nil
+}
+
+func (wrapper *FindingWrapper) ApplicationName() (param *string) {
 	return nil
 }

@@ -2,6 +2,7 @@
     RETURN AssignmentRules
     AssignmentGroup       VARCHAR(100) NULL
     Assignee              VARCHAR(100) NULL
+    ApplicationName       VARCHAR(300) NULL
     OrganizationID        VARCHAR(36)  NOT NULL
     GroupID               VARCHAR(300) NULL
     VulnTitleRegex        VARCHAR(100) NULL
@@ -23,6 +24,7 @@ CREATE PROCEDURE `GetAssignmentRulesByOrg` (_OrganizationID VARCHAR(36))
 SELECT
     AssignmentGroup,
     Assignee,
+    ApplicationName,
     OrganizationID,
     GroupID,
     VulnTitleRegex,

@@ -9,7 +9,6 @@ import (
 	"github.com/nortonlifelock/log"
 	"sort"
 	"strings"
-	"sync"
 	"time"
 )
 
@@ -82,11 +81,6 @@ func (job *ImageRescanJob) Process(ctx context.Context, id string, appconfig dom
 	return err
 }
 
-type imageFindingTicketPair struct {
-	finding domain.ImageFinding
-	ticket  domain.Ticket
-}
-
 func (job *ImageRescanJob) processImageFindings(engine integrations.TicketingEngine, scanner integrations.IScanner, registryImage string) (err error) {
 	if len(strings.Split(registryImage, ";")) == 2 {
 		var registry = strings.Split(registryImage, ";")[0]
@@ -97,50 +91,76 @@ func (job *ImageRescanJob) processImageFindings(engine integrations.TicketingEng
 		if err == nil {
 			var findings []domain.ImageFinding
 			if findings, err = scanner.RescanImage(job.ctx, image, registry); err == nil {
-				// findings without tickets need tickets created for  them
-				var findingsWithoutTickets = make([]domain.ImageFinding, 0)
+				var findingsAsTickets = make([]domain.Ticket, 0)
+				for index := range findings {
+					finding := findings[index]
 
-				// tickets without findings may be closed
-				var ticketsWithoutFindings = make([]domain.Ticket, 0)
+					var priority string
+					var dueDate time.Time
+					if priority, dueDate, err = calculateSLAForImageFinding(finding, job.orgPayload); err == nil {
+						findingTic := &ImageFinding{
+							finding,
+							job.insource.Source(),
+							job.orgCode,
+							dueDate,
+							priority,
+						}
 
-				// tickets with findings can have their last seen date updated and should be reopened
-				var ticketsWithFindings = make([]imageFindingTicketPair, 0)
+						if len(findingTic.DeviceID()) > 0 && len(findingTic.VulnerabilityID()) > 0 {
+							findingsAsTickets = append(findingsAsTickets, findingTic)
+						}
+					} else {
+						job.lstream.Send(log.Errorf(err, "error while calculating priority for ticket"))
+					}
+				}
 
-				ticketSlice := fanInChannel(tickets)
-				ticketSlice = getTicketsForImage(ticketSlice, image)
+				findingMap := mapImageFindingsByDeviceIDVulnID(findings)
 
-				deviceIDToVulnIDToTicket := mapTicketsByDeviceIDVulnIDAndPort(ticketSlice)
-				deviceIDToVulnIDToFinding := mapImageFindingsByDeviceIDVulnID(findings)
-
-				for _, finding := range findings {
-					vulnID := fmt.Sprintf("%s;%s", finding.VulnerabilityID(), finding.VulnerabilityLocation())
-					if deviceIDToVulnIDToTicket[finding.ImageName()] != nil {
-						if deviceIDToVulnIDToTicket[finding.ImageName()][vulnID] != nil {
-							for _, tieTicketToFinding := range deviceIDToVulnIDToTicket[finding.ImageName()][vulnID] {
-								ticketsWithFindings = append(ticketsWithFindings, imageFindingTicketPair{
-									finding: finding,
-									ticket:  tieTicketToFinding,
-								})
+				_, _, ticketsWithFindings := processFindingsAndTickets(
+					job.lstream,
+					job.db,
+					job.config.OrganizationID(),
+					job.insource.SourceID(),
+					engine,
+					fanInChannel(tickets),
+					findingsAsTickets,
+					fmt.Sprintf("finding was NOT found by %s", job.insource.Source()),
+					fmt.Sprintf("finding still detected by %s", job.insource.Source()),
+					func(ticket domain.Ticket) string {
+						return fmt.Sprintf("%s;%s;%s", ticket.DeviceID(), ticket.VulnerabilityID(), sord(ticket.ServicePorts()))
+					},
+					func(ticket domain.Ticket) bool {
+						finding := findingMap[fmt.Sprintf("%s;%s;%s", ticket.DeviceID(), ticket.VulnerabilityID(), sord(ticket.ServicePorts()))]
+						if finding != nil {
+							if finding.Exception() {
+								return false
 							}
-						} else {
-							findingsWithoutTickets = append(findingsWithoutTickets, finding)
+						}
+						return ford(ticket.CVSS()) >= job.orgPayload.LowestCVSS
+					},
+				)
+
+				for _, pair := range ticketsWithFindings {
+					finding := findingMap[fmt.Sprintf("%s;%s;%s", pair.ticket.DeviceID(), pair.ticket.VulnerabilityID(), sord(pair.ticket.ServicePorts()))]
+					if finding != nil {
+						if sord(pair.ticket.Status()) == engine.GetStatusMap(domain.StatusClosedException) {
+							if !finding.Exception() { // if the finding isn't already marked as an exception in Aqua, set it as an exception in Aqua
+								err = scanner.CreateException(finding, fmt.Sprintf("%s marked as Closed-Exception on %s", pair.ticket.Title(), time.Now().Format(time.RFC3339)))
+								if err != nil {
+									job.lstream.Send(log.Errorf(err, "error marking ticket as an exception in Aqua [%s]", pair.ticket.Title()))
+								}
+							}
+						} else if finding.Exception() {
+							// close the ticket
+							err = engine.Transition(pair.ticket, engine.GetStatusMap(domain.StatusClosedException), fmt.Sprintf("Moving ticket to closed exception as it was acknowledged in %s", job.insource.Source()), "")
+							if err != nil {
+								job.lstream.Send(log.Errorf(err, "error while setting [%s] to Closed-Exception", pair.ticket.Title()))
+							}
 						}
 					} else {
-						findingsWithoutTickets = append(findingsWithoutTickets, finding)
+						job.lstream.Send(log.Errorf(err, "could not find finding [%s] while checking for exceptions", fmt.Sprintf("%s;%s;%s", pair.ticket.DeviceID(), pair.ticket.VulnerabilityID(), sord(pair.ticket.ServicePorts()))))
 					}
 				}
-
-				for _, ticket := range ticketSlice {
-					if deviceIDToVulnIDToFinding[ticket.DeviceID()] != nil {
-						if deviceIDToVulnIDToFinding[ticket.DeviceID()][fmt.Sprintf("%s;%s", ticket.VulnerabilityID(), sord(ticket.ServicePorts()))] == nil {
-							ticketsWithoutFindings = append(ticketsWithoutFindings, ticket)
-						}
-					} else {
-						ticketsWithoutFindings = append(ticketsWithoutFindings, ticket)
-					}
-				}
-
-				job.updateTicketsAccordingToFindings(engine, scanner, findingsWithoutTickets, ticketsWithFindings, ticketsWithoutFindings)
 			}
 		}
 	} else {
@@ -148,145 +168,6 @@ func (job *ImageRescanJob) processImageFindings(engine integrations.TicketingEng
 	}
 
 	return err
-}
-
-func (job *ImageRescanJob) updateTicketsAccordingToFindings(engine integrations.TicketingEngine, scanner integrations.IScanner, findingsWithoutTickets []domain.ImageFinding, ticketsWithFindings []imageFindingTicketPair, ticketsWithoutFindings []domain.Ticket) {
-	wg := &sync.WaitGroup{}
-	wg.Add(3)
-	go func() {
-		defer handleRoutinePanic(job.lstream)
-		defer wg.Done()
-		job.createTicketsForUnticketedFindings(engine, findingsWithoutTickets)
-	}()
-	go func() {
-		defer handleRoutinePanic(job.lstream)
-		defer wg.Done()
-		job.updateTicketsWithStaleFindings(engine, scanner, ticketsWithFindings)
-	}()
-	go func() {
-		defer handleRoutinePanic(job.lstream)
-		defer wg.Done()
-		job.closeTicketsWithMissingFindings(engine, ticketsWithoutFindings)
-	}()
-	wg.Wait()
-}
-
-func (job *ImageRescanJob) closeTicketsWithMissingFindings(engine integrations.TicketingEngine, tickets []domain.Ticket) {
-	wg := &sync.WaitGroup{}
-	for index := range tickets {
-		wg.Add(1)
-		go func(ticket domain.Ticket) {
-			defer handleRoutinePanic(job.lstream)
-			defer wg.Done()
-
-			_, _, err := engine.UpdateTicket(
-				closedTicket{
-					ticket,
-					engine,
-				},
-				fmt.Sprintf("finding was NOT found by %s", job.insource.Source()),
-			)
-
-			if err == nil {
-				job.lstream.Send(log.Infof("finding for %s was NOT by %s, closing ticket...", ticket.Title(), job.insource.Source()))
-			} else {
-				job.lstream.Send(log.Errorf(err, "error while closing ticket [%s]", ticket.Title()))
-			}
-		}(tickets[index])
-	}
-	wg.Wait()
-}
-
-func (job *ImageRescanJob) updateTicketsWithStaleFindings(engine integrations.TicketingEngine, scanner integrations.IScanner, ticketsWithFindings []imageFindingTicketPair) {
-	wg := &sync.WaitGroup{}
-	for index := range ticketsWithFindings {
-		wg.Add(1)
-		go func(pair imageFindingTicketPair) {
-			defer handleRoutinePanic(job.lstream)
-			defer wg.Done()
-
-			_, _, err := engine.UpdateTicket(
-				&staleTicket{
-					pair.ticket,
-					engine,
-				},
-				fmt.Sprintf("finding still detected in [%s] by %s on [%s]", pair.finding.ImageTag(), job.insource.Source(), time.Now().Format(time.RFC822)),
-			)
-			if err == nil {
-				job.lstream.Send(log.Infof("finding for %s still detected on [%s] by %s", pair.ticket.Title(), pair.finding.ImageTag(), job.insource.Source()))
-			} else {
-				job.lstream.Send(log.Errorf(err, "error while updating ticket [%s]", pair.ticket.Title()))
-			}
-
-			if sord(pair.ticket.Status()) == engine.GetStatusMap(domain.StatusClosedException) {
-				if !pair.finding.Exception() { // if the finding isn't already marked as an exception in Aqua, set it as an exception in Aqua
-					err = scanner.CreateException(pair.finding, fmt.Sprintf("%s marked as Closed-Exception on %s", pair.ticket.Title(), time.Now().Format(time.RFC3339)))
-					if err != nil {
-						job.lstream.Send(log.Errorf(err, "error marking ticket as an exception in Aqua [%s]", pair.ticket.Title()))
-					}
-				}
-			} else if pair.finding.Exception() {
-				// close the ticket
-				err = engine.Transition(pair.ticket, engine.GetStatusMap(domain.StatusClosedException), fmt.Sprintf("Moving ticket to closed exception as it was acknowledged in %s", job.insource.Source()), "")
-				if err != nil {
-					job.lstream.Send(log.Errorf(err, "error while setting [%s] to Closed-Exception", pair.ticket.Title()))
-				}
-			}
-		}(ticketsWithFindings[index])
-	}
-	wg.Wait()
-}
-
-func (job *ImageRescanJob) createTicketsForUnticketedFindings(engine integrations.TicketingEngine, findings []domain.ImageFinding) {
-	wg := &sync.WaitGroup{}
-	for index := range findings {
-
-		if !findings[index].Exception() {
-			if ford(findings[index].CVSS2()) >= job.orgPayload.LowestCVSS {
-				wg.Add(1)
-				go func(finding domain.ImageFinding) {
-					defer handleRoutinePanic(job.lstream)
-					defer wg.Done()
-
-					ignore, err := job.db.HasIgnore(job.insource.SourceID(), finding.VulnerabilityID(), finding.ImageName(), job.config.OrganizationID(), "", time.Now())
-					if err != nil {
-						job.lstream.Send(log.Errorf(err, "error while loading ignore for Aqua entry [%s|%s]", finding.ImageName(), finding.VulnerabilityID()))
-					}
-
-					if ignore == nil {
-						var priority string
-						var dueDate time.Time
-						if priority, dueDate, err = calculateSLAForImageFinding(finding, job.orgPayload); err == nil {
-							var ticket = &ImageFinding{
-								finding,
-								job.insource.Source(),
-								job.orgCode,
-								dueDate,
-								priority,
-							}
-
-							_, sourceKey, err := engine.CreateTicket(ticket)
-							if err == nil {
-								job.lstream.Send(log.Infof("Created ticket [%s] for image [%s] on vulnerability [%s]", sourceKey, finding.ImageName(), finding.VulnerabilityID()))
-							} else {
-								job.lstream.Send(log.Errorf(err, "error while creating ticket for image [%s] on vulnerability [%s]", finding.ImageName(), finding.VulnerabilityID()))
-							}
-						} else {
-							job.lstream.Send(log.Errorf(err, "error while calculating SLAs for Image/Vuln [%s|%s]", finding.ImageName(), finding.VulnerabilityID()))
-						}
-
-					} else {
-						job.lstream.Send(log.Infof("SKIPPING ticket for [%s|%s] as it has an ignore entry", finding.ImageName(), finding.VulnerabilityID()))
-					}
-
-				}(findings[index])
-			}
-		} else {
-			finding := findings[index]
-			job.lstream.Send(log.Infof("SKIPPING ticket for [%s|%s] as it was marked as an Exception in [%s]", finding.ImageName(), finding.VulnerabilityID(), job.insource.Source()))
-		}
-	}
-	wg.Wait()
 }
 
 func calculateSLAForImageFinding(finding domain.ImageFinding, orgPayload *OrgPayload) (highestApplicableSeverity string, dueDate time.Time, err error) {
@@ -516,50 +397,21 @@ func (i *ImageFinding) ExceptionDate() (param *time.Time) {
 	return nil
 }
 
-func mapImageFindingsByDeviceIDVulnID(findings []domain.ImageFinding) (entityIDToRuleHashToFinding map[string]map[string]domain.ImageFinding) {
+func (i *ImageFinding) ApplicationName() (param *string) {
+	return nil
+}
+
+func mapImageFindingsByDeviceIDVulnID(findings []domain.ImageFinding) (entityIDToRuleHashToFinding map[string]domain.ImageFinding) {
 	// DeviceID = Image name
 	// VulnID = CVE
 
-	entityIDToRuleHashToFinding = make(map[string]map[string]domain.ImageFinding)
+	entityIDToRuleHashToFinding = make(map[string]domain.ImageFinding)
 	for _, finding := range findings {
 		if len(finding.ImageName()) > 0 {
-			if entityIDToRuleHashToFinding[finding.ImageName()] == nil {
-				entityIDToRuleHashToFinding[finding.ImageName()] = make(map[string]domain.ImageFinding)
-			}
-
-			entityIDToRuleHashToFinding[finding.ImageName()][fmt.Sprintf("%s;%s", finding.VulnerabilityID(), finding.VulnerabilityLocation())] = finding
+			key := fmt.Sprintf("%s;%s;%s", finding.ImageName(), finding.VulnerabilityID(), finding.VulnerabilityLocation())
+			entityIDToRuleHashToFinding[key] = finding
 		}
 	}
 
 	return entityIDToRuleHashToFinding
-}
-
-func getTicketsForImage(in []domain.Ticket, image string) (out []domain.Ticket) {
-	out = make([]domain.Ticket, 0)
-
-	for _, tic := range in {
-		if tic.DeviceID() == image {
-			out = append(out, tic)
-		}
-	}
-
-	return out
-}
-
-func mapTicketsByDeviceIDVulnIDAndPort(tickets []domain.Ticket) (entityIDToRuleHashToTicket map[string]map[string][]domain.Ticket) {
-	entityIDToRuleHashToTicket = make(map[string]map[string][]domain.Ticket)
-	for _, ticket := range tickets {
-		vulnID := fmt.Sprintf("%s;%s", ticket.VulnerabilityID(), sord(ticket.ServicePorts()))
-		if entityIDToRuleHashToTicket[ticket.DeviceID()] == nil {
-			entityIDToRuleHashToTicket[ticket.DeviceID()] = make(map[string][]domain.Ticket)
-		}
-
-		if entityIDToRuleHashToTicket[ticket.DeviceID()][vulnID] == nil {
-			entityIDToRuleHashToTicket[ticket.DeviceID()][vulnID] = make([]domain.Ticket, 0)
-		}
-
-		entityIDToRuleHashToTicket[ticket.DeviceID()][vulnID] = append(entityIDToRuleHashToTicket[ticket.DeviceID()][vulnID], ticket)
-	}
-
-	return entityIDToRuleHashToTicket
 }
