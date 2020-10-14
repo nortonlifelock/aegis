@@ -300,7 +300,7 @@ func findingDetectionCreation(lstream log.Logger, db domain.DatabaseConnection, 
 					if err == nil {
 						var port, protocol string
 						var portInt int
-						if len(sord(finding.ServicePorts())) > 0 {
+						if len(strings.Split(sord(finding.ServicePorts()), " ")) == 2 {
 							port = strings.Split(sord(finding.ServicePorts()), " ")[0]
 							protocol = strings.Split(sord(finding.ServicePorts()), " ")[1]
 							portInt, _ = strconv.Atoi(port)
