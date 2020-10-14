@@ -342,7 +342,7 @@ func (i *ImageFinding) ScanID() (param int) {
 }
 
 func (i *ImageFinding) ServicePorts() (param *string) {
-	val := i.finding.VulnerabilityLocation()
+	val := fmt.Sprintf("0 %s", i.finding.VulnerabilityLocation())
 	return &val
 }
 
