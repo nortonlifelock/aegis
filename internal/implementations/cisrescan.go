@@ -414,7 +414,7 @@ func updateTicketsAccordingToFindings(lstream log.Logger, db domain.DatabaseConn
 	go func() {
 		defer handleRoutinePanic(lstream)
 		defer wg.Done()
-		updateTicketsWithStaleFindings(db, lstream, engine, ticketsWithFindings, updatingComment, orgID)
+		updateTicketsWithStaleFindings(db, lstream, engine, ticketsWithFindings, updatingComment, orgID, sourceID)
 	}()
 	go func() {
 		defer handleRoutinePanic(lstream)
@@ -574,7 +574,7 @@ func (t *staleTicket) Status() (val *string) {
 	return val
 }
 
-func updateTicketsWithStaleFindings(db domain.DatabaseConnection, lstream log.Logger, engine integrations.TicketingEngine, pairs []findingTicketPair, updatingComment string, orgID string) {
+func updateTicketsWithStaleFindings(db domain.DatabaseConnection, lstream log.Logger, engine integrations.TicketingEngine, pairs []findingTicketPair, updatingComment string, orgID, sourceID string) {
 	wg := &sync.WaitGroup{}
 	for index := range pairs {
 		wg.Add(1)
@@ -596,6 +596,11 @@ func updateTicketsWithStaleFindings(db domain.DatabaseConnection, lstream log.Lo
 			}
 
 			processTicket(db, lstream, pair.ticket, orgID)
+			if sord(pair.ticket.Status()) == engine.GetStatusMap(domain.StatusClosedException) ||
+				sord(pair.ticket.Status()) == engine.GetStatusMap(domain.StatusClosedFalsePositive) {
+				processExceptionOrFalsePositive(db, lstream, orgID, sourceID, pair.ticket)
+			}
+
 		}(pairs[index])
 	}
 	wg.Wait()

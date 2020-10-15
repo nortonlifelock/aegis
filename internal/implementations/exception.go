@@ -73,12 +73,12 @@ func (job *ExceptionJob) Process(ctx context.Context, id string, appconfig domai
 											}
 										}()
 
-										job.processExceptionOrFalsePositive(ticket)
+										processExceptionOrFalsePositive(job.db, job.lstream, job.config.OrganizationID(), job.outsource.SourceID(), ticket)
 									}(inTicket)
 								} else {
 									seen[inTicket.CERF()] = true
 									job.lstream.Send(log.Debugf("Slow loading %s", inTicket.CERF()))
-									job.processExceptionOrFalsePositive(inTicket)
+									processExceptionOrFalsePositive(job.db, job.lstream, job.config.OrganizationID(), job.outsource.SourceID(), inTicket)
 									job.lstream.Send(log.Debugf("Done loading %s", inTicket.CERF()))
 								}
 
@@ -129,7 +129,7 @@ func (job *ExceptionJob) pullOrgCodeFromDB() (orgcode string, err error) {
 
 // This method creates an exception in the database if there is an associated CERF with the ticket that has not expired
 // If there is not an associated CERF, a false positive entry in the database is created
-func (job *ExceptionJob) processExceptionOrFalsePositive(ticket domain.Ticket) {
+func processExceptionOrFalsePositive(db domain.DatabaseConnection, lstream log.Logger, orgID, sourceID string, ticket domain.Ticket) {
 	var err error
 
 	var deviceID = ticket.DeviceID()
@@ -141,11 +141,11 @@ func (job *ExceptionJob) processExceptionOrFalsePositive(ticket domain.Ticket) {
 		// TODO: update the due date to be able to be passed as null to the sproc
 		if ticket.ExceptionExpiration().After(time.Now()) {
 
-			job.lstream.Send(log.Infof("Creating/updating EXCEPTION %s", ticket.Title()))
+			lstream.Send(log.Infof("Creating/updating EXCEPTION %s", ticket.Title()))
 
-			if _, _, err = job.db.SaveIgnore(
-				job.outsource.SourceID(),
-				job.config.OrganizationID(),
+			if _, _, err = db.SaveIgnore(
+				sourceID,
+				orgID,
 				domain.Exception,
 				vulnID,
 				deviceID,
@@ -155,19 +155,19 @@ func (job *ExceptionJob) processExceptionOrFalsePositive(ticket domain.Ticket) {
 				sord(ticket.ServicePorts())); err == nil {
 				ignoreSaved = true
 			} else {
-				job.lstream.Send(log.Errorf(err, "Error while updating ticket %s: %s", ticket.Title(), err.Error()))
+				lstream.Send(log.Errorf(err, "Error while updating ticket %s: %s", ticket.Title(), err.Error()))
 			}
 		} else {
-			job.lstream.Send(log.Debugf("Skipping update for %s as it's CERF expired in the past (%s)", ticket.ExceptionExpiration().Format(time.RFC3339)))
+			lstream.Send(log.Debugf("Skipping update for %s as it's CERF expired in the past (%s)", ticket.ExceptionExpiration().Format(time.RFC3339)))
 		}
 	} else {
 
 		// TODO: update the due date to be able to be passed as null to the sproc
-		job.lstream.Send(log.Infof("Creating/updating FALSE POSITIVE %s", ticket.Title()))
+		lstream.Send(log.Infof("Creating/updating FALSE POSITIVE %s", ticket.Title()))
 		t := time.Date(1111, 1, 1, 1, 1, 0, 1, time.UTC)
-		if _, _, err = job.db.SaveIgnore(
-			job.outsource.SourceID(),
-			job.config.OrganizationID(),
+		if _, _, err = db.SaveIgnore(
+			sourceID,
+			orgID,
 			domain.FalsePositive,
 			vulnID,
 			deviceID,
@@ -177,7 +177,7 @@ func (job *ExceptionJob) processExceptionOrFalsePositive(ticket domain.Ticket) {
 			sord(ticket.ServicePorts())); err == nil {
 			ignoreSaved = true
 		} else {
-			job.lstream.Send(log.Errorf(err, "Error while updating ticket %s: %s", ticket.Title(), err.Error()))
+			lstream.Send(log.Errorf(err, "Error while updating ticket %s: %s", ticket.Title(), err.Error()))
 		}
 	}
 
