@@ -12,7 +12,7 @@ type Ticket interface {
 	ApplicationName() (param *string)
 	Category() (param *string)
 	CERF() (param string)
-	CERFExpirationDate() (param time.Time)
+	ExceptionExpiration() (param time.Time)
 	CVEReferences() (param *string)
 	CVSS() (param *float32)
 	CloudID() (param string)
