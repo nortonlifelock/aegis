@@ -15,7 +15,7 @@
 
 DROP PROCEDURE IF EXISTS `HasExceptionOrFalsePositive`;
 
-CREATE PROCEDURE `HasExceptionOrFalsePositive`(_sourceID VARCHAR(36), _vulnID NVARCHAR(255), _devID VARCHAR(36), _orgID VARCHAR(36), _port NVARCHAR(15), _OS VARCHAR(100))
+CREATE PROCEDURE `HasExceptionOrFalsePositive`(_sourceID VARCHAR(36), _vulnID NVARCHAR(255), _devID VARCHAR(36), _orgID VARCHAR(36), _port NVARCHAR(150), _OS VARCHAR(100))
   #BEGIN#
   SELECT
     ID,

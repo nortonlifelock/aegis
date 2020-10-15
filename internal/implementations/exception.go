@@ -3,6 +3,8 @@ package implementations
 import (
 	"context"
 	"fmt"
+	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -181,52 +183,51 @@ func processExceptionOrFalsePositive(db domain.DatabaseConnection, lstream log.L
 		}
 	}
 
-	_ = ignoreSaved
-	//if ignoreSaved {
-	//	var ignore domain.Ignore
-	//	if ignore, err = job.db.HasIgnore(
-	//		job.outsource.SourceID(),
-	//		vulnID,
-	//		deviceID,
-	//		job.config.OrganizationID(),
-	//		sord(ticket.ServicePorts()),
-	//		tord1970(nil),
-	//	); err == nil {
-	//		if ignore != nil {
-	//			var portString string
-	//			var protocol string
-	//			var portInt int
-	//
-	//			if len(sord(ticket.ServicePorts())) > 0 {
-	//				var portProtocol = strings.Split(sord(ticket.ServicePorts()), " ")
-	//				if len(portProtocol) == 2 {
-	//					portString = portProtocol[0]
-	//					protocol = portProtocol[1]
-	//					if portInt, err = strconv.Atoi(portString); err != nil {
-	//						job.lstream.Send(log.Errorf(err, "failed to parse port [%s] as integer", portString))
-	//					}
-	//				} else {
-	//					err = fmt.Errorf("port formatting error")
-	//					job.lstream.Send(log.Errorf(err, "[%s] could not be broken into two", sord(ticket.ServicePorts())))
-	//				}
-	//			}
-	//
-	//			if err == nil {
-	//				_, _, err = job.db.UpdateDetectionIgnore(deviceID, vulnID, portInt, protocol, ignore.ID())
-	//				if err != nil {
-	//					job.lstream.Send(log.Errorf(err, "error while updating ignore for [%s/%s]", deviceID, vulnID))
-	//				}
-	//
-	//				job.lstream.Send(log.Infof("finished updating detection for %v/%v/%v/%v", deviceID, vulnID, portInt, protocol))
-	//			}
-	//
-	//		} else {
-	//			job.lstream.Send(log.Errorf(err, "failed to load ignore entry for [%s/%s]", deviceID, vulnID))
-	//		}
-	//	} else {
-	//		job.lstream.Send(log.Errorf(err, "error while loading ignore entry for [%s/%s]", deviceID, vulnID))
-	//	}
-	//}
+	if ignoreSaved {
+		var ignore domain.Ignore
+		if ignore, err = db.HasIgnore(
+			sourceID,
+			vulnID,
+			deviceID,
+			orgID,
+			sord(ticket.ServicePorts()),
+			tord1970(nil),
+		); err == nil {
+			if ignore != nil {
+				var portString string
+				var protocol string
+				var portInt int
+
+				if len(sord(ticket.ServicePorts())) > 0 {
+					var portProtocol = strings.Split(sord(ticket.ServicePorts()), " ")
+					if len(portProtocol) == 2 {
+						portString = portProtocol[0]
+						protocol = portProtocol[1]
+						if portInt, err = strconv.Atoi(portString); err != nil {
+							lstream.Send(log.Errorf(err, "failed to parse port [%s] as integer", portString))
+						}
+					} else {
+						err = fmt.Errorf("port formatting error")
+						lstream.Send(log.Errorf(err, "[%s] could not be broken into two", sord(ticket.ServicePorts())))
+					}
+				}
+
+				if err == nil {
+					_, _, err = db.UpdateDetectionIgnore(deviceID, vulnID, portInt, protocol, ignore.ID())
+					if err != nil {
+						lstream.Send(log.Errorf(err, "error while updating ignore for [%s/%s]", deviceID, vulnID))
+					}
+
+					lstream.Send(log.Infof("finished updating detection for %v/%v/%v/%v", deviceID, vulnID, portInt, protocol))
+				}
+
+			} else {
+				lstream.Send(log.Errorf(err, "failed to load ignore entry for [%s/%s]", deviceID, vulnID))
+			}
+		} else {
+			lstream.Send(log.Errorf(err, "error while loading ignore entry for [%s/%s]", deviceID, vulnID))
+		}
+	}
 }
 
 // This method updates the expiration date of the CERFs in the database that are past the date of the last job start
