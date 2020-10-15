@@ -308,7 +308,7 @@ func findingDetectionCreation(lstream log.Logger, db domain.DatabaseConnection, 
 
 						if detectionInfo, err := db.GetDetectionInfo(finding.DeviceID(), finding.VulnerabilityID(), portInt, protocol); err == nil {
 							var ignoreID string
-							ignore, err := db.HasIgnore(sourceID, finding.VulnerabilityID(), finding.DeviceID(), orgID, "", time.Now())
+							ignore, err := db.HasIgnore(sourceID, finding.VulnerabilityID(), finding.DeviceID(), orgID, sord(finding.ServicePorts()), time.Now())
 							if err != nil {
 								lstream.Send(log.Errorf(err, "error while loading ignore entry [%s|%s]", finding.DeviceID(), finding.VulnerabilityID()))
 							}
