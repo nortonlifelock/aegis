@@ -342,6 +342,21 @@ func (connector *ConnectorJira) UpdateTicket(ticket domain.Ticket, comment strin
 				}
 			}
 
+			if !ticket.ExceptionExpiration().IsZero() {
+				field = connector.GetFieldMap(backendExceptionExpiration)
+				if field != nil {
+					val := ticket.ExceptionExpiration()
+					updateBlock.Fields.ExceptionExpiration = &val
+					oldToNewFieldName["exceptionexpiration"] = field.ID
+				}
+			} else {
+				field = connector.GetFieldMap(backendExceptionExpiration)
+				if field != nil {
+					updateBlock.Fields.ExceptionExpiration = nil
+					oldToNewFieldName["exceptionexpiration"] = field.ID
+				}
+			}
+
 			if ticket.IPAddress() != nil {
 				field := connector.GetFieldMap(backendIPAddress)
 				if field != nil {
