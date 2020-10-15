@@ -699,8 +699,8 @@ func (wrapper *FindingWrapper) CERF() (param string) {
 	return
 }
 
-// CERFExpirationDate returns the CERFExpirationDate of the ticket
-func (wrapper *FindingWrapper) CERFExpirationDate() (param time.Time) {
+// ExceptionExpiration returns the ExceptionExpiration of the ticket
+func (wrapper *FindingWrapper) ExceptionExpiration() (param time.Time) {
 	return
 }
 

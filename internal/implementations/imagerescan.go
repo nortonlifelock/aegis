@@ -115,6 +115,13 @@ func (job *ImageRescanJob) processImageFindings(engine integrations.TicketingEng
 				}
 
 				findingMap := mapImageFindingsByDeviceIDVulnID(findings)
+				ticketSlice := fanInChannel(tickets)
+				ticketsForImage := make([]domain.Ticket, 0)
+				for index := range ticketSlice {
+					if ticketSlice[index].DeviceID() == image {
+						ticketsForImage = append(ticketsForImage, ticketSlice[index])
+					}
+				}
 
 				_, _, ticketsWithFindings := processFindingsAndTickets(
 					job.lstream,
@@ -122,7 +129,7 @@ func (job *ImageRescanJob) processImageFindings(engine integrations.TicketingEng
 					job.config.OrganizationID(),
 					job.insource.SourceID(),
 					engine,
-					fanInChannel(tickets),
+					ticketsForImage,
 					findingsAsTickets,
 					fmt.Sprintf("finding was NOT found by %s", job.insource.Source()),
 					fmt.Sprintf("finding still detected by %s", job.insource.Source()),
@@ -141,7 +148,8 @@ func (job *ImageRescanJob) processImageFindings(engine integrations.TicketingEng
 				)
 
 				for _, pair := range ticketsWithFindings {
-					finding := findingMap[fmt.Sprintf("%s;%s;%s", pair.ticket.DeviceID(), pair.ticket.VulnerabilityID(), sord(pair.ticket.ServicePorts()))]
+					key := fmt.Sprintf("%s;%s;%s", pair.ticket.DeviceID(), pair.ticket.VulnerabilityID(), sord(pair.ticket.ServicePorts()))
+					finding := findingMap[key]
 					if finding != nil {
 						if sord(pair.ticket.Status()) == engine.GetStatusMap(domain.StatusClosedException) {
 							if !finding.Exception() { // if the finding isn't already marked as an exception in Aqua, set it as an exception in Aqua
@@ -158,7 +166,7 @@ func (job *ImageRescanJob) processImageFindings(engine integrations.TicketingEng
 							}
 						}
 					} else {
-						job.lstream.Send(log.Errorf(err, "could not find finding [%s] while checking for exceptions", fmt.Sprintf("%s;%s;%s", pair.ticket.DeviceID(), pair.ticket.VulnerabilityID(), sord(pair.ticket.ServicePorts()))))
+						job.lstream.Send(log.Errorf(err, "could not find finding [%s] while checking for exceptions", key))
 					}
 				}
 			}
@@ -219,7 +227,7 @@ func (i *ImageFinding) CERF() (param string) {
 	return
 }
 
-func (i *ImageFinding) CERFExpirationDate() (param time.Time) {
+func (i *ImageFinding) ExceptionExpiration() (param time.Time) {
 	return
 }
 
@@ -408,7 +416,9 @@ func mapImageFindingsByDeviceIDVulnID(findings []domain.ImageFinding) (entityIDT
 	entityIDToRuleHashToFinding = make(map[string]domain.ImageFinding)
 	for _, finding := range findings {
 		if len(finding.ImageName()) > 0 {
-			key := fmt.Sprintf("%s;%s;%s", finding.ImageName(), finding.VulnerabilityID(), finding.VulnerabilityLocation())
+			// leading 0 in the last element is to match up with the [port protocol] format in the ServicePorts
+			// since no value for port is relevant to an image finding, a 0 is left here
+			key := fmt.Sprintf("%s;%s;0 %s", finding.ImageName(), finding.VulnerabilityID(), finding.VulnerabilityLocation())
 			entityIDToRuleHashToFinding[key] = finding
 		}
 	}

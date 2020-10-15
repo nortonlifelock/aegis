@@ -91,8 +91,8 @@ func (t csvTicket) CERF() (param string) {
 	return param
 }
 
-func (t csvTicket) CERFExpirationDate() (param time.Time) {
-	return t.Ticket.CERFExpirationDate()
+func (t csvTicket) ExceptionExpiration() (param time.Time) {
+	return t.Ticket.ExceptionExpiration()
 }
 
 func (t csvTicket) CVEReferences() (param *string) {

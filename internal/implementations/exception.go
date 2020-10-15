@@ -139,7 +139,7 @@ func (job *ExceptionJob) processExceptionOrFalsePositive(ticket domain.Ticket) {
 	if len(ticket.CERF()) > 0 && ticket.CERF() != "Empty" {
 
 		// TODO: update the due date to be able to be passed as null to the sproc
-		if ticket.CERFExpirationDate().After(time.Now()) {
+		if ticket.ExceptionExpiration().After(time.Now()) {
 
 			job.lstream.Send(log.Infof("Creating/updating EXCEPTION %s", ticket.Title()))
 
@@ -149,7 +149,7 @@ func (job *ExceptionJob) processExceptionOrFalsePositive(ticket domain.Ticket) {
 				domain.Exception,
 				vulnID,
 				deviceID,
-				ticket.CERFExpirationDate(),
+				ticket.ExceptionExpiration(),
 				ticket.CERF(),
 				true,
 				sord(ticket.ServicePorts())); err == nil {
@@ -158,7 +158,7 @@ func (job *ExceptionJob) processExceptionOrFalsePositive(ticket domain.Ticket) {
 				job.lstream.Send(log.Errorf(err, "Error while updating ticket %s: %s", ticket.Title(), err.Error()))
 			}
 		} else {
-			job.lstream.Send(log.Debugf("Skipping update for %s as it's CERF expired in the past (%s)", ticket.CERFExpirationDate().Format(time.RFC3339)))
+			job.lstream.Send(log.Debugf("Skipping update for %s as it's CERF expired in the past (%s)", ticket.ExceptionExpiration().Format(time.RFC3339)))
 		}
 	} else {
 

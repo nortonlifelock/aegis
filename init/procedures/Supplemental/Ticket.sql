@@ -35,7 +35,7 @@
   SystemName          VARCHAR(500)            NULL
   VulnerabilityTitle  NVARCHAR(500)           NULL
   CERF                NVARCHAR(30)            NOT
-  CERFExpirationDate  DATETIME                NOT
+  ExceptionExpiration  DATETIME                NOT
   DBCreatedDate       DATETIME                NOT
   DBUpdatedDate       DATETIME                NULL
   CloudID             NVARCHAR(128)           NOT

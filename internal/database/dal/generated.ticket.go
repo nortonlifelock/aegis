@@ -17,55 +17,55 @@ import (
 
 // Ticket defines the struct that implements the Ticket interface
 type Ticket struct {
-	AlertDatevar          *time.Time
-	ApplicationNamevar    *string
-	AssignedTovar         *string
-	AssignmentGroupvar    *string
-	CERFvar               string
-	CERFExpirationDatevar time.Time
-	CVEReferencesvar      *string
-	CVSSvar               *float32
-	Categoryvar           *string
-	CloudIDvar            string
-	Configsvar            string
-	CreatedDatevar        *time.Time
-	DBCreatedDatevar      time.Time
-	DBUpdatedDatevar      *time.Time
-	Descriptionvar        *string
-	DeviceIDvar           string
-	DueDatevar            *time.Time
-	ExceptionDatevar      *time.Time
-	GroupIDvar            string
-	HostNamevar           *string
-	IDvar                 int
-	IPAddressvar          *string
-	Labelsvar             *string
-	LastCheckedvar        *time.Time
-	MacAddressvar         *string
-	MethodOfDiscoveryvar  *string
-	OSDetailedvar         *string
-	OWASPvar              *string
-	OperatingSystemvar    *string
-	OrgCodevar            *string
-	OrganizationIDvar     string
-	Patchablevar          *string
-	Priorityvar           *string
-	Projectvar            *string
-	ReportedByvar         *string
-	ResolutionDatevar     *time.Time
-	ResolutionStatusvar   *string
-	ScanIDvar             int
-	ServicePortsvar       *string
-	Solutionvar           *string
-	Statusvar             *string
-	Summaryvar            *string
-	SystemNamevar         *string
-	TicketTypevar         *string
-	Titlevar              string
-	UpdatedDatevar        *time.Time
-	VendorReferencesvar   *string
-	VulnerabilityIDvar    string
-	VulnerabilityTitlevar *string
+	AlertDatevar           *time.Time
+	ApplicationNamevar     *string
+	AssignedTovar          *string
+	AssignmentGroupvar     *string
+	CERFvar                string
+	CVEReferencesvar       *string
+	CVSSvar                *float32
+	Categoryvar            *string
+	CloudIDvar             string
+	Configsvar             string
+	CreatedDatevar         *time.Time
+	DBCreatedDatevar       time.Time
+	DBUpdatedDatevar       *time.Time
+	Descriptionvar         *string
+	DeviceIDvar            string
+	DueDatevar             *time.Time
+	ExceptionDatevar       *time.Time
+	ExceptionExpirationvar time.Time
+	GroupIDvar             string
+	HostNamevar            *string
+	IDvar                  int
+	IPAddressvar           *string
+	Labelsvar              *string
+	LastCheckedvar         *time.Time
+	MacAddressvar          *string
+	MethodOfDiscoveryvar   *string
+	OSDetailedvar          *string
+	OWASPvar               *string
+	OperatingSystemvar     *string
+	OrgCodevar             *string
+	OrganizationIDvar      string
+	Patchablevar           *string
+	Priorityvar            *string
+	Projectvar             *string
+	ReportedByvar          *string
+	ResolutionDatevar      *time.Time
+	ResolutionStatusvar    *string
+	ScanIDvar              int
+	ServicePortsvar        *string
+	Solutionvar            *string
+	Statusvar              *string
+	Summaryvar             *string
+	SystemNamevar          *string
+	TicketTypevar          *string
+	Titlevar               string
+	UpdatedDatevar         *time.Time
+	VendorReferencesvar    *string
+	VulnerabilityIDvar     string
+	VulnerabilityTitlevar  *string
 }
 
 //**********************************************************
@@ -75,55 +75,55 @@ type Ticket struct {
 // MarshalJSON marshals the struct by converting it to a map
 func (myTicket Ticket) MarshalJSON() ([]byte, error) {
 	return json.Marshal(map[string]interface{}{
-		"AlertDate":          myTicket.AlertDatevar,
-		"ApplicationName":    myTicket.ApplicationNamevar,
-		"AssignedTo":         myTicket.AssignedTovar,
-		"AssignmentGroup":    myTicket.AssignmentGroupvar,
-		"CERF":               myTicket.CERFvar,
-		"CERFExpirationDate": myTicket.CERFExpirationDatevar,
-		"CVEReferences":      myTicket.CVEReferencesvar,
-		"CVSS":               myTicket.CVSSvar,
-		"Category":           myTicket.Categoryvar,
-		"CloudID":            myTicket.CloudIDvar,
-		"Configs":            myTicket.Configsvar,
-		"CreatedDate":        myTicket.CreatedDatevar,
-		"DBCreatedDate":      myTicket.DBCreatedDatevar,
-		"DBUpdatedDate":      myTicket.DBUpdatedDatevar,
-		"Description":        myTicket.Descriptionvar,
-		"DeviceID":           myTicket.DeviceIDvar,
-		"DueDate":            myTicket.DueDatevar,
-		"ExceptionDate":      myTicket.ExceptionDatevar,
-		"GroupID":            myTicket.GroupIDvar,
-		"HostName":           myTicket.HostNamevar,
-		"ID":                 myTicket.IDvar,
-		"IPAddress":          myTicket.IPAddressvar,
-		"Labels":             myTicket.Labelsvar,
-		"LastChecked":        myTicket.LastCheckedvar,
-		"MacAddress":         myTicket.MacAddressvar,
-		"MethodOfDiscovery":  myTicket.MethodOfDiscoveryvar,
-		"OSDetailed":         myTicket.OSDetailedvar,
-		"OWASP":              myTicket.OWASPvar,
-		"OperatingSystem":    myTicket.OperatingSystemvar,
-		"OrgCode":            myTicket.OrgCodevar,
-		"OrganizationID":     myTicket.OrganizationIDvar,
-		"Patchable":          myTicket.Patchablevar,
-		"Priority":           myTicket.Priorityvar,
-		"Project":            myTicket.Projectvar,
-		"ReportedBy":         myTicket.ReportedByvar,
-		"ResolutionDate":     myTicket.ResolutionDatevar,
-		"ResolutionStatus":   myTicket.ResolutionStatusvar,
-		"ScanID":             myTicket.ScanIDvar,
-		"ServicePorts":       myTicket.ServicePortsvar,
-		"Solution":           myTicket.Solutionvar,
-		"Status":             myTicket.Statusvar,
-		"Summary":            myTicket.Summaryvar,
-		"SystemName":         myTicket.SystemNamevar,
-		"TicketType":         myTicket.TicketTypevar,
-		"Title":              myTicket.Titlevar,
-		"UpdatedDate":        myTicket.UpdatedDatevar,
-		"VendorReferences":   myTicket.VendorReferencesvar,
-		"VulnerabilityID":    myTicket.VulnerabilityIDvar,
-		"VulnerabilityTitle": myTicket.VulnerabilityTitlevar,
+		"AlertDate":           myTicket.AlertDatevar,
+		"ApplicationName":     myTicket.ApplicationNamevar,
+		"AssignedTo":          myTicket.AssignedTovar,
+		"AssignmentGroup":     myTicket.AssignmentGroupvar,
+		"CERF":                myTicket.CERFvar,
+		"CVEReferences":       myTicket.CVEReferencesvar,
+		"CVSS":                myTicket.CVSSvar,
+		"Category":            myTicket.Categoryvar,
+		"CloudID":             myTicket.CloudIDvar,
+		"Configs":             myTicket.Configsvar,
+		"CreatedDate":         myTicket.CreatedDatevar,
+		"DBCreatedDate":       myTicket.DBCreatedDatevar,
+		"DBUpdatedDate":       myTicket.DBUpdatedDatevar,
+		"Description":         myTicket.Descriptionvar,
+		"DeviceID":            myTicket.DeviceIDvar,
+		"DueDate":             myTicket.DueDatevar,
+		"ExceptionDate":       myTicket.ExceptionDatevar,
+		"ExceptionExpiration": myTicket.ExceptionExpirationvar,
+		"GroupID":             myTicket.GroupIDvar,
+		"HostName":            myTicket.HostNamevar,
+		"ID":                  myTicket.IDvar,
+		"IPAddress":           myTicket.IPAddressvar,
+		"Labels":              myTicket.Labelsvar,
+		"LastChecked":         myTicket.LastCheckedvar,
+		"MacAddress":          myTicket.MacAddressvar,
+		"MethodOfDiscovery":   myTicket.MethodOfDiscoveryvar,
+		"OSDetailed":          myTicket.OSDetailedvar,
+		"OWASP":               myTicket.OWASPvar,
+		"OperatingSystem":     myTicket.OperatingSystemvar,
+		"OrgCode":             myTicket.OrgCodevar,
+		"OrganizationID":      myTicket.OrganizationIDvar,
+		"Patchable":           myTicket.Patchablevar,
+		"Priority":            myTicket.Priorityvar,
+		"Project":             myTicket.Projectvar,
+		"ReportedBy":          myTicket.ReportedByvar,
+		"ResolutionDate":      myTicket.ResolutionDatevar,
+		"ResolutionStatus":    myTicket.ResolutionStatusvar,
+		"ScanID":              myTicket.ScanIDvar,
+		"ServicePorts":        myTicket.ServicePortsvar,
+		"Solution":            myTicket.Solutionvar,
+		"Status":              myTicket.Statusvar,
+		"Summary":             myTicket.Summaryvar,
+		"SystemName":          myTicket.SystemNamevar,
+		"TicketType":          myTicket.TicketTypevar,
+		"Title":               myTicket.Titlevar,
+		"UpdatedDate":         myTicket.UpdatedDatevar,
+		"VendorReferences":    myTicket.VendorReferencesvar,
+		"VulnerabilityID":     myTicket.VulnerabilityIDvar,
+		"VulnerabilityTitle":  myTicket.VulnerabilityTitlevar,
 	})
 }
 
@@ -150,11 +150,6 @@ func (myTicket *Ticket) AssignmentGroup() (param *string) {
 // CERF returns the CERF parameter from the Ticket struct
 func (myTicket *Ticket) CERF() (param string) {
 	return myTicket.CERFvar
-}
-
-// CERFExpirationDate returns the CERFExpirationDate parameter from the Ticket struct
-func (myTicket *Ticket) CERFExpirationDate() (param time.Time) {
-	return myTicket.CERFExpirationDatevar
 }
 
 // CVEReferences returns the CVEReferences parameter from the Ticket struct
@@ -215,6 +210,11 @@ func (myTicket *Ticket) DueDate() (param *time.Time) {
 // ExceptionDate returns the ExceptionDate parameter from the Ticket struct
 func (myTicket *Ticket) ExceptionDate() (param *time.Time) {
 	return myTicket.ExceptionDatevar
+}
+
+// ExceptionExpiration returns the ExceptionExpiration parameter from the Ticket struct
+func (myTicket *Ticket) ExceptionExpiration() (param time.Time) {
+	return myTicket.ExceptionExpirationvar
 }
 
 // GroupID returns the GroupID parameter from the Ticket struct
