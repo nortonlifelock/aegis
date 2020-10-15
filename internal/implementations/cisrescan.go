@@ -433,7 +433,7 @@ func createTicketsForUnticketedFindings(db domain.DatabaseConnection, lstream lo
 				defer handleRoutinePanic(lstream)
 				defer wg.Done()
 
-				ignore, err := db.HasIgnore(sourceID, finding.VulnerabilityID(), finding.DeviceID(), orgID, "", time.Now())
+				ignore, err := db.HasIgnore(sourceID, finding.VulnerabilityID(), finding.DeviceID(), orgID, sord(finding.ServicePorts()), time.Now())
 				if err != nil {
 					lstream.Send(log.Errorf(err, "error while loading ignore entry [%s|%s]", finding.DeviceID(), finding.VulnerabilityID()))
 				}
