@@ -731,7 +731,7 @@ func (connector *ConnectorJira) GetCERFExpirationUpdates(startDate time.Time) (c
 
 			if issue, ok := <-issues; ok {
 				if len(issue.Title()) > 0 {
-					cerfs[issue.Title()] = issue.CERFExpirationDate()
+					cerfs[issue.Title()] = issue.ExceptionExpiration()
 				}
 			} else {
 				break

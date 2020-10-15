@@ -102,13 +102,13 @@ func (ji *Issue) CERF() (param string) {
 	return ji.getString(backendCERF)
 }
 
-// CERFExpirationDate gets the CERFExpirationDate parameter from the Ticket struct
-func (ji *Issue) CERFExpirationDate() (param time.Time) {
+// ExceptionExpiration gets the ExceptionExpiration parameter from the Ticket struct
+func (ji *Issue) ExceptionExpiration() (param time.Time) {
 	var cerfExpiration time.Time
 
 	// the ticket itself is a CERF ticket
-	if !ji.getTime(backendCERFExpiration).IsZero() {
-		cerfExpiration = ji.getTime(backendCERFExpiration)
+	if !ji.getTime(backendExceptionExpiration).IsZero() {
+		cerfExpiration = ji.getTime(backendExceptionExpiration)
 	} else {
 		// the ticket has a referenced CERF, let's grab it's expiration
 		if len(ji.CERF()) > 0 {
@@ -116,14 +116,14 @@ func (ji *Issue) CERFExpirationDate() (param time.Time) {
 			if val, exists := ji.connector.CERFs.Load(ji.CERF()); exists {
 				ji.connector.CERFLock.Unlock()
 				if cerf, ok := val.(domain.Ticket); ok {
-					cerfExpiration = cerf.CERFExpirationDate()
+					cerfExpiration = cerf.ExceptionExpiration()
 				} else {
 					ji.connector.lstream.Send(log.Errorf(nil, "cerf [%v] failed to load from cache", ji.CERF()))
 				}
 			} else {
 				if cerf, err := ji.connector.GetTicket(ji.CERF()); err == nil {
 					if cerf != nil {
-						cerfExpiration = cerf.CERFExpirationDate()
+						cerfExpiration = cerf.ExceptionExpiration()
 						ji.connector.CERFs.Store(ji.CERF(), cerf)
 					} else {
 						ji.connector.lstream.Send(log.Errorf(err, "cerf [%v] returned nil from JIRA", ji.CERF()))
