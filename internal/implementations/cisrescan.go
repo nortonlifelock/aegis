@@ -587,12 +587,6 @@ func updateTicketsWithStaleFindings(db domain.DatabaseConnection, lstream log.Lo
 			} else {
 				lstream.Send(log.Errorf(err, "error while updating ticket [%s]", pair.ticket.Title()))
 			}
-
-			if sord(pair.ticket.Status()) == engine.GetStatusMap(domain.StatusClosedException) ||
-				sord(pair.ticket.Status()) == engine.GetStatusMap(domain.StatusClosedFalsePositive) {
-				processExceptionOrFalsePositive(db, engine, lstream, orgID, sourceID, pair.ticket)
-			}
-
 		}(pairs[index])
 	}
 	wg.Wait()
