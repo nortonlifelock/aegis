@@ -446,13 +446,6 @@ func createTicketsForUnticketedFindings(db domain.DatabaseConnection, lstream lo
 					} else {
 						lstream.Send(log.Errorf(err, "error while creating ticket for device [%s] with vulnerability [%s]", finding.DeviceID(), finding.VulnerabilityID()))
 					}
-
-					recentlyCreatedTicket, err := engine.GetTicket(sourceKey)
-					if err == nil {
-						processTicket(db, lstream, recentlyCreatedTicket, orgID)
-					} else {
-						lstream.Send(log.Errorf(err, "error while gathering recently created ticket"))
-					}
 				} else {
 					lstream.Send(log.Infof("SKIPPING ticket for [%s|%s] as it has an ignore entry", finding.DeviceID(), finding.VulnerabilityID()))
 				}
@@ -595,7 +588,6 @@ func updateTicketsWithStaleFindings(db domain.DatabaseConnection, lstream log.Lo
 				lstream.Send(log.Errorf(err, "error while updating ticket [%s]", pair.ticket.Title()))
 			}
 
-			processTicket(db, lstream, pair.ticket, orgID)
 			if sord(pair.ticket.Status()) == engine.GetStatusMap(domain.StatusClosedException) ||
 				sord(pair.ticket.Status()) == engine.GetStatusMap(domain.StatusClosedFalsePositive) {
 				processExceptionOrFalsePositive(db, lstream, orgID, sourceID, pair.ticket)
