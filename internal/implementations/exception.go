@@ -129,38 +129,43 @@ func (job *ExceptionJob) pullOrgCodeFromDB() (orgcode string, err error) {
 
 // This method creates an exception in the database if there is an associated CERF with the ticket that has not expired
 // If there is not an associated CERF, a false positive entry in the database is created
-func processExceptionOrFalsePositive(db domain.DatabaseConnection, lstream log.Logger, orgID, sourceID string, ticket domain.Ticket) {
+func processExceptionOrFalsePositive(db domain.DatabaseConnection, engine integrations.TicketingEngine, lstream log.Logger, orgID, sourceID string, ticket domain.Ticket) {
 	var err error
 
 	var deviceID = ticket.DeviceID()
 	var vulnID = ticket.VulnerabilityID()
 	var ignoreSaved bool
 
-	if len(ticket.CERF()) > 0 && ticket.CERF() != "Empty" {
+	if sord(ticket.Status()) == engine.GetStatusMap(domain.StatusClosedException) {
 
-		// TODO: update the due date to be able to be passed as null to the sproc
-		if ticket.ExceptionExpiration().After(time.Now()) {
+		if len(ticket.CERF()) > 0 && ticket.CERF() != "Empty" {
+			// TODO: update the due date to be able to be passed as null to the sproc
+			if ticket.ExceptionExpiration().After(time.Now()) {
 
-			lstream.Send(log.Infof("Creating/updating EXCEPTION %s", ticket.Title()))
+				lstream.Send(log.Infof("Creating/updating EXCEPTION %s", ticket.Title()))
 
-			if _, _, err = db.SaveIgnore(
-				sourceID,
-				orgID,
-				domain.Exception,
-				vulnID,
-				deviceID,
-				ticket.ExceptionExpiration(),
-				ticket.CERF(),
-				true,
-				sord(ticket.ServicePorts())); err == nil {
-				ignoreSaved = true
+				if _, _, err = db.SaveIgnore(
+					sourceID,
+					orgID,
+					domain.Exception,
+					vulnID,
+					deviceID,
+					ticket.ExceptionExpiration(),
+					ticket.CERF(),
+					true,
+					sord(ticket.ServicePorts())); err == nil {
+					ignoreSaved = true
+				} else {
+					lstream.Send(log.Errorf(err, "Error while updating ticket %s: %s", ticket.Title(), err.Error()))
+				}
 			} else {
-				lstream.Send(log.Errorf(err, "Error while updating ticket %s: %s", ticket.Title(), err.Error()))
+				lstream.Send(log.Debugf("Skipping update for %s as it's CERF expired in the past (%s)", ticket.Title(), ticket.ExceptionExpiration().Format(time.RFC3339)))
 			}
 		} else {
-			lstream.Send(log.Debugf("Skipping update for %s as it's CERF expired in the past (%s)", ticket.ExceptionExpiration().Format(time.RFC3339)))
+			lstream.Send(log.Errorf(err, "empty CERF found on [%s]", ticket.Title()))
 		}
-	} else {
+
+	} else if sord(ticket.Status()) == engine.GetStatusMap(domain.StatusClosedFalsePositive) {
 
 		// TODO: update the due date to be able to be passed as null to the sproc
 		lstream.Send(log.Infof("Creating/updating FALSE POSITIVE %s", ticket.Title()))
@@ -179,6 +184,8 @@ func processExceptionOrFalsePositive(db domain.DatabaseConnection, lstream log.L
 		} else {
 			lstream.Send(log.Errorf(err, "Error while updating ticket %s: %s", ticket.Title(), err.Error()))
 		}
+	} else {
+		lstream.Send(log.Errorf(err, "unrecognized status for exception processing [%s]", sord(ticket.Status())))
 	}
 
 	_ = ignoreSaved
