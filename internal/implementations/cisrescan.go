@@ -232,7 +232,6 @@ func processFindingsAndTickets(lstream log.Logger, db domain.DatabaseConnection,
 		}
 	}
 
-	findingDetectionCreation(lstream, db, orgID, sourceID, findings)
 	updateTicketsAccordingToFindings(
 		lstream,
 		db,
@@ -246,6 +245,7 @@ func processFindingsAndTickets(lstream log.Logger, db domain.DatabaseConnection,
 		updatingComment,
 		shouldCreateTicket,
 	)
+	findingDetectionCreation(lstream, db, orgID, sourceID, findings)
 
 	return findingsWithoutTickets, ticketsWithoutFindings, ticketsWithFindings
 }
