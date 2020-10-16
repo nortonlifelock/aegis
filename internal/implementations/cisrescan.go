@@ -590,7 +590,7 @@ func updateTicketsWithStaleFindings(db domain.DatabaseConnection, lstream log.Lo
 
 			if sord(pair.ticket.Status()) == engine.GetStatusMap(domain.StatusClosedException) ||
 				sord(pair.ticket.Status()) == engine.GetStatusMap(domain.StatusClosedFalsePositive) {
-				processExceptionOrFalsePositive(db, lstream, orgID, sourceID, pair.ticket)
+				processExceptionOrFalsePositive(db, engine, lstream, orgID, sourceID, pair.ticket)
 			}
 
 		}(pairs[index])

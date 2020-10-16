@@ -73,12 +73,12 @@ func (job *ExceptionJob) Process(ctx context.Context, id string, appconfig domai
 											}
 										}()
 
-										processExceptionOrFalsePositive(job.db, job.lstream, job.config.OrganizationID(), job.outsource.SourceID(), ticket)
+										processExceptionOrFalsePositive(job.db, eng, job.lstream, job.config.OrganizationID(), job.outsource.SourceID(), ticket)
 									}(inTicket)
 								} else {
 									seen[inTicket.CERF()] = true
 									job.lstream.Send(log.Debugf("Slow loading %s", inTicket.CERF()))
-									processExceptionOrFalsePositive(job.db, job.lstream, job.config.OrganizationID(), job.outsource.SourceID(), inTicket)
+									processExceptionOrFalsePositive(job.db, eng, job.lstream, job.config.OrganizationID(), job.outsource.SourceID(), inTicket)
 									job.lstream.Send(log.Debugf("Done loading %s", inTicket.CERF()))
 								}
 
