@@ -188,7 +188,7 @@ func (job *CISRescanJob) processBundleOnCloud(scanner integrations.CISScanner, e
 					return fmt.Sprintf("%s;%s", ticket.DeviceID(), ticket.VulnerabilityID())
 				},
 				func(ticket domain.Ticket) bool {
-					return sord(ticket.Priority()) != "low"
+					return strings.ToLower(sord(ticket.Priority())) != "low"
 				},
 			)
 		}
