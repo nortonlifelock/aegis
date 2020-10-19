@@ -53,6 +53,7 @@ type GeneratedDatabaseConnection interface {
 	DisableOrganization(_ID string, _UpdatedBy string) (id int, affectedRows int, err error)
 	DisableSource(_ID string, _OrgID string, _UpdatedBy string) (id int, affectedRows int, err error)
 	GetAllDetectionInfo(_OrgID string) ([]DetectionInfo, error)
+	GetAllDeviceInfo() ([]DeviceInfo, error)
 	GetAllExceptions(_offset int, _limit int, _sourceID string, _orgID string, _typeID int, _vulnID string, _devID string, _dueDate time.Time, _port string, _approval string, _active bool, _dBCreatedDate time.Time, _dBUpdatedDate time.Time, _updatedBy string, _createdBy string, _sortField string, _sortOrder string) ([]Ignore, error)
 	GetAllJobConfigs(_OrgID string) ([]JobConfig, error)
 	GetAllJobConfigsWithOrder(_offset int, _limit int, _configID string, _jobid int, _dataInSourceConfigID string, _dataOutSourceConfigID string, _priorityOverride int, _continuous bool, _Payload string, _waitInSeconds int, _maxInstances int, _autoStart bool, _OrgID string, _updatedBy string, _createdBy string, _sortField string, _sortOrder string, _updatedDate time.Time, _createdDate time.Time, _lastJobStart time.Time, _ID string) ([]JobConfig, error)
