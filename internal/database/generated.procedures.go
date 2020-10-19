@@ -1144,6 +1144,71 @@ func (conn *dbconn) GetAllDetectionInfo(_OrgID string) ([]domain.DetectionInfo, 
 	return retDetectionInfo, err
 }
 
+// GetAllDeviceInfo executes the stored procedure GetAllDeviceInfo against the database and returns the read results
+func (conn *dbconn) GetAllDeviceInfo() ([]domain.DeviceInfo, error) {
+	var err error
+	var retDeviceInfo = make([]domain.DeviceInfo, 0)
+
+	conn.Read(&connection.Procedure{
+		Proc:       "GetAllDeviceInfo",
+		Parameters: []interface{}{},
+		Callback: func(results interface{}, dberr error) {
+			err = dberr
+
+			if err == nil {
+
+				err = conn.getRows(results,
+					func(rows *sql.Rows) (err error) {
+						if err = rows.Err(); err == nil {
+
+							var myID string
+							var mySourceID *string
+							var myOS string
+							var myMAC string
+							var myIP string
+							var myHostName string
+							var myRegion *string
+							var myInstanceID *string
+							var myTrackingMethod *string
+
+							if err = rows.Scan(
+
+								&myID,
+								&mySourceID,
+								&myOS,
+								&myMAC,
+								&myIP,
+								&myHostName,
+								&myRegion,
+								&myInstanceID,
+								&myTrackingMethod,
+							); err == nil {
+
+								newDeviceInfo := &dal.DeviceInfo{
+									IDvar:             myID,
+									SourceIDvar:       mySourceID,
+									OSvar:             myOS,
+									MACvar:            myMAC,
+									IPvar:             myIP,
+									HostNamevar:       myHostName,
+									Regionvar:         myRegion,
+									InstanceIDvar:     myInstanceID,
+									TrackingMethodvar: myTrackingMethod,
+								}
+
+								retDeviceInfo = append(retDeviceInfo, newDeviceInfo)
+							}
+						}
+
+						return err
+					})
+			}
+		},
+	})
+
+	return retDeviceInfo, err
+}
+
 // GetAllExceptions executes the stored procedure GetAllExceptions against the database and returns the read results
 func (conn *dbconn) GetAllExceptions(_offset int, _limit int, _sourceID string, _orgID string, _typeID int, _vulnID string, _devID string, _dueDate time.Time, _port string, _approval string, _active bool, _dBCreatedDate time.Time, _dBUpdatedDate time.Time, _updatedBy string, _createdBy string, _sortField string, _sortOrder string) ([]domain.Ignore, error) {
 	var err error

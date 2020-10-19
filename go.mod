@@ -12,10 +12,10 @@ require (
 	github.com/nortonlifelock/azure v1.0.1-0.20200923201949-b266eecf6d03
 	github.com/nortonlifelock/connection v1.0.1-0.20200116160344-4d492cf1f581
 	github.com/nortonlifelock/crypto v1.0.1-0.20200213175907-562e87a94143
-	github.com/nortonlifelock/domain v1.0.1-0.20201015171310-9620bc3cc1fc
+	github.com/nortonlifelock/domain v1.0.1-0.20201019214124-3216ae849db7
 	github.com/nortonlifelock/dome9 v1.0.1-0.20200825204601-3b08f6faf258
 	github.com/nortonlifelock/files v1.0.1-0.20200127165427-5178f1323f54
-	github.com/nortonlifelock/jira v1.0.1-0.20201015230948-46983c5cd6f4
+	github.com/nortonlifelock/jira v1.0.1-0.20201019181947-d57262d68daa
 	github.com/nortonlifelock/jira-tool v1.0.0
 	github.com/nortonlifelock/job v1.0.1-0.20200723165359-98431175f14c
 	github.com/nortonlifelock/log v1.0.1-0.20200723215351-a71254d3c335
