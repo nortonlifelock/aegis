@@ -61,8 +61,6 @@ func (connector *ConnectorJira) mapDalTicketToJiraIssue(ticket domain.Ticket) (j
 
 		if len(sord(ticket.ApplicationName())) > 0 {
 			setJIField(connector, ji, backendApplicationName, ticket.ApplicationName())
-		} else {
-			setJIField(connector, ji, backendApplicationName, "None")
 		}
 
 		if len(ticket.DeviceID()) > 0 {
