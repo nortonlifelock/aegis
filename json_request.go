@@ -77,7 +77,7 @@ type FieldList struct {
 	GroupID             string      `json:"groupid,omitempty"`
 	SystemName          *string     `json:"systemname,omitempty"`
 	Category            *ValueField `json:"category,omitempty"`
-	ApplicationName     *ValueField `json:"applicationname,omitempty"`
+	ApplicationName     *string     `json:"applicationname,omitempty"`
 	ScanID              string      `json:"scanid,omitempty"`
 	VulnerabilityID     string      `json:"vulnerabilityid,omitempty"`
 	CreatedDate         *time.Time  `json:"created,omitempty"`
