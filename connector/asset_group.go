@@ -248,7 +248,8 @@ func (session *QsSession) populateOnlineAppliances(groups []*qualys.QSAssetGroup
 
 		if err == nil {
 			for _, group := range groups {
-				groupAppliances := strings.Split(group.Appliances, ",")
+				applianceString := strings.Replace(group.Appliances, " ", "", -1)
+				groupAppliances := strings.Split(applianceString, ",")
 				group.OnlineAppliances = make([]int, 0)
 
 				for _, appliance := range output.Appliances {
