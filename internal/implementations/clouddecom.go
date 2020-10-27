@@ -31,6 +31,8 @@ type CloudDecommissionJob struct {
 type CloudDecommissionPayload struct {
 	// OnlyCheckIPs is an optional field. If it is not empty, a decommission check will only be done against these specific IPs as opposed to the entire cloud inventory
 	OnlyCheckIPs []string `json:"only_check_ips"`
+
+	DecommOnStoppedState bool `json:"decommission_on_stopped_state"`
 }
 
 // buildPayload loads the Payload from the job history into the Payload object
@@ -382,6 +384,8 @@ func (job *CloudDecommissionJob) findDecommissionedDevices(historyOfDevices []do
 
 				// the cloud service reported the device as decommissioned
 				if matchedCloudDevice.State() == domain.DeviceDecommed {
+					deviceIDToDecommDevice[sord(device.SourceID())] = device
+				} else if job.Payload.DecommOnStoppedState && matchedCloudDevice.State() == domain.DeviceStopped {
 					deviceIDToDecommDevice[sord(device.SourceID())] = device
 				}
 			}

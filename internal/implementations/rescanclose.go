@@ -340,7 +340,7 @@ func canCreateCloudDecommJob(db domain.DatabaseConnection, lstream log.Logger, o
 				lstream.Send(log.Errorf(err, "failed to load cloud source config for cloud source ID [%s]", sord(assetGroup.CloudSourceID())))
 			}
 		} else {
-			lstream.Send(log.Errorf(err, "wanted to create a cloud decommission scan for [%s], but it did not have the cloud source ID set", groupID))
+			// if an asset group does not have a cloud source ID set, it is not configured to have cloud decommission scans
 		}
 	} else {
 		lstream.Send(log.Errorf(err, "error while loading asset group information for [org|group|source] [%s|%s]", orgID, groupID))

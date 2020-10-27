@@ -140,6 +140,7 @@ func processExceptionOrFalsePositive(db domain.DatabaseConnection, engine integr
 
 		if len(ticket.CERF()) > 0 && ticket.CERF() != "Empty" {
 			// TODO: update the due date to be able to be passed as null to the sproc
+
 			if ticket.ExceptionExpiration().After(time.Now()) {
 
 				lstream.Send(log.Infof("Creating/updating EXCEPTION %s", ticket.Title()))
