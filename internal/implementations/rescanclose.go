@@ -293,29 +293,35 @@ func createCloudDecommissionJob(parentJobID string, db domain.DatabaseConnection
 			priority = iord(jobConfig.PriorityOverride())
 		}
 
-		payload := &CloudDecommissionPayload{OnlyCheckIPs: ips}
-		if payloadBody, err := json.Marshal(payload); err == nil {
-			_, _, err = db.CreateJobHistoryWithParentID(
-				jobRegistration.ID(),
-				jobConfig.ID(),
-				domain.JobStatusPending,
-				priority,
-				"",
-				0,
-				string(payloadBody),
-				"",
-				time.Now().UTC(),
-				"",
-				parentJobID,
-			)
+		var payload = &CloudDecommissionPayload{}
+		if err := json.Unmarshal([]byte(sord(jobConfig.Payload())), payload); err == nil {
+			payload.OnlyCheckIPs = ips
 
-			if err == nil {
-				lstream.Send(log.Infof("queued a cloud decommission scan for ips [%v]", ips))
+			if payloadBody, err := json.Marshal(payload); err == nil {
+				_, _, err = db.CreateJobHistoryWithParentID(
+					jobRegistration.ID(),
+					jobConfig.ID(),
+					domain.JobStatusPending,
+					priority,
+					"",
+					0,
+					string(payloadBody),
+					"",
+					time.Now().UTC(),
+					"",
+					parentJobID,
+				)
+
+				if err == nil {
+					lstream.Send(log.Infof("queued a cloud decommission scan for ips [%v]", ips))
+				} else {
+					lstream.Send(log.Errorf(err, "error while queueing cloud decommission scan for ips [%v]", ips))
+				}
 			} else {
-				lstream.Send(log.Errorf(err, "error while queueing cloud decommission scan for ips [%v]", ips))
+				lstream.Send(log.Errorf(err, "error while creating payload for CloudDecommissionJob"))
 			}
 		} else {
-			lstream.Send(log.Errorf(err, "error while creating payload for CloudDecommissionJob"))
+			lstream.Send(log.Errorf(err, "error while marshalling payload from JobConfig for CloudDecommissionJob"))
 		}
 	}
 }
