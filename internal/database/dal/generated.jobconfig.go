@@ -173,6 +173,11 @@ func (myJobConfig *JobConfig) SetOrganizationID(val string) {
 	myJobConfig.OrganizationIDvar = val
 }
 
+// SetPayload sets the Payload parameter from the JobConfig struct
+func (myJobConfig *JobConfig) SetPayload(val string) {
+	myJobConfig.Payloadvar = &val
+}
+
 // SetUpdatedBy sets the UpdatedBy parameter from the JobConfig struct
 func (myJobConfig *JobConfig) SetUpdatedBy(val string) {
 	myJobConfig.UpdatedByvar = &val

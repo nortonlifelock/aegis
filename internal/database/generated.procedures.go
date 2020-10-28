@@ -4516,6 +4516,7 @@ func (conn *dbconn) GetJobConfigByOrgIDAndJobIDWithSC(_OrgID string, _JobID int,
 							var myOrganizationID string
 							var myDataInSourceConfigID *string
 							var myDataOutSourceConfigID *string
+							var myPayload *string
 							var myPriorityOverride *int
 							var myContinuous []uint8
 							var myWaitInSeconds int
@@ -4534,6 +4535,7 @@ func (conn *dbconn) GetJobConfigByOrgIDAndJobIDWithSC(_OrgID string, _JobID int,
 								&myOrganizationID,
 								&myDataInSourceConfigID,
 								&myDataOutSourceConfigID,
+								&myPayload,
 								&myPriorityOverride,
 								&myContinuous,
 								&myWaitInSeconds,
@@ -4552,6 +4554,7 @@ func (conn *dbconn) GetJobConfigByOrgIDAndJobIDWithSC(_OrgID string, _JobID int,
 									OrganizationIDvar:        myOrganizationID,
 									DataInSourceConfigIDvar:  myDataInSourceConfigID,
 									DataOutSourceConfigIDvar: myDataOutSourceConfigID,
+									Payloadvar:               myPayload,
 									PriorityOverridevar:      myPriorityOverride,
 									Continuousvar:            myContinuous[0] > 0 && myContinuous[0] != 48, // converts uint8 to bool (48 is ASCII code for 0, which is reserved for false)
 									WaitInSecondsvar:         myWaitInSeconds,
