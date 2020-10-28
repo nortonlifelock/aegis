@@ -5,6 +5,7 @@
   OrganizationID          NVARCHAR(36)           NOT
   DataInSourceConfigID    NVARCHAR(36)  NULL
   DataOutSourceConfigID   NVARCHAR(36)  NULL
+  Payload                 VARCHAR(100)  NULL
   PriorityOverride        INT           NULL
   Continuous              BIT           NOT
   WaitInSeconds           INT           NOT
@@ -27,6 +28,7 @@ SELECT
     JC.OrganizationId,
     JC.DataInSourceConfigId,
     JC.DataOutSourceConfigId,
+    JC.Payload,
     JC.PriorityOverride,
     JC.Continuous,
     JC.WaitInSeconds,
