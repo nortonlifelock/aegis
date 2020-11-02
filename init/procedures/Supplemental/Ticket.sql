@@ -49,5 +49,11 @@
   OWASP               VARCHAR(300)            NULL
   ExceptionDate       DATETIME                NULL
   ApplicationName     VARCHAR(300)            NULL
+  HubProjectName      VARCHAR(100)            NULL
+  HubProjectVersion   VARCHAR(100)            NULL
+  ComponentName       VARCHAR(100)            NULL
+  ComponentVersion    VARCHAR(100)            NULL
+  PolicyRule          VARCHAR(100)            NULL
+  PolicySeverity      VARCHAR(100)            NULL
 */
 #BEGIN#

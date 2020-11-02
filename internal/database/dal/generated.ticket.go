@@ -26,6 +26,8 @@ type Ticket struct {
 	CVSSvar                *float32
 	Categoryvar            *string
 	CloudIDvar             string
+	ComponentNamevar       *string
+	ComponentVersionvar    *string
 	Configsvar             string
 	CreatedDatevar         *time.Time
 	DBCreatedDatevar       time.Time
@@ -37,6 +39,8 @@ type Ticket struct {
 	ExceptionExpirationvar time.Time
 	GroupIDvar             string
 	HostNamevar            *string
+	HubProjectNamevar      *string
+	HubProjectVersionvar   *string
 	IDvar                  int
 	IPAddressvar           *string
 	Labelsvar              *string
@@ -49,6 +53,8 @@ type Ticket struct {
 	OrgCodevar             *string
 	OrganizationIDvar      string
 	Patchablevar           *string
+	PolicyRulevar          *string
+	PolicySeverityvar      *string
 	Priorityvar            *string
 	Projectvar             *string
 	ReportedByvar          *string
@@ -84,6 +90,8 @@ func (myTicket Ticket) MarshalJSON() ([]byte, error) {
 		"CVSS":                myTicket.CVSSvar,
 		"Category":            myTicket.Categoryvar,
 		"CloudID":             myTicket.CloudIDvar,
+		"ComponentName":       myTicket.ComponentNamevar,
+		"ComponentVersion":    myTicket.ComponentVersionvar,
 		"Configs":             myTicket.Configsvar,
 		"CreatedDate":         myTicket.CreatedDatevar,
 		"DBCreatedDate":       myTicket.DBCreatedDatevar,
@@ -95,6 +103,8 @@ func (myTicket Ticket) MarshalJSON() ([]byte, error) {
 		"ExceptionExpiration": myTicket.ExceptionExpirationvar,
 		"GroupID":             myTicket.GroupIDvar,
 		"HostName":            myTicket.HostNamevar,
+		"HubProjectName":      myTicket.HubProjectNamevar,
+		"HubProjectVersion":   myTicket.HubProjectVersionvar,
 		"ID":                  myTicket.IDvar,
 		"IPAddress":           myTicket.IPAddressvar,
 		"Labels":              myTicket.Labelsvar,
@@ -107,6 +117,8 @@ func (myTicket Ticket) MarshalJSON() ([]byte, error) {
 		"OrgCode":             myTicket.OrgCodevar,
 		"OrganizationID":      myTicket.OrganizationIDvar,
 		"Patchable":           myTicket.Patchablevar,
+		"PolicyRule":          myTicket.PolicyRulevar,
+		"PolicySeverity":      myTicket.PolicySeverityvar,
 		"Priority":            myTicket.Priorityvar,
 		"Project":             myTicket.Projectvar,
 		"ReportedBy":          myTicket.ReportedByvar,
@@ -172,6 +184,16 @@ func (myTicket *Ticket) CloudID() (param string) {
 	return myTicket.CloudIDvar
 }
 
+// ComponentName returns the ComponentName parameter from the Ticket struct
+func (myTicket *Ticket) ComponentName() (param *string) {
+	return myTicket.ComponentNamevar
+}
+
+// ComponentVersion returns the ComponentVersion parameter from the Ticket struct
+func (myTicket *Ticket) ComponentVersion() (param *string) {
+	return myTicket.ComponentVersionvar
+}
+
 // Configs returns the Configs parameter from the Ticket struct
 func (myTicket *Ticket) Configs() (param string) {
 	return myTicket.Configsvar
@@ -225,6 +247,16 @@ func (myTicket *Ticket) GroupID() (param string) {
 // HostName returns the HostName parameter from the Ticket struct
 func (myTicket *Ticket) HostName() (param *string) {
 	return myTicket.HostNamevar
+}
+
+// HubProjectName returns the HubProjectName parameter from the Ticket struct
+func (myTicket *Ticket) HubProjectName() (param *string) {
+	return myTicket.HubProjectNamevar
+}
+
+// HubProjectVersion returns the HubProjectVersion parameter from the Ticket struct
+func (myTicket *Ticket) HubProjectVersion() (param *string) {
+	return myTicket.HubProjectVersionvar
 }
 
 // ID returns the ID parameter from the Ticket struct
@@ -285,6 +317,16 @@ func (myTicket *Ticket) OrganizationID() (param string) {
 // Patchable returns the Patchable parameter from the Ticket struct
 func (myTicket *Ticket) Patchable() (param *string) {
 	return myTicket.Patchablevar
+}
+
+// PolicyRule returns the PolicyRule parameter from the Ticket struct
+func (myTicket *Ticket) PolicyRule() (param *string) {
+	return myTicket.PolicyRulevar
+}
+
+// PolicySeverity returns the PolicySeverity parameter from the Ticket struct
+func (myTicket *Ticket) PolicySeverity() (param *string) {
+	return myTicket.PolicySeverityvar
 }
 
 // Priority returns the Priority parameter from the Ticket struct
@@ -407,6 +449,16 @@ func (myTicket *Ticket) SetCloudID(val string) {
 	myTicket.CloudIDvar = val
 }
 
+// SetComponentName sets the ComponentName parameter from the Ticket struct
+func (myTicket *Ticket) SetComponentName(val string) {
+	myTicket.ComponentNamevar = &val
+}
+
+// SetComponentVersion sets the ComponentVersion parameter from the Ticket struct
+func (myTicket *Ticket) SetComponentVersion(val string) {
+	myTicket.ComponentVersionvar = &val
+}
+
 // SetConfigs sets the Configs parameter from the Ticket struct
 func (myTicket *Ticket) SetConfigs(val string) {
 	myTicket.Configsvar = val
@@ -425,6 +477,16 @@ func (myTicket *Ticket) SetGroupID(val string) {
 // SetHostName sets the HostName parameter from the Ticket struct
 func (myTicket *Ticket) SetHostName(val string) {
 	myTicket.HostNamevar = &val
+}
+
+// SetHubProjectName sets the HubProjectName parameter from the Ticket struct
+func (myTicket *Ticket) SetHubProjectName(val string) {
+	myTicket.HubProjectNamevar = &val
+}
+
+// SetHubProjectVersion sets the HubProjectVersion parameter from the Ticket struct
+func (myTicket *Ticket) SetHubProjectVersion(val string) {
+	myTicket.HubProjectVersionvar = &val
 }
 
 // SetIPAddress sets the IPAddress parameter from the Ticket struct
@@ -475,6 +537,16 @@ func (myTicket *Ticket) SetOrganizationID(val string) {
 // SetPatchable sets the Patchable parameter from the Ticket struct
 func (myTicket *Ticket) SetPatchable(val string) {
 	myTicket.Patchablevar = &val
+}
+
+// SetPolicyRule sets the PolicyRule parameter from the Ticket struct
+func (myTicket *Ticket) SetPolicyRule(val string) {
+	myTicket.PolicyRulevar = &val
+}
+
+// SetPolicySeverity sets the PolicySeverity parameter from the Ticket struct
+func (myTicket *Ticket) SetPolicySeverity(val string) {
+	myTicket.PolicySeverityvar = &val
 }
 
 // SetPriority sets the Priority parameter from the Ticket struct

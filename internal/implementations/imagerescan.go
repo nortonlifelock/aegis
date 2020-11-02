@@ -162,7 +162,7 @@ func (job *ImageRescanJob) processImageFindings(engine integrations.TicketingEng
 							// close the ticket
 							err = engine.Transition(pair.ticket, engine.GetStatusMap(domain.StatusClosedException), fmt.Sprintf("Moving ticket to closed exception as it was acknowledged in %s", job.insource.Source()), "")
 							if err != nil {
-								job.lstream.Send(log.Errorf(err, "error while setting [%s] to Closed-Exception", pair.ticket.Title()))
+								job.lstream.Send(log.Errorf(err, "error while setting [%s] to %s", pair.ticket.Title(), engine.GetStatusMap(domain.StatusClosedException)))
 							}
 						}
 					} else {
@@ -205,6 +205,30 @@ type ImageFinding struct {
 	orgCode  string
 	dueDate  time.Time
 	priority string
+}
+
+func (i *ImageFinding) HubProjectName() (param *string) {
+	return
+}
+
+func (i *ImageFinding) HubProjectVersion() (param *string) {
+	return
+}
+
+func (i *ImageFinding) ComponentName() (param *string) {
+	return
+}
+
+func (i *ImageFinding) ComponentVersion() (param *string) {
+	return
+}
+
+func (i *ImageFinding) PolicyRule() (param *string) {
+	return
+}
+
+func (i *ImageFinding) PolicySeverity() (param *string) {
+	return
 }
 
 func (i *ImageFinding) AlertDate() (param *time.Time) {

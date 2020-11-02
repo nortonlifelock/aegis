@@ -911,3 +911,27 @@ func (wrapper *FindingWrapper) ExceptionDate() (param *time.Time) {
 func (wrapper *FindingWrapper) ApplicationName() (param *string) {
 	return nil
 }
+
+func (wrapper *FindingWrapper) HubProjectName() (param *string) {
+	return
+}
+
+func (wrapper *FindingWrapper) HubProjectVersion() (param *string) {
+	return
+}
+
+func (wrapper *FindingWrapper) ComponentName() (param *string) {
+	return
+}
+
+func (wrapper *FindingWrapper) ComponentVersion() (param *string) {
+	return
+}
+
+func (wrapper *FindingWrapper) PolicyRule() (param *string) {
+	return
+}
+
+func (wrapper *FindingWrapper) PolicySeverity() (param *string) {
+	return
+}
