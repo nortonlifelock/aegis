@@ -776,10 +776,12 @@ func (connector *ConnectorJira) GetOpenTicketsByGroupID(methodOfDiscovery string
 	statuses := make(map[string]bool)
 	statuses[connector.GetStatusMap(domain.StatusOpen)] = true
 	statuses[connector.GetStatusMap(domain.StatusReopened)] = true
+	statuses[connector.GetStatusMap(domain.StatusInProgress)] = true
 	statuses[connector.GetStatusMap(domain.StatusResolvedRemediated)] = true
 	statuses[connector.GetStatusMap(domain.StatusResolvedDecom)] = true
 	statuses[connector.GetStatusMap(domain.StatusResolvedException)] = true
 	statuses[connector.GetStatusMap(domain.StatusResolvedFalsePositive)] = true
+	statuses[connector.GetStatusMap(domain.StatusScanError)] = true
 	statuses[connector.GetStatusMap(domain.StatusClosedException)] = true
 
 	tickets, err = connector.getOpenTicketsByGroupID(statuses, methodOfDiscovery, orgCode, groupID)
