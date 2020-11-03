@@ -30,7 +30,8 @@ type ImageRescanJob struct {
 }
 
 type ImageRescanPayload struct {
-	RegistryImage []string `json:"registry_image"`
+	RegistryImage     []string `json:"registry_image"`
+	ExceptionAssignee string   `json:"exception_assignee"`
 }
 
 // buildPayload parses the information from the Payload of the job history entry
@@ -160,7 +161,7 @@ func (job *ImageRescanJob) processImageFindings(engine integrations.TicketingEng
 							}
 						} else if finding.Exception() {
 							// close the ticket
-							err = engine.Transition(pair.ticket, engine.GetStatusMap(domain.StatusClosedException), fmt.Sprintf("Moving ticket to closed exception as it was acknowledged in %s", job.insource.Source()), "")
+							err = engine.Transition(pair.ticket, engine.GetStatusMap(domain.StatusClosedException), fmt.Sprintf("Moving ticket to closed exception as it was acknowledged in %s", job.insource.Source()), job.Payload.ExceptionAssignee)
 							if err != nil {
 								job.lstream.Send(log.Errorf(err, "error while setting [%s] to Closed-Exception", pair.ticket.Title()))
 							}
