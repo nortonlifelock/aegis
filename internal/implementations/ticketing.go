@@ -618,38 +618,12 @@ func (job *TicketingJob) checkForExistingTicket(in <-chan *vulnerabilityPayload)
 
 					if err == nil {
 						if existingTicket == nil {
-
-							var existingTicketChan <-chan domain.Ticket
-							var statuses = make(map[string]bool)
-							statuses[job.ticketingEngine.GetStatusMap(domain.StatusOpen)] = true
-							statuses[job.ticketingEngine.GetStatusMap(domain.StatusInProgress)] = true
-							statuses[job.ticketingEngine.GetStatusMap(domain.StatusReopened)] = true
-							statuses[job.ticketingEngine.GetStatusMap(domain.StatusResolvedRemediated)] = true
-							statuses[job.ticketingEngine.GetStatusMap(domain.StatusResolvedFalsePositive)] = true
-							statuses[job.ticketingEngine.GetStatusMap(domain.StatusResolvedDecom)] = true
-							statuses[job.ticketingEngine.GetStatusMap(domain.StatusResolvedException)] = true
-							existingTicketChan, err = job.ticketingEngine.GetTicketsByDeviceIDVulnID(job.insource.Source(), payload.orgCode, sord(payload.device.SourceID()), payload.vuln.SourceID(), statuses, payload.combo.Port(), payload.combo.Protocol())
-							if err == nil {
-
-								if emptyChannel(existingTicketChan) {
-									job.lstream.Send(log.Infof("No ticket found for vulnerability [%s] on device [%v]. Creating new ticket...", payload.vuln.SourceID(), sord(payload.device.SourceID())))
-									select {
-									case <-job.ctx.Done():
-										return
-									case out <- payload:
-									}
-								}
-							} else {
-								job.lstream.Send(log.Error(
-									fmt.Sprintf(
-										"Error issues from JIRA with vuln title [%v] and ID [%v].",
-										payload.vuln.Name(),
-										payload.vuln.SourceID(),
-									),
-									err,
-								))
+							job.lstream.Send(log.Infof("No ticket found for vulnerability [%s] on device [%v]. Creating new ticket...", payload.vuln.SourceID(), sord(payload.device.SourceID())))
+							select {
+							case <-job.ctx.Done():
+								return
+							case out <- payload:
 							}
-
 						} else {
 							job.lstream.Send(log.Info(
 								fmt.Sprintf(
@@ -682,26 +656,6 @@ func (job *TicketingJob) checkForExistingTicket(in <-chan *vulnerabilityPayload)
 	}()
 
 	return out
-}
-
-func emptyChannel(in <-chan domain.Ticket) bool {
-	for {
-		select {
-		case _, ok := <-in:
-			if ok {
-				go func() {
-					for {
-						if _, ok := <-in; !ok {
-							return
-						}
-					}
-				}()
-				return false
-			} else {
-				return true
-			}
-		}
-	}
 }
 
 // takes the Payload and transforms it to a ticket. overwrites/appends information in the ticket fields from cloud service tags if a tag mapping & tags
