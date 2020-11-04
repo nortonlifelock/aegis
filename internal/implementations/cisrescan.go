@@ -920,6 +920,10 @@ func (wrapper *FindingWrapper) HubProjectVersion() (param *string) {
 	return
 }
 
+func (wrapper *FindingWrapper) HubSeverity() (param *string) {
+	return
+}
+
 func (wrapper *FindingWrapper) ComponentName() (param *string) {
 	return
 }

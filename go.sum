@@ -170,6 +170,10 @@ github.com/nortonlifelock/domain v1.0.1-0.20201019214124-3216ae849db7 h1:VEcI5l1
 github.com/nortonlifelock/domain v1.0.1-0.20201019214124-3216ae849db7/go.mod h1:znFyCnzgKqtnNcBVQ8XHKyPxMsMR7QDkyAApQ58Avuo=
 github.com/nortonlifelock/domain v1.0.1-0.20201028214439-1c18434b72fc h1:oA4SRABfDeXB8X4vlSenhJrjLKZ2ki4c0rSkFv8z02I=
 github.com/nortonlifelock/domain v1.0.1-0.20201028214439-1c18434b72fc/go.mod h1:znFyCnzgKqtnNcBVQ8XHKyPxMsMR7QDkyAApQ58Avuo=
+github.com/nortonlifelock/domain v1.0.1-0.20201104174225-79f1c2f47111 h1:BGoLUCbtkBBuNJuiEDFv8HcQv0xIjO3EaI4tnmjT6wI=
+github.com/nortonlifelock/domain v1.0.1-0.20201104174225-79f1c2f47111/go.mod h1:znFyCnzgKqtnNcBVQ8XHKyPxMsMR7QDkyAApQ58Avuo=
+github.com/nortonlifelock/domain v1.0.1-0.20201104183700-0da050a8675a h1:X9lhGuvJ8NnD7JYy4mxuGoZXOEZOsHiFGMFIOOYezJU=
+github.com/nortonlifelock/domain v1.0.1-0.20201104183700-0da050a8675a/go.mod h1:znFyCnzgKqtnNcBVQ8XHKyPxMsMR7QDkyAApQ58Avuo=
 github.com/nortonlifelock/dome9 v1.0.0 h1:YtnBerL5djePwj/ufSunuLfgeL6owDlwxFNLYrkYw0Y=
 github.com/nortonlifelock/dome9 v1.0.0/go.mod h1:0c1bsMWR0hkuOBv2aKdhRPkJiyVCj6VQhB22/reZuCo=
 github.com/nortonlifelock/dome9 v1.0.1-0.20200825204601-3b08f6faf258 h1:7sHFNr8iSElpDYWQkZPpG0GaZ73CmLzY/AegxAQHR/w=
@@ -251,6 +255,12 @@ github.com/nortonlifelock/jira v1.0.1-0.20201021161855-aa9515c78ad5 h1:yFw8qJcAv
 github.com/nortonlifelock/jira v1.0.1-0.20201021161855-aa9515c78ad5/go.mod h1:cUEJjftxHEeREJLJkL6EIanwvuzg8LKPWr972y1q/nw=
 github.com/nortonlifelock/jira v1.0.1-0.20201029173248-66c814063f87 h1:CwapCZe9cOUIXEHRu8G8hUWHUB72RFZSya9zUFrRhwQ=
 github.com/nortonlifelock/jira v1.0.1-0.20201029173248-66c814063f87/go.mod h1:ljle/wwuDFWieVFwxdzsNHVJmMczBiUBGVZEepuVM4Q=
+github.com/nortonlifelock/jira v1.0.1-0.20201102213915-613eaa0a1ad2 h1:/jkj7FV0gHhabA6m3nTHogqPTBV0NFioeEv58Wiujgg=
+github.com/nortonlifelock/jira v1.0.1-0.20201102213915-613eaa0a1ad2/go.mod h1:ljle/wwuDFWieVFwxdzsNHVJmMczBiUBGVZEepuVM4Q=
+github.com/nortonlifelock/jira v1.0.1-0.20201104174635-f3c788a81c7f h1:/fJRU/3ThCUf3dxtWJrOxNj3ACN1qHaUHCUconccAEk=
+github.com/nortonlifelock/jira v1.0.1-0.20201104174635-f3c788a81c7f/go.mod h1:LainNXNzTj4OTKgd6271U9aZ3HV+P23Bx6kHA2fBH+M=
+github.com/nortonlifelock/jira v1.0.1-0.20201104204927-667600aa0625 h1:M6mVXbISS2ZGbElAU5VqicbdwUgtZJy/0/rcM55mcKk=
+github.com/nortonlifelock/jira v1.0.1-0.20201104204927-667600aa0625/go.mod h1:LainNXNzTj4OTKgd6271U9aZ3HV+P23Bx6kHA2fBH+M=
 github.com/nortonlifelock/jira-tool v1.0.0 h1:gxue0xy39eve1BchepLSxqfsqvfYFut74TSXJcQW1Rg=
 github.com/nortonlifelock/jira-tool v1.0.0/go.mod h1:/oHnPKmXd2vmw8qvJKtYpKb5fx0LwmFRuc2VGJn8QlU=
 github.com/nortonlifelock/job v1.0.1-0.20200127165455-ca80a64d226c h1:5xsHmrs+UO4CJQD+j0KPlMlhZyUfUDtaQOQ5V4Wrsb8=

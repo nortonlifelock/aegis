@@ -94,8 +94,6 @@ func (job *ExceptionJob) Process(ctx context.Context, id string, appconfig domai
 				job.lstream.Send(log.Error("error while gathering organization code from the database", err))
 			}
 
-			job.updateCERFExpirationsInDB(eng)
-
 			// TODO this requires further testing - this is only required for detections that are no longer synced which have expired ignores
 			// TODO Synced detections have expired ignores removed
 			_, _, err = job.db.RemoveExpiredIgnoreIDs(job.config.OrganizationID())

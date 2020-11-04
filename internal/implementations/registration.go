@@ -20,6 +20,7 @@ const (
 	ticketSyncJob  = "TicketSyncJob"
 	cloudDecomJob  = "CloudDecommissionJob"
 	imageRescanJob = "ImageRescanJob"
+	codeRescanJob  = "CodeRescanJob"
 )
 
 var oneRegister = sync.Once{}
@@ -40,5 +41,6 @@ func init() {
 		job.Register(ticketSyncJob, &TicketSyncJob{})
 		job.Register(cloudDecomJob, &CloudDecommissionJob{})
 		job.Register(imageRescanJob, &ImageRescanJob{})
+		job.Register(codeRescanJob, &CodeRescanJob{})
 	})
 }

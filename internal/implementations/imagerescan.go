@@ -30,7 +30,8 @@ type ImageRescanJob struct {
 }
 
 type ImageRescanPayload struct {
-	RegistryImage []string `json:"registry_image"`
+	RegistryImage     []string `json:"registry_image"`
+	ExceptionAssignee string   `json:"exception_assignee"`
 }
 
 // buildPayload parses the information from the Payload of the job history entry
@@ -160,7 +161,7 @@ func (job *ImageRescanJob) processImageFindings(engine integrations.TicketingEng
 							}
 						} else if finding.Exception() {
 							// close the ticket
-							err = engine.Transition(pair.ticket, engine.GetStatusMap(domain.StatusClosedException), fmt.Sprintf("Moving ticket to closed exception as it was acknowledged in %s", job.insource.Source()), "")
+							err = engine.Transition(pair.ticket, engine.GetStatusMap(domain.StatusClosedException), fmt.Sprintf("Moving ticket to closed exception as it was acknowledged in %s", job.insource.Source()), job.Payload.ExceptionAssignee)
 							if err != nil {
 								job.lstream.Send(log.Errorf(err, "error while setting [%s] to %s", pair.ticket.Title(), engine.GetStatusMap(domain.StatusClosedException)))
 							}
@@ -188,6 +189,11 @@ func calculateSLAForImageFinding(finding domain.ImageFinding, orgPayload *OrgPay
 		err = fmt.Errorf("either CVSS version not present [%d] or CVSS score not present [%v|%v]", orgPayload.CVSSVersion, finding.CVSS2(), finding.CVSS3())
 	}
 
+	highestApplicableSeverity, dueDate = calculateSeverityAccordingToOrgPayload(orgPayload, cvssScore)
+	return highestApplicableSeverity, dueDate, err
+}
+
+func calculateSeverityAccordingToOrgPayload(orgPayload *OrgPayload, cvssScore float32) (highestApplicableSeverity string, dueDate time.Time) {
 	// we iterate over the sorted list of custom severity ranges and find the highest applicable severity
 	for index := range orgPayload.Severities {
 		if cvssScore >= orgPayload.Severities[index].CVSSMin {
@@ -196,7 +202,7 @@ func calculateSLAForImageFinding(finding domain.ImageFinding, orgPayload *OrgPay
 		}
 	}
 
-	return highestApplicableSeverity, dueDate, err
+	return highestApplicableSeverity, dueDate
 }
 
 type ImageFinding struct {
@@ -212,6 +218,10 @@ func (i *ImageFinding) HubProjectName() (param *string) {
 }
 
 func (i *ImageFinding) HubProjectVersion() (param *string) {
+	return
+}
+
+func (i *ImageFinding) HubSeverity() (param *string) {
 	return
 }
 

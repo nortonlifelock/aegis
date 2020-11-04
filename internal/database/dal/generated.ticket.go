@@ -41,6 +41,7 @@ type Ticket struct {
 	HostNamevar            *string
 	HubProjectNamevar      *string
 	HubProjectVersionvar   *string
+	HubSeverityvar         *string
 	IDvar                  int
 	IPAddressvar           *string
 	Labelsvar              *string
@@ -105,6 +106,7 @@ func (myTicket Ticket) MarshalJSON() ([]byte, error) {
 		"HostName":            myTicket.HostNamevar,
 		"HubProjectName":      myTicket.HubProjectNamevar,
 		"HubProjectVersion":   myTicket.HubProjectVersionvar,
+		"HubSeverity":         myTicket.HubSeverityvar,
 		"ID":                  myTicket.IDvar,
 		"IPAddress":           myTicket.IPAddressvar,
 		"Labels":              myTicket.Labelsvar,
@@ -257,6 +259,11 @@ func (myTicket *Ticket) HubProjectName() (param *string) {
 // HubProjectVersion returns the HubProjectVersion parameter from the Ticket struct
 func (myTicket *Ticket) HubProjectVersion() (param *string) {
 	return myTicket.HubProjectVersionvar
+}
+
+// HubSeverity returns the HubSeverity parameter from the Ticket struct
+func (myTicket *Ticket) HubSeverity() (param *string) {
+	return myTicket.HubSeverityvar
 }
 
 // ID returns the ID parameter from the Ticket struct
@@ -487,6 +494,11 @@ func (myTicket *Ticket) SetHubProjectName(val string) {
 // SetHubProjectVersion sets the HubProjectVersion parameter from the Ticket struct
 func (myTicket *Ticket) SetHubProjectVersion(val string) {
 	myTicket.HubProjectVersionvar = &val
+}
+
+// SetHubSeverity sets the HubSeverity parameter from the Ticket struct
+func (myTicket *Ticket) SetHubSeverity(val string) {
+	myTicket.HubSeverityvar = &val
 }
 
 // SetIPAddress sets the IPAddress parameter from the Ticket struct
