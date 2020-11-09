@@ -153,10 +153,10 @@ func (c *CodeFinding) HubSeverity() (param *string) {
 	// Medium: If at least one vulnerability is of medium risk OR policy severity is 'Major'
 	// High : If at least one vulnerability is of high risk OR Policy Severity is 'Critical'
 	var val string
-	if strings.ToLower(sord(c.Priority())) == "medium" || strings.Contains(strings.ToLower(sord(c.PolicySeverity())), "major") {
-		val = "Medium"
-	} else if strings.ToLower(sord(c.Priority())) == "high" || strings.ToLower(sord(c.Priority())) == "critical" || strings.Contains(strings.ToLower(sord(c.PolicySeverity())), "critical") {
+	if strings.ToLower(sord(c.Priority())) == "high" || strings.ToLower(sord(c.Priority())) == "critical" || strings.Contains(strings.ToLower(sord(c.PolicySeverity())), "critical") {
 		val = "High"
+	} else if strings.ToLower(sord(c.Priority())) == "medium" || strings.Contains(strings.ToLower(sord(c.PolicySeverity())), "major") {
+		val = "Medium"
 	}
 	return &val
 }

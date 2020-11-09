@@ -12,12 +12,15 @@ const (
 	policyInViolation = "IN_VIOLATION"
 )
 
+val := "\"Method of Discovery\" = Qualys AND project in (VRR, \"VRR SurfEasy\") AND status not in (Closed-Decommission, Closed-Remediated, CLOSED-NA, Closed-Error, \"Closed-Moved to IDA\") AND LastFound <= 2020-10-15 AND GroupID ~ \"tag*\""
+
 func (cli *BlackDuckClient) GetProjectVulnerabilities(ctx context.Context, projectID string) (findings []domain.CodeFinding, err error) {
 	findings = make([]domain.CodeFinding, 0)
 
 	projectResponse, err := cli.GetProject(projectID)
 	if err == nil {
 		projectVersionsResponse, err := cli.GetProjectVersions(projectID)
+		// TODO only use most recent project version
 		if err == nil {
 			for _, version := range projectVersionsResponse.Items {
 				linkContainingVersionID := version.Meta.Href
@@ -141,15 +144,30 @@ func (finding *BlackDuckFinding) ViolatedPolicyName() string {
 	return val
 }
 func (finding *BlackDuckFinding) ViolatedPolicySeverity() string {
-	var severities = make([]string, 0)
-	for _, rule := range finding.PolicyRules.Items {
-		if rule.PolicyApprovalStatus == policyInViolation {
-			severities = append(severities, rule.Severity)
-		}
+	_, severity := finding.getHighestSeverityAndPolicy()
+	return severity
+}
+
+func (finding *BlackDuckFinding) getHighestSeverityAndPolicy() (policy, severity string) {
+	severityNameToSeverityLevel := map[string]int{
+		"TRIVIAL":  0,
+		"MINOR":    1,
+		"MAJOR":    2,
+		"CRITICAL": 3,
+		"BLOCKER":  4,
 	}
 
-	val := strings.Join(severities, ",")
-	return val
+	var highestSeverityLevel = -1
+	for _, rule := range finding.PolicyRules.Items {
+		if rule.PolicyApprovalStatus == policyInViolation {
+			if severityNameToSeverityLevel[rule.Severity] > highestSeverityLevel {
+				highestSeverityLevel = severityNameToSeverityLevel[rule.Severity]
+				severity = rule.Severity
+				policy = rule.Name
+			}
+		}
+	}
+	return policy, severity
 }
 func (finding *BlackDuckFinding) CVSS() float32 {
 	return float32(finding.ComponentVuln.Cvss2.OverallScore)
@@ -165,12 +183,11 @@ func (finding *BlackDuckFinding) Description() string {
 func (finding *BlackDuckFinding) Summary() string {
 	var header string
 	if len(finding.ViolatedPolicyName()) > 0 {
-		header = fmt.Sprintf("%s / %s", finding.ViolatedPolicyName(), finding.VulnerabilityID())
-	} else {
-		header = finding.VulnerabilityID()
+		highestSeverityPolicy, _ := finding.getHighestSeverityAndPolicy()
+		header = fmt.Sprintf("(%s) ", highestSeverityPolicy)
 	}
 
-	val := fmt.Sprintf("(%s) %s %s, %s %s", header, finding.ProjectName(), finding.ProjectVersion(), finding.ComponentName(), finding.ComponentVersion())
+	val := fmt.Sprintf("%s%s %s, %s %s", header, finding.ProjectName(), finding.ProjectVersion(), finding.ComponentName(), finding.ComponentVersion())
 	return val
 }
 func (finding *BlackDuckFinding) Updated() time.Time {
