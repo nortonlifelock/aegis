@@ -22,12 +22,12 @@ func (cli *BlackDuckClient) GetProjectVulnerabilities(ctx context.Context, proje
 		if projectVersionsResponse, err = cli.GetProjectVersions(projectID); err == nil {
 
 			if len(projectVersionsResponse.Items) > 0 {
-				var mostRecentVersionTime = projectVersionsResponse.Items[0].CreatedAt
+				var mostRecentVersionTime = projectVersionsResponse.Items[0].LastScanDate
 				var mostRecentVersion = &projectVersionsResponse.Items[0]
 
 				for index := range projectVersionsResponse.Items {
-					if projectVersionsResponse.Items[index].CreatedAt.After(mostRecentVersionTime) {
-						mostRecentVersionTime = projectVersionsResponse.Items[index].CreatedAt
+					if projectVersionsResponse.Items[index].LastScanDate.After(mostRecentVersionTime) {
+						mostRecentVersionTime = projectVersionsResponse.Items[index].LastScanDate
 						mostRecentVersion = &projectVersionsResponse.Items[index]
 					}
 				}

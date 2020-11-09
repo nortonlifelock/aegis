@@ -53,6 +53,8 @@ type ProjectItem struct {
 	SettingUpdatedAt     time.Time `json:"settingUpdatedAt"`
 	SettingUpdatedBy     string    `json:"settingUpdatedBy"`
 	SettingUpdatedByUser string    `json:"settingUpdatedByUser"`
+	LastBOMUpdate        time.Time `json:"lastBomUpdateDate"`
+	LastScanDate         time.Time `json:"lastScanDate"`
 	Source               string    `json:"source"`
 	Meta                 Meta      `json:"_meta"`
 }
