@@ -12,22 +12,30 @@ const (
 	policyInViolation = "IN_VIOLATION"
 )
 
-val := "\"Method of Discovery\" = Qualys AND project in (VRR, \"VRR SurfEasy\") AND status not in (Closed-Decommission, Closed-Remediated, CLOSED-NA, Closed-Error, \"Closed-Moved to IDA\") AND LastFound <= 2020-10-15 AND GroupID ~ \"tag*\""
-
 func (cli *BlackDuckClient) GetProjectVulnerabilities(ctx context.Context, projectID string) (findings []domain.CodeFinding, err error) {
 	findings = make([]domain.CodeFinding, 0)
 
 	projectResponse, err := cli.GetProject(projectID)
 	if err == nil {
 		projectVersionsResponse, err := cli.GetProjectVersions(projectID)
-		// TODO only use most recent project version
 		if err == nil {
-			for _, version := range projectVersionsResponse.Items {
-				linkContainingVersionID := version.Meta.Href
+
+			if len(projectVersionsResponse.Items) > 0 {
+				var mostRecentVersionTime time.Time
+				var mostRecentVersion *ProjectItem
+
+				for index := range projectVersionsResponse.Items {
+					if projectVersionsResponse.Items[index].CreatedAt.After(mostRecentVersionTime) {
+						mostRecentVersionTime = projectVersionsResponse.Items[index].CreatedAt
+						mostRecentVersion = &projectVersionsResponse.Items[index]
+					}
+				}
+
+				linkContainingVersionID := mostRecentVersion.Meta.Href
 				var lookingFor = "/versions/"
 				projectVersionID := linkContainingVersionID[strings.Index(linkContainingVersionID, lookingFor)+len(lookingFor):]
 
-				findingsForVersion, err := cli.getVulnerabilityFindings(ctx, projectID, projectVersionID, projectResponse, version)
+				findingsForVersion, err := cli.getVulnerabilityFindings(ctx, projectID, projectVersionID, projectResponse, mostRecentVersion)
 
 				select {
 				case <-ctx.Done():
@@ -39,9 +47,9 @@ func (cli *BlackDuckClient) GetProjectVulnerabilities(ctx context.Context, proje
 					for _, ffv := range findingsForVersion {
 						findings = append(findings, ffv)
 					}
-				} else {
-					break
 				}
+			} else {
+				err = fmt.Errorf("could not find any versions for [%s]", projectID)
 			}
 		} else {
 			err = fmt.Errorf("error while getting project versions for [%s] - %s", projectID, err.Error())
