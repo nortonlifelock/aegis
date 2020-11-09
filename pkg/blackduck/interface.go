@@ -21,8 +21,8 @@ func (cli *BlackDuckClient) GetProjectVulnerabilities(ctx context.Context, proje
 		if err == nil {
 
 			if len(projectVersionsResponse.Items) > 0 {
-				var mostRecentVersionTime time.Time
-				var mostRecentVersion *ProjectItem
+				var mostRecentVersionTime = projectVersionsResponse.Items[0].CreatedAt
+				var mostRecentVersion = &projectVersionsResponse.Items[0]
 
 				for index := range projectVersionsResponse.Items {
 					if projectVersionsResponse.Items[index].CreatedAt.After(mostRecentVersionTime) {
@@ -35,7 +35,7 @@ func (cli *BlackDuckClient) GetProjectVulnerabilities(ctx context.Context, proje
 				var lookingFor = "/versions/"
 				projectVersionID := linkContainingVersionID[strings.Index(linkContainingVersionID, lookingFor)+len(lookingFor):]
 
-				findingsForVersion, err := cli.getVulnerabilityFindings(ctx, projectID, projectVersionID, projectResponse, mostRecentVersion)
+				findingsForVersion, err := cli.getVulnerabilityFindings(ctx, projectID, projectVersionID, projectResponse, *mostRecentVersion)
 
 				select {
 				case <-ctx.Done():
