@@ -15,10 +15,11 @@ const (
 func (cli *BlackDuckClient) GetProjectVulnerabilities(ctx context.Context, projectID string) (findings []domain.CodeFinding, err error) {
 	findings = make([]domain.CodeFinding, 0)
 
-	projectResponse, err := cli.GetProject(projectID)
-	if err == nil {
-		projectVersionsResponse, err := cli.GetProjectVersions(projectID)
-		if err == nil {
+	var projectResponse *ProjectResponse
+	if projectResponse, err = cli.GetProject(projectID); err == nil {
+
+		var projectVersionsResponse *ProjectVersionResponse
+		if projectVersionsResponse, err = cli.GetProjectVersions(projectID); err == nil {
 
 			if len(projectVersionsResponse.Items) > 0 {
 				var mostRecentVersionTime = projectVersionsResponse.Items[0].CreatedAt
@@ -35,14 +36,8 @@ func (cli *BlackDuckClient) GetProjectVulnerabilities(ctx context.Context, proje
 				var lookingFor = "/versions/"
 				projectVersionID := linkContainingVersionID[strings.Index(linkContainingVersionID, lookingFor)+len(lookingFor):]
 
-				findingsForVersion, err := cli.getVulnerabilityFindings(ctx, projectID, projectVersionID, projectResponse, *mostRecentVersion)
-
-				select {
-				case <-ctx.Done():
-					return nil, fmt.Errorf("context closed")
-				default:
-				}
-
+				var findingsForVersion []*BlackDuckFinding
+				findingsForVersion, err = cli.getVulnerabilityFindings(ctx, projectID, projectVersionID, projectResponse, *mostRecentVersion)
 				if err == nil {
 					for _, ffv := range findingsForVersion {
 						findings = append(findings, ffv)
