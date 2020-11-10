@@ -2,7 +2,6 @@ package dome9
 
 import (
 	"fmt"
-	"strconv"
 	"strings"
 )
 
@@ -43,7 +42,7 @@ func (finding *Finding) Summary() (param string) {
 
 // BundleID returns the bundle id of the finding
 func (finding *Finding) BundleID() string {
-	return strconv.Itoa(finding.bundleID)
+	return finding.bundleID
 }
 
 // VulnerabilityTitle returns the VulnerabilityTitle parameter of the ticket
@@ -77,7 +76,7 @@ func (finding *Finding) getDescription() string {
 	descriptionTemp = strings.Replace(descriptionTemp, "%entityname", finding.EntityName, 1)
 	descriptionTemp = strings.Replace(descriptionTemp, "%entitytype", finding.EntityType, 1)
 	descriptionTemp = strings.Replace(descriptionTemp, "%solution", finding.Remediation, 1)
-	descriptionTemp = strings.Replace(descriptionTemp, "%bundle", strconv.Itoa(finding.bundleID), 1)
+	descriptionTemp = strings.Replace(descriptionTemp, "%bundle", finding.bundleID, 1)
 
 	return descriptionTemp
 }

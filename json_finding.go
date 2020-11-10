@@ -32,7 +32,7 @@ type Finding struct {
 	externalCloudAccountName string
 
 	// bundleID is not returned by the API, but is populated by the api wrapper
-	bundleID int
+	bundleID string
 
 	// dueDate is not returned by the API, and must be set manually
 	dueDate time.Time
