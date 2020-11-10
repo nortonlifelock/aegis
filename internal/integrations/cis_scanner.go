@@ -18,9 +18,7 @@ const (
 
 // CISScanner finds compliance violations within a cloud service
 type CISScanner interface {
-	//GetAllFindingsForBundle(bundleID int) (retChan <-chan domain.Finding, err error)
-
-	RescanBundle(bundleID int, cloudAccountID string) (findings []domain.Finding, err error)
+	RescanBundle(bundleID string, cloudAccountID string) (findings []domain.Finding, err error)
 }
 
 // GetCISScanner returns a struct that implements the TicketingEngine interface
