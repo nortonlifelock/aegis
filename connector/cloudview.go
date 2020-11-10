@@ -6,8 +6,7 @@ import (
 	"sync"
 )
 
-func (session *QsSession) RescanBundle(bundleID int, cloudAccountID string) (findings []domain.Finding, err error) {
-	_ = bundleID // not necessary
+func (session *QsSession) RescanBundle(policyName string, cloudAccountID string) (findings []domain.Finding, err error) {
 	findings = make([]domain.Finding, 0)
 
 	var evaluations []qualys.AccountEvaluationContent
@@ -27,7 +26,7 @@ func (session *QsSession) RescanBundle(bundleID int, cloudAccountID string) (fin
 					permit <- true
 				}()
 
-				if evaluationFindings, threadErr := session.apiSession.GetCloudEvaluationFindings(cloudAccountID, evaluation, cloudAccountType); threadErr == nil {
+				if evaluationFindings, threadErr := session.apiSession.GetCloudEvaluationFindings(cloudAccountID, evaluation, policyName, cloudAccountType); threadErr == nil {
 					lock.Lock()
 					findings = append(findings, evaluationFindings...)
 					lock.Unlock()

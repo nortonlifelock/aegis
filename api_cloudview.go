@@ -167,7 +167,7 @@ func (session *Session) GetCloudAccountEvaluationsWithCloudAccountType(accountID
 	return evaluations, err
 }
 
-func (session *Session) GetCloudEvaluationFindings(accountID string, content AccountEvaluationContent, cloudAccountType string) (findings []domain.Finding, err error) {
+func (session *Session) GetCloudEvaluationFindings(accountID string, content AccountEvaluationContent, policyName string, cloudAccountType string) (findings []domain.Finding, err error) {
 	findings = make([]domain.Finding, 0)
 	var last bool
 	var page int
@@ -201,7 +201,7 @@ func (session *Session) GetCloudEvaluationFindings(accountID string, content Acc
 		)
 
 		for _, finding := range evaluationResult.Content {
-			if finding.Result != fixedFinding && !evidenceHasError(finding) {
+			if finding.Result != fixedFinding && !evidenceHasError(finding) && accountContentHasPolicy(policyName, content) {
 				findings = append(findings, &cloudViewFinding{
 					evaluationContent: finding,
 					accountContent:    content,
@@ -211,6 +211,17 @@ func (session *Session) GetCloudEvaluationFindings(accountID string, content Acc
 	}
 
 	return findings, err
+}
+
+func accountContentHasPolicy(policyName string, content AccountEvaluationContent) (hasPolicy bool) {
+	for _, policy := range content.PolicyNames {
+		if strings.ToLower(policyName) == strings.ToLower(policy) {
+			hasPolicy = true
+			break
+		}
+	}
+
+	return hasPolicy
 }
 
 func evidenceHasError(finding EvaluationResultContent) (hasError bool) {
