@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/nortonlifelock/domain"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -58,53 +59,78 @@ func (cli *BlackDuckClient) GetProjectVulnerabilities(ctx context.Context, proje
 
 func (cli *BlackDuckClient) getVulnerabilityFindings(ctx context.Context, projectID string, projectVersionID string, projectResponse *ProjectResponse, version ProjectItem) (findings []*BlackDuckFinding, err error) {
 	findings = make([]*BlackDuckFinding, 0)
+	var vulnerabilityCache sync.Map
 
 	var componentInfoResp *ComponentResponse
-	componentInfoResp, err = cli.GetComponentInformation(projectID, projectVersionID)
-	if err == nil {
+	if componentInfoResp, err = cli.GetComponentInformation(projectID, projectVersionID); err == nil {
+		var wg sync.WaitGroup
+
 		for index := range componentInfoResp.Items {
-			select {
-			case <-ctx.Done():
-				return nil, fmt.Errorf("context closed")
-			default:
-			}
+			wg.Add(1)
+			go func(index int) {
+				defer wg.Done()
 
-			component := componentInfoResp.Items[index]
-			lowerRange := "/components/"
-			upperRange := "/versions/"
+				var threadError error
+				component := componentInfoResp.Items[index]
+				lowerRange := "/components/"
+				upperRange := "/versions/"
 
-			componentID := component.ComponentVersion[strings.Index(component.ComponentVersion, lowerRange)+len(lowerRange) : strings.Index(component.ComponentVersion, upperRange)]
-			componentVersionID := component.ComponentVersion[strings.Index(component.ComponentVersion, upperRange)+len(upperRange):]
+				componentID := component.ComponentVersion[strings.Index(component.ComponentVersion, lowerRange)+len(lowerRange) : strings.Index(component.ComponentVersion, upperRange)]
+				componentVersionID := component.ComponentVersion[strings.Index(component.ComponentVersion, upperRange)+len(upperRange):]
 
-			var componentVulnerabilityResponse *ComponentVulnerabilityResponse
-			componentVulnerabilityResponse, err = cli.GetComponentVulnerabilities(componentID, componentVersionID)
-			if err == nil {
+				var componentVulnerabilityResponse *ComponentVulnerabilityResponse
+				componentVulnerabilityResponse, threadError = cli.GetComponentVulnerabilities(componentID, componentVersionID)
+				if threadError == nil {
 
-				var policyResp *PolicyRulesResp
-				policyResp, err = cli.GetPolicyStatus(projectID, projectVersionID, componentID, componentVersionID)
-				if err == nil {
-					for index := range componentVulnerabilityResponse.Items {
-						vuln := componentVulnerabilityResponse.Items[index]
-						finding := &BlackDuckFinding{
-							ProjectUUID:   projectID,
-							ProjectInfo:   projectResponse,
-							ProjectItem:   &version,
-							Component:     &component,
-							ComponentVuln: &vuln,
-							PolicyRules:   policyResp,
+					var policyResp *PolicyRulesResp
+					policyResp, threadError = cli.GetPolicyStatus(projectID, projectVersionID, componentID, componentVersionID)
+					if threadError == nil {
+						for index := range componentVulnerabilityResponse.Items {
+							vuln := componentVulnerabilityResponse.Items[index]
+
+							var vulnDetail *VulnerabilityInfoResponse
+							var ok bool
+							if vulnDetailInt, loaded := vulnerabilityCache.Load(vuln.VulnerabilityName); loaded {
+								if vulnDetail, ok = vulnDetailInt.(*VulnerabilityInfoResponse); !ok {
+									threadError = fmt.Errorf("interface cache error on black duck vulnerability [%s]", vuln.VulnerabilityName)
+								}
+							} else {
+								vulnDetail, threadError = cli.getVulnerabilityDetails(vuln.VulnerabilityName)
+								if threadError == nil {
+									vulnerabilityCache.Store(vuln.VulnerabilityName, vulnDetail)
+								}
+							}
+
+							if threadError == nil {
+								finding := &BlackDuckFinding{
+									ProjectUUID:   projectID,
+									ProjectInfo:   projectResponse,
+									ProjectItem:   &version,
+									Component:     &component,
+									ComponentVuln: &vuln,
+									PolicyRules:   policyResp,
+									VulnDetail:    vulnDetail,
+								}
+
+								findings = append(findings, finding)
+							}
 						}
-
-						findings = append(findings, finding)
+					} else {
+						// only a single error needs to make it out, so error overwrite is not a concern
+						threadError = fmt.Errorf("error while getting policies for [%s/%s/%s/%s] - %s", projectID, projectVersionID, componentID, componentVersionID, threadError.Error())
 					}
 				} else {
-					err = fmt.Errorf("error while getting policies for [%s/%s/%s/%s] - %s", projectID, projectVersionID, componentID, componentVersionID, err.Error())
-					break
+					// only a single error needs to make it out, so error overwrite is not a concern
+					threadError = fmt.Errorf("error while getting component vulnerabilities for [%s/%s/%s/%s] - %s", projectID, projectVersionID, componentID, componentVersionID, threadError.Error())
 				}
-			} else {
-				err = fmt.Errorf("error while getting component vulnerabilities for [%s/%s/%s/%s] - %s", projectID, projectVersionID, componentID, componentVersionID, err.Error())
-				break
-			}
+
+				if threadError != nil {
+					err = threadError
+				}
+			}(index)
 		}
+
+		wg.Wait()
 	} else {
 		err = fmt.Errorf("error while getting component information for [%s/%s] - %s", projectID, projectVersionID, err.Error())
 	}
@@ -119,6 +145,7 @@ type BlackDuckFinding struct {
 	Component     *ComponentItems
 	ComponentVuln *ComponentVulnerability
 	PolicyRules   *PolicyRulesResp
+	VulnDetail    *VulnerabilityInfoResponse
 }
 
 func (finding *BlackDuckFinding) ProjectID() string {
@@ -177,7 +204,7 @@ func (finding *BlackDuckFinding) getHighestSeverityAndPolicy() (policy, severity
 	return policy, severity
 }
 func (finding *BlackDuckFinding) CVSS() float32 {
-	return float32(finding.ComponentVuln.BaseScore)
+	return float32(finding.VulnDetail.OverallScore)
 }
 
 func (finding *BlackDuckFinding) Description() string {

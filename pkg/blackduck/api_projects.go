@@ -12,7 +12,7 @@ func (cli *BlackDuckClient) GetProject(projectID string) (resp *ProjectResponse,
 	resp = &ProjectResponse{}
 
 	var body []byte
-	if body, err = cli.executeRequest(http.MethodGet, endpoint, nil); err == nil {
+	if body, err = cli.executeRequest(http.MethodGet, endpoint, nil, nil); err == nil {
 		err = json.Unmarshal(body, resp)
 		if err != nil {
 			err = fmt.Errorf("error while parsing response body - %s", err.Error())
@@ -29,7 +29,7 @@ func (cli *BlackDuckClient) GetProjectVersions(projectID string) (resp *ProjectV
 	resp = &ProjectVersionResponse{}
 
 	var body []byte
-	if body, err = cli.executeRequest(http.MethodGet, endpoint, nil); err == nil {
+	if body, err = cli.executeRequest(http.MethodGet, endpoint, nil, nil); err == nil {
 		err = json.Unmarshal(body, resp)
 		if err != nil {
 			err = fmt.Errorf("error while parsing response body - %s", err.Error())

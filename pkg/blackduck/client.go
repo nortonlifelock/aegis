@@ -32,10 +32,14 @@ func NewBlackDuckClient(baseURL string, apiToken string, insecureSkipVerify bool
 	return client, err
 }
 
-func (cli *BlackDuckClient) executeRequest(method string, endpoint string, requestBody io.Reader) (respBody []byte, err error) {
+func (cli *BlackDuckClient) executeRequest(method string, endpoint string, requestBody io.Reader, customHeaders map[string]string) (respBody []byte, err error) {
 	var request *http.Request
 	if request, err = http.NewRequest(method, fmt.Sprintf("%s/%s?limit=1000", cli.baseUrl, endpoint), requestBody); err == nil {
 		request.AddCookie(&http.Cookie{Name: "AUTHORIZATION_BEARER", Value: cli.bearerToken})
+
+		for key, value := range customHeaders {
+			request.Header.Add(key, value)
+		}
 
 		var response *http.Response
 		if response, err = cli.client.Do(request); err == nil {
