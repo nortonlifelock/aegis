@@ -34,7 +34,7 @@ func NewBlackDuckClient(baseURL string, apiToken string, insecureSkipVerify bool
 
 func (cli *BlackDuckClient) executeRequest(method string, endpoint string, requestBody io.Reader) (respBody []byte, err error) {
 	var request *http.Request
-	if request, err = http.NewRequest(method, fmt.Sprintf("%s/%s", cli.baseUrl, endpoint), requestBody); err == nil {
+	if request, err = http.NewRequest(method, fmt.Sprintf("%s/%s?limit=1000", cli.baseUrl, endpoint), requestBody); err == nil {
 		request.AddCookie(&http.Cookie{Name: "AUTHORIZATION_BEARER", Value: cli.bearerToken})
 
 		var response *http.Response

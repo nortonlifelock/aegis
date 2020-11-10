@@ -8,7 +8,7 @@ import (
 )
 
 func (cli *BlackDuckClient) GetProject(projectID string) (resp *ProjectResponse, err error) {
-	endpoint := strings.Replace(GetProject, "{PROJECT_ID}", projectID, 1)
+	endpoint := strings.Replace(getProject, "{PROJECT_ID}", projectID, 1)
 	resp = &ProjectResponse{}
 
 	var body []byte
@@ -25,7 +25,7 @@ func (cli *BlackDuckClient) GetProject(projectID string) (resp *ProjectResponse,
 }
 
 func (cli *BlackDuckClient) GetProjectVersions(projectID string) (resp *ProjectVersionResponse, err error) {
-	endpoint := strings.Replace(GetProjectVersions, "{PROJECT_ID}", projectID, 1)
+	endpoint := strings.Replace(getProjectVersions, "{PROJECT_ID}", projectID, 1)
 	resp = &ProjectVersionResponse{}
 
 	var body []byte

@@ -59,7 +59,8 @@ func (cli *BlackDuckClient) GetProjectVulnerabilities(ctx context.Context, proje
 func (cli *BlackDuckClient) getVulnerabilityFindings(ctx context.Context, projectID string, projectVersionID string, projectResponse *ProjectResponse, version ProjectItem) (findings []*BlackDuckFinding, err error) {
 	findings = make([]*BlackDuckFinding, 0)
 
-	componentInfoResp, err := cli.GetComponentInformation(projectID, projectVersionID)
+	var componentInfoResp *ComponentResponse
+	componentInfoResp, err = cli.GetComponentInformation(projectID, projectVersionID)
 	if err == nil {
 		for index := range componentInfoResp.Items {
 			select {
@@ -75,9 +76,12 @@ func (cli *BlackDuckClient) getVulnerabilityFindings(ctx context.Context, projec
 			componentID := component.ComponentVersion[strings.Index(component.ComponentVersion, lowerRange)+len(lowerRange) : strings.Index(component.ComponentVersion, upperRange)]
 			componentVersionID := component.ComponentVersion[strings.Index(component.ComponentVersion, upperRange)+len(upperRange):]
 
-			componentVulnerabilityResponse, err := cli.GetComponentVulnerabilities(projectID, projectVersionID, componentID, componentVersionID)
+			var componentVulnerabilityResponse *ComponentVulnerabilityResponse
+			componentVulnerabilityResponse, err = cli.GetComponentVulnerabilities(componentID, componentVersionID)
 			if err == nil {
-				policyResp, err := cli.GetPolicyStatus(projectID, projectVersionID, componentID, componentVersionID)
+
+				var policyResp *PolicyRulesResp
+				policyResp, err = cli.GetPolicyStatus(projectID, projectVersionID, componentID, componentVersionID)
 				if err == nil {
 					for index := range componentVulnerabilityResponse.Items {
 						vuln := componentVulnerabilityResponse.Items[index]
@@ -113,7 +117,7 @@ type BlackDuckFinding struct {
 	ProjectInfo   *ProjectResponse
 	ProjectItem   *ProjectItem
 	Component     *ComponentItems
-	ComponentVuln *ComponentVulnerabilityItem
+	ComponentVuln *ComponentVulnerability
 	PolicyRules   *PolicyRulesResp
 }
 
@@ -173,12 +177,12 @@ func (finding *BlackDuckFinding) getHighestSeverityAndPolicy() (policy, severity
 	return policy, severity
 }
 func (finding *BlackDuckFinding) CVSS() float32 {
-	return float32(finding.ComponentVuln.Cvss2.OverallScore)
+	return float32(finding.ComponentVuln.BaseScore)
 }
 
 func (finding *BlackDuckFinding) Description() string {
 	projectOwner := finding.ProjectItem.CreatedBy
-	vulnSummary := finding.ComponentVuln.Summary
+	vulnSummary := finding.ComponentVuln.Description
 	vals := fmt.Sprintf("Project owner: %s\n\n%s", projectOwner, vulnSummary)
 	return vals
 }
@@ -194,8 +198,8 @@ func (finding *BlackDuckFinding) Summary() string {
 	return val
 }
 func (finding *BlackDuckFinding) Updated() time.Time {
-	return finding.ComponentVuln.UpdatedAt
+	return finding.ComponentVuln.VulnerabilityUpdatedDate
 }
 func (finding *BlackDuckFinding) VulnerabilityID() string {
-	return finding.ComponentVuln.ID
+	return finding.ComponentVuln.VulnerabilityName
 }
