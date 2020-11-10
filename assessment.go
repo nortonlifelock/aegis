@@ -8,7 +8,7 @@ import (
 
 // RescanBundle tests a rule set against a cloud account and returns a slice of findings for each instance of a violation of a
 // rule within that cloud account
-func (client *Client) RescanBundle(bundleID int, cloudSubscriptionID string) (findings []domain.Finding, err error) {
+func (client *Client) RescanBundle(bundleID string, cloudSubscriptionID string) (findings []domain.Finding, err error) {
 	findings = make([]domain.Finding, 0)
 
 	var vendor, externalAccountNumber, cloudAccountName string
