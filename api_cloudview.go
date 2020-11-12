@@ -267,7 +267,7 @@ func (f *cloudViewFinding) ScanID() int {
 }
 
 func (f *cloudViewFinding) Summary() string {
-	return fmt.Sprintf("Aegis (%s)", f.accountContent.ControlName)
+	return fmt.Sprintf("Aegis (%s)", strings.Replace(f.accountContent.ControlName, "\n", "", -1))
 }
 func (f *cloudViewFinding) VulnerabilityTitle() string {
 	return f.accountContent.ControlName
