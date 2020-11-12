@@ -35,6 +35,7 @@ var MappableFields = []string{
 	backendOSDetailed,
 	backendCategory,
 	backendApplicationName,
+	backendTrackingMethod,
 	backendConfig,
 	backendLastChecked,
 	backendCloudID,
@@ -108,4 +109,5 @@ const (
 	backendLastChecked         = "LastChecked"
 	backendCloudID             = "CloudID"
 	backendApplicationName     = "Application Name"
+	backendTrackingMethod      = "Tracking Method"
 )

@@ -239,6 +239,10 @@ func (ji *Issue) ApplicationName() (param *string) {
 	return ji.getStringPointer(backendApplicationName)
 }
 
+func (ji *Issue) TrackingMethod() (param *string) {
+	return ji.getStringPointer(backendTrackingMethod)
+}
+
 // MethodOfDiscovery gets the MethodOfDiscovery parameter from the Ticket struct
 func (ji *Issue) MethodOfDiscovery() (param *string) {
 	return ji.getStringPointer(backendMOD)

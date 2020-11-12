@@ -63,6 +63,10 @@ func (connector *ConnectorJira) mapDalTicketToJiraIssue(ticket domain.Ticket) (j
 			setJIField(connector, ji, backendApplicationName, ticket.ApplicationName())
 		}
 
+		if len(sord(ticket.TrackingMethod())) > 0 {
+			setJIField(connector, ji, backendTrackingMethod, ticket.TrackingMethod())
+		}
+
 		if len(ticket.DeviceID()) > 0 {
 			_ = ji.setCF(connector, backendDeviceID, ticket.DeviceID())
 		}

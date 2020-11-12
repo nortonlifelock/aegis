@@ -196,6 +196,14 @@ func (connector *ConnectorJira) UpdateTicket(ticket domain.Ticket, comment strin
 				}
 			}
 
+			if len(sord(ticket.TrackingMethod())) > 0 {
+				field := connector.GetFieldMap(backendTrackingMethod)
+				if field != nil {
+					updateBlock.Fields.TrackingMethod = ticket.TrackingMethod()
+					oldToNewFieldName["trackingmethod"] = field.ID
+				}
+			}
+
 			if ticket.LastChecked() != nil && !ticket.LastChecked().IsZero() {
 				field := connector.GetFieldMap(backendLastChecked)
 				if field != nil {
