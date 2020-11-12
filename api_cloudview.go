@@ -205,6 +205,7 @@ func (session *Session) GetCloudEvaluationFindings(accountID string, content Acc
 				findings = append(findings, &cloudViewFinding{
 					evaluationContent: finding,
 					accountContent:    content,
+					accountID:         accountID,
 				})
 			}
 		}
@@ -238,6 +239,7 @@ func evidenceHasError(finding EvaluationResultContent) (hasError bool) {
 type cloudViewFinding struct {
 	evaluationContent EvaluationResultContent
 	accountContent    AccountEvaluationContent
+	accountID         string
 }
 
 // ID corresponds to a vulnerability ID
@@ -252,7 +254,11 @@ func (f *cloudViewFinding) DeviceID() string {
 
 // AccountID corresponds to the cloud account that the entity lies within
 func (f *cloudViewFinding) AccountID() string {
-	return f.evaluationContent.AccountID
+	if len(f.evaluationContent.AccountID) > 0 {
+		return f.evaluationContent.AccountID
+	} else {
+		return f.accountID
+	}
 }
 
 // ScanID corresponds to the assessment that found the finding
