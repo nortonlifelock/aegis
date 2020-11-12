@@ -410,6 +410,10 @@ func (i *ImageFinding) ApplicationName() (param *string) {
 	return nil
 }
 
+func (i *ImageFinding) TrackingMethod() (param *string) {
+	return nil
+}
+
 func mapImageFindingsByDeviceIDVulnID(findings []domain.ImageFinding) (entityIDToRuleHashToFinding map[string]domain.ImageFinding) {
 	// DeviceID = Image name
 	// VulnID = CVE

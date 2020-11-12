@@ -910,3 +910,7 @@ func (wrapper *FindingWrapper) ExceptionDate() (param *time.Time) {
 func (wrapper *FindingWrapper) ApplicationName() (param *string) {
 	return nil
 }
+
+func (wrapper *FindingWrapper) TrackingMethod() (param *string) {
+	return nil
+}

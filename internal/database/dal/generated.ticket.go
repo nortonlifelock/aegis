@@ -62,6 +62,7 @@ type Ticket struct {
 	SystemNamevar          *string
 	TicketTypevar          *string
 	Titlevar               string
+	TrackingMethodvar      *string
 	UpdatedDatevar         *time.Time
 	VendorReferencesvar    *string
 	VulnerabilityIDvar     string
@@ -120,6 +121,7 @@ func (myTicket Ticket) MarshalJSON() ([]byte, error) {
 		"SystemName":          myTicket.SystemNamevar,
 		"TicketType":          myTicket.TicketTypevar,
 		"Title":               myTicket.Titlevar,
+		"TrackingMethod":      myTicket.TrackingMethodvar,
 		"UpdatedDate":         myTicket.UpdatedDatevar,
 		"VendorReferences":    myTicket.VendorReferencesvar,
 		"VulnerabilityID":     myTicket.VulnerabilityIDvar,
@@ -352,6 +354,11 @@ func (myTicket *Ticket) Title() (param string) {
 	return myTicket.Titlevar
 }
 
+// TrackingMethod returns the TrackingMethod parameter from the Ticket struct
+func (myTicket *Ticket) TrackingMethod() (param *string) {
+	return myTicket.TrackingMethodvar
+}
+
 // UpdatedDate returns the UpdatedDate parameter from the Ticket struct
 func (myTicket *Ticket) UpdatedDate() (param *time.Time) {
 	return myTicket.UpdatedDatevar
@@ -525,6 +532,11 @@ func (myTicket *Ticket) SetTicketType(val string) {
 // SetTitle sets the Title parameter from the Ticket struct
 func (myTicket *Ticket) SetTitle(val string) {
 	myTicket.Titlevar = val
+}
+
+// SetTrackingMethod sets the TrackingMethod parameter from the Ticket struct
+func (myTicket *Ticket) SetTrackingMethod(val string) {
+	myTicket.TrackingMethodvar = &val
 }
 
 // SetVulnerabilityID sets the VulnerabilityID parameter from the Ticket struct

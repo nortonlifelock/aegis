@@ -49,5 +49,6 @@
   OWASP               VARCHAR(300)            NULL
   ExceptionDate       DATETIME                NULL
   ApplicationName     VARCHAR(300)            NULL
+  TrackingMethod      VARCHAR(100)            NULL
 */
 #BEGIN#
