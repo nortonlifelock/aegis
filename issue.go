@@ -2,8 +2,6 @@ package jira
 
 import (
 	"github.com/andygrunwald/go-jira"
-	"github.com/nortonlifelock/domain"
-	"github.com/nortonlifelock/log"
 	"strconv"
 	"strings"
 	"time"
@@ -104,39 +102,7 @@ func (ji *Issue) CERF() (param string) {
 
 // ExceptionExpiration gets the ExceptionExpiration parameter from the Ticket struct
 func (ji *Issue) ExceptionExpiration() (param time.Time) {
-	var cerfExpiration time.Time
-
-	// the ticket itself is a CERF ticket
-	if !ji.getTime(backendExceptionExpiration).IsZero() {
-		cerfExpiration = ji.getTime(backendExceptionExpiration)
-	} else {
-		// the ticket has a referenced CERF, let's grab it's expiration
-		if len(ji.CERF()) > 0 {
-			ji.connector.CERFLock.Lock()
-			if val, exists := ji.connector.CERFs.Load(ji.CERF()); exists {
-				ji.connector.CERFLock.Unlock()
-				if cerf, ok := val.(domain.Ticket); ok {
-					cerfExpiration = cerf.ExceptionExpiration()
-				} else {
-					ji.connector.lstream.Send(log.Errorf(nil, "cerf [%v] failed to load from cache", ji.CERF()))
-				}
-			} else {
-				if cerf, err := ji.connector.GetTicket(ji.CERF()); err == nil {
-					if cerf != nil {
-						cerfExpiration = cerf.ExceptionExpiration()
-						ji.connector.CERFs.Store(ji.CERF(), cerf)
-					} else {
-						ji.connector.lstream.Send(log.Errorf(err, "cerf [%v] returned nil from JIRA", ji.CERF()))
-					}
-				} else {
-					ji.connector.lstream.Send(log.Errorf(err, "cerf [%v] failed to load from JIRA", ji.CERF()))
-				}
-				ji.connector.CERFLock.Unlock()
-			}
-		}
-	}
-
-	return cerfExpiration
+	return ji.getTime(backendExceptionExpiration)
 }
 
 // OrgCode gets the OrgCode parameter from the Ticket struct
