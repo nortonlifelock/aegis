@@ -15,7 +15,7 @@ require (
 	github.com/nortonlifelock/domain v1.0.1-0.20201112203103-c6f2cc0a6b9d
 	github.com/nortonlifelock/dome9 v1.0.1-0.20201110210803-19f1f4e6909d
 	github.com/nortonlifelock/files v1.0.1-0.20200127165427-5178f1323f54
-	github.com/nortonlifelock/jira v1.0.1-0.20201112203507-1687038936ca
+	github.com/nortonlifelock/jira v1.0.1-0.20201113183101-71935beca9f6
 	github.com/nortonlifelock/jira-tool v1.0.0
 	github.com/nortonlifelock/job v1.0.1-0.20200723165359-98431175f14c
 	github.com/nortonlifelock/log v1.0.1-0.20200723215351-a71254d3c335
