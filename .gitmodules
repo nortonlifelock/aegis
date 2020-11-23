@@ -1,9 +1,6 @@
 [submodule "pkg/jira"]
 	path = pkg/jira
 	url = git@github.com:nortonlifelock/jira.git
-[submodule "pkg/crypto"]
-	path = pkg/crypto
-	url = git@github.com:nortonlifelock/crypto.git
 [submodule "pkg/qualys"]
 	path = pkg/qualys
 	url = git@github.com:nortonlifelock/qualys.git
