@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/nortonlifelock/domain"
+	"github.com/nortonlifelock/aegis/pkg/domain"
 	"github.com/pkg/errors"
 	auth "gopkg.in/korylprince/go-ad-auth.v2"
 )

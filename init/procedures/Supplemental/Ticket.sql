@@ -56,5 +56,6 @@
   ComponentVersion    VARCHAR(100)            NULL
   PolicyRule          VARCHAR(100)            NULL
   PolicySeverity      VARCHAR(100)            NULL
+  TrackingMethod      VARCHAR(100)            NULL
 */
 #BEGIN#

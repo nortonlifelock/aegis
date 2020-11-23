@@ -9,8 +9,8 @@ import (
 	"strings"
 
 	"github.com/gorilla/mux"
-	"github.com/nortonlifelock/crypto"
-	"github.com/nortonlifelock/domain"
+	"github.com/nortonlifelock/aegis/pkg/crypto"
+	"github.com/nortonlifelock/aegis/pkg/domain"
 	"github.com/pkg/errors"
 )
 

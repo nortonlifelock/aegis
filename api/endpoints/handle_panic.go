@@ -2,7 +2,7 @@ package endpoints
 
 import (
 	"fmt"
-	"github.com/nortonlifelock/log"
+	"github.com/nortonlifelock/aegis/pkg/log"
 	"github.com/pkg/errors"
 	"net/http"
 )

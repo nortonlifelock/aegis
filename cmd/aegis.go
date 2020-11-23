@@ -7,7 +7,7 @@ import (
 	aegis_init "github.com/nortonlifelock/aegis/init"
 	"github.com/nortonlifelock/aegis/internal/config"
 	"github.com/nortonlifelock/aegis/internal/database"
-	"github.com/nortonlifelock/domain"
+	"github.com/nortonlifelock/aegis/pkg/domain"
 	"github.com/pkg/errors"
 	"os"
 
@@ -16,8 +16,8 @@ import (
 	"time"
 
 	_ "github.com/nortonlifelock/aegis/internal/implementations"
-	"github.com/nortonlifelock/job"
-	"github.com/nortonlifelock/log"
+	"github.com/nortonlifelock/aegis/pkg/job"
+	"github.com/nortonlifelock/aegis/pkg/log"
 )
 
 func main() {

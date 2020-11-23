@@ -3,7 +3,7 @@ package blackduck
 import (
 	"context"
 	"fmt"
-	"github.com/nortonlifelock/domain"
+	"github.com/nortonlifelock/aegis/pkg/domain"
 	"strings"
 	"sync"
 	"time"

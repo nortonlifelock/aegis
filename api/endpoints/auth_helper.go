@@ -1,6 +1,6 @@
 package endpoints
 
-import "github.com/nortonlifelock/domain"
+import "github.com/nortonlifelock/aegis/pkg/domain"
 
 // ADConfig holds the fields that are required to authenticate against AD as well as grab
 // the groups that a user is a member of

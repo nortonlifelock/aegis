@@ -7,9 +7,9 @@ import (
 	"github.com/nortonlifelock/aegis/internal/config"
 	"github.com/nortonlifelock/aegis/internal/database"
 	"github.com/nortonlifelock/aegis/internal/integrations"
-	"github.com/nortonlifelock/domain"
-	"github.com/nortonlifelock/jira"
-	"github.com/nortonlifelock/log"
+	"github.com/nortonlifelock/aegis/pkg/domain"
+	"github.com/nortonlifelock/aegis/pkg/jira"
+	"github.com/nortonlifelock/aegis/pkg/log"
 	"io/ioutil"
 	"os"
 	"strings"
@@ -60,7 +60,6 @@ func copyTicketsByJQL() {
 
 	tics := prod.GetByCustomJQLChan(ticketJQL)
 
-
 	var count int
 	var wg sync.WaitGroup
 
@@ -71,7 +70,7 @@ func copyTicketsByJQL() {
 	}
 
 	for {
-		if tic, ok := <- tics; ok {
+		if tic, ok := <-tics; ok {
 			<-permit
 			wg.Add(1)
 			go func(line domain.Ticket) {

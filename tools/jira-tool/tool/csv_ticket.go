@@ -2,7 +2,7 @@ package tool
 
 import (
 	"fmt"
-	"github.com/nortonlifelock/domain"
+	"github.com/nortonlifelock/aegis/pkg/domain"
 	"strconv"
 	"strings"
 	"time"

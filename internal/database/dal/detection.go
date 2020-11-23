@@ -1,7 +1,7 @@
 package dal
 
 import (
-	"github.com/nortonlifelock/domain"
+	"github.com/nortonlifelock/aegis/pkg/domain"
 	"sync"
 	"time"
 )

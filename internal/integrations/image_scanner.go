@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/nortonlifelock/aegis/pkg/aqua"
-	"github.com/nortonlifelock/domain"
+	"github.com/nortonlifelock/aegis/pkg/domain"
 )
 
 type IScanner interface {

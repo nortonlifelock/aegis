@@ -1,7 +1,7 @@
 package endpoints
 
 import (
-	"github.com/nortonlifelock/domain"
+	"github.com/nortonlifelock/aegis/pkg/domain"
 )
 
 type endpoint interface {

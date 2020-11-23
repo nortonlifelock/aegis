@@ -5,8 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/nortonlifelock/aegis/internal/integrations"
-	"github.com/nortonlifelock/domain"
-	"github.com/nortonlifelock/log"
+	"github.com/nortonlifelock/aegis/pkg/domain"
+	"github.com/nortonlifelock/aegis/pkg/log"
 	"sort"
 	"strings"
 	"time"
@@ -440,6 +440,10 @@ func (i *ImageFinding) ExceptionDate() (param *time.Time) {
 }
 
 func (i *ImageFinding) ApplicationName() (param *string) {
+	return nil
+}
+
+func (i *ImageFinding) TrackingMethod() (param *string) {
 	return nil
 }
 

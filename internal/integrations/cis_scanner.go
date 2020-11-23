@@ -4,10 +4,10 @@ import (
 	"context"
 	"encoding/json"
 
-	"github.com/nortonlifelock/crypto"
-	"github.com/nortonlifelock/domain"
-	"github.com/nortonlifelock/dome9"
-	qualys "github.com/nortonlifelock/qualys/connector"
+	"github.com/nortonlifelock/aegis/pkg/crypto"
+	"github.com/nortonlifelock/aegis/pkg/domain"
+	"github.com/nortonlifelock/aegis/pkg/dome9"
+	qualys "github.com/nortonlifelock/aegis/pkg/qualys/connector"
 	"github.com/pkg/errors"
 )
 
@@ -18,9 +18,7 @@ const (
 
 // CISScanner finds compliance violations within a cloud service
 type CISScanner interface {
-	//GetAllFindingsForBundle(bundleID int) (retChan <-chan domain.Finding, err error)
-
-	RescanBundle(bundleID int, cloudAccountID string) (findings []domain.Finding, err error)
+	RescanBundle(bundleID string, cloudAccountID string) (findings []domain.Finding, err error)
 }
 
 // GetCISScanner returns a struct that implements the TicketingEngine interface

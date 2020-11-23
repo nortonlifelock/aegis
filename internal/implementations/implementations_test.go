@@ -3,7 +3,7 @@ package implementations
 import (
 	"context"
 	"fmt"
-	"github.com/nortonlifelock/domain"
+	"github.com/nortonlifelock/aegis/pkg/domain"
 	"testing"
 )
 

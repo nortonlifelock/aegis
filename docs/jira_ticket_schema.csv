@@ -1,39 +1,46 @@
-Field Name, Field Type
-Epic Name,Name of Epic
-Method of Discovery,Select List (single choice)
-Summary,System field
-Hostname,Text Field (single line)
-IP Address,Text Field (single line)
-MAC Address,Text Field (single line)
-Service Port,Text Field (single line)
-Description,System field
-Criticality,Select List (single choice)
-Scan/Alert Date,Date Picker
-Assets Affected,Text Field (multi-line)
-Assignee,System field
-ScanID,Text Field (single line)
-Assignment Group,Group Picker (single group)
-CVE References,Text Field (multi-line)
-Resolution Date,Date Time Picker
-Due Date,System field
-Operating System,Select List (single choice)
-Vulnerablility,Text Field (single line)
-cvss_score,Select List (single choice)
-GroupID,Text Field (single line)
-DeviceID,Text Field (single line)
-VulnerabilityID,Text Field (single line)
-Org,Text Field (single line)
-AutomationID,Text Field (single line)
-Reopen Reason,Text Field (multi-line)
-VendorRef,Text Field (multi-line)
-Linked Exception,Query issue linker custom field
-Last Rescan,Date Time Picker
-Reference,URL Field
-Latest Detection Date,Date Picker
-OS_Detailed,Text Field (single line)
-Solution,Text Field (multi-line)
-CloudID,Text Field (single line)
-Config,Select List (single choice)
-LastChecked,Date Picker
-Application,Text Field (single line)
-Application Type,Select List (single choice)
+"Method of Discovery" - dropdown (None,Nexpose,Internal Discovery,External Discovery,Penetration Test,Vendor Notice,Server Build,Qualys,SynAck,Security Scorecard,BitSight,Bugcrowd,Dome9,PCI ASV,Stacks for Hacks,Aqua,Black Duck,CloudView)
+"Status" - dropdown (Open, Reopened, In-Progress, Resolved-FalsePositive, Resolved-Exception, Resolved-Remediated, Resolved-Decommissioned, Approved-Exception, Approved-False-Positive, Closed-Decommission, Closed-Remediated, Scan-Error, Closed-NA, Closed-Error, Closed-CERF)
+"created" - datetime
+"Summary" - string
+"Hostname" - string
+"IP Address" - string
+"MAC Address" - string
+"Service Port" - string
+"Description" - textbox
+"Solution" - textbox
+"VRR Priority" - drowndown (None,Immediate,Critical,High,Medium,Low)
+"LastFound" - datetime
+"Assignment Group" - string
+"Resolution Date" - datetime
+"Reopen Reason" - textbox
+"Operating System" - dropdown (None,BIG-IP,Data ONTAP,embedded,IOS,Linux,MAC OS X,Solaris,VMware ESX/ESXi,Windows,z/OS,Unknown,None,AIX,Amazon Linux,Redhat,CentOS,Cisco,CoreOS,NetApp,Oracle,UNIX,Ubuntu,FreeBSD)
+"Vulnerability" - string
+"cvss_score" - float
+"VulnerabilityID" - string
+"OWASP" - dropdown (None,Injection,Broken Authentication,Sensitive Data Exposure,XML External Entities,Broken Access Control,Security Misconfiguration,Cross-site Scripting XSS,Insecure Deserialization,Using Components with known vulnerabilities,Insufficient Logging & Monitoring)
+"Exception Date" - datetime
+"GroupID" - string
+"DeviceID" - string
+"Patchable" - dropdown (None,Yes,No)
+"ScanID" - string
+"Org" - string
+"SystemName" - string
+"CERF" - string
+"Exception Expiration" - datetime
+"CVE References" - string
+"VendorRef" - string
+"Updated" - datetime
+"OS_Detailed" - string
+"VRR Category" - dropdown (None,Security Logging,Network Security,Key Management,Asset Classification,User Access Control,Host,Malware,Third Party Application,Database,Firewall,Forensics,General remote services,Hardware,Information gathering,OEL,Configuration,Web Application,Function,Container)
+"Config" - string
+"LastChecked" - datetime
+"CloudID" - string
+"Application Name" - string
+"Hub Project Name" - string
+"Hub Project Version" - string
+"Hub Severity" - string
+"Component Name" - string
+"Component Version" - string
+"Policy Rule" - string
+"Policy Severity" - string
+"Application Type" - dropdown (None,Web,API,Mobile-iOS,Mobile-Android,Desktop,Other)

@@ -12,8 +12,8 @@ import (
 	"time"
 
 	"github.com/nortonlifelock/aegis/internal/integrations"
-	"github.com/nortonlifelock/domain"
-	"github.com/nortonlifelock/log"
+	"github.com/nortonlifelock/aegis/pkg/domain"
+	"github.com/nortonlifelock/aegis/pkg/log"
 )
 
 // CISRescanJob implements the Job interface and pulls findings from Dome9 and creates tickets when applicable
@@ -36,14 +36,13 @@ type CISRescanJob struct {
 }
 
 // CISRescanPayload holds information that dictates how the rescan is run, and on what account
-// The BundleID points towards a bundle, which holds a series of rules
+// The RuleID points towards a bundle for Dome9, or a policy name for Cloud View, which holds a series of rules
 // The cloud account IDs points to the cloud account (e.g. AWS/Azure) that we which to test the rules against
 type CISRescanPayload struct {
-	BundleID        int      `json:"bundle_id"`
+	RuleID          string   `json:"rule_id"`
 	CloudAccountIDs []string `json:"cloud_accounts"`
 }
 
-// buildPayload parses the BundleID from the job history Payload
 func (job *CISRescanJob) buildPayload(pjson string) (err error) {
 	job.Payload = &CISRescanPayload{}
 	if err = json.Unmarshal([]byte(pjson), job.Payload); err == nil {
@@ -55,7 +54,7 @@ func (job *CISRescanJob) buildPayload(pjson string) (err error) {
 	return err
 }
 
-// Process pulls findings from a particular bundle, and creates a ticket in the ticketing engine if one did not exist
+// Process pulls findings from a particular rule set, and creates a ticket in the ticketing engine if one did not exist
 func (job *CISRescanJob) Process(ctx context.Context, id string, appconfig domain.Config, db domain.DatabaseConnection, lstream log.Logger, payload string, jobConfig domain.JobConfig, inSource []domain.SourceConfig, outSource []domain.SourceConfig) (err error) {
 
 	var ok bool
@@ -81,9 +80,9 @@ func (job *CISRescanJob) Process(ctx context.Context, id string, appconfig domai
 									defer wg.Done()
 
 									var err error // error is scoped intentionally
-									err = job.processBundleOnCloud(scanner, engine, job.Payload.BundleID, cloudID)
+									err = job.processRuleOnCloud(scanner, engine, job.Payload.RuleID, cloudID)
 									if err != nil {
-										job.lstream.Send(log.Errorf(err, "error while processing bundle ID [%d] for cloud account [%s]", job.Payload.BundleID, cloudID))
+										job.lstream.Send(log.Errorf(err, "error while processing rule ID [%s] for cloud account [%s]", job.Payload.RuleID, cloudID))
 									}
 								}(cloudID)
 							}
@@ -138,10 +137,10 @@ type findingTicketPair struct {
 	ticket  domain.Ticket
 }
 
-func (job *CISRescanJob) processBundleOnCloud(scanner integrations.CISScanner, engine integrations.TicketingEngine, bundleID int, cloudAccountID string) (err error) {
+func (job *CISRescanJob) processRuleOnCloud(scanner integrations.CISScanner, engine integrations.TicketingEngine, ruleID string, cloudAccountID string) (err error) {
 
 	var findings []domain.Finding
-	findings, err = scanner.RescanBundle(bundleID, cloudAccountID)
+	findings, err = scanner.RescanBundle(ruleID, cloudAccountID)
 	if err == nil {
 
 		var tickets <-chan domain.Ticket
@@ -414,7 +413,7 @@ func updateTicketsAccordingToFindings(lstream log.Logger, db domain.DatabaseConn
 	go func() {
 		defer handleRoutinePanic(lstream)
 		defer wg.Done()
-		updateTicketsWithStaleFindings(db, lstream, engine, ticketsWithFindings, updatingComment, orgID, sourceID)
+		updateTicketsWithStaleFindings(lstream, engine, ticketsWithFindings, updatingComment)
 	}()
 	go func() {
 		defer handleRoutinePanic(lstream)
@@ -567,7 +566,7 @@ func (t *staleTicket) Status() (val *string) {
 	return val
 }
 
-func updateTicketsWithStaleFindings(db domain.DatabaseConnection, lstream log.Logger, engine integrations.TicketingEngine, pairs []findingTicketPair, updatingComment string, orgID, sourceID string) {
+func updateTicketsWithStaleFindings(lstream log.Logger, engine integrations.TicketingEngine, pairs []findingTicketPair, updatingComment string) {
 	wg := &sync.WaitGroup{}
 	for index := range pairs {
 		wg.Add(1)
@@ -938,4 +937,8 @@ func (wrapper *FindingWrapper) PolicyRule() (param *string) {
 
 func (wrapper *FindingWrapper) PolicySeverity() (param *string) {
 	return
+}
+
+func (wrapper *FindingWrapper) TrackingMethod() (param *string) {
+	return nil
 }

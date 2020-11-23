@@ -5,7 +5,7 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/nortonlifelock/aegis/internal/implementations"
 	"github.com/nortonlifelock/aegis/internal/integrations"
-	"github.com/nortonlifelock/domain"
+	"github.com/nortonlifelock/aegis/pkg/domain"
 	"net/http"
 	"regexp"
 	"sort"

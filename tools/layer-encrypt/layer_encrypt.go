@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"github.com/nortonlifelock/aegis/internal/config"
 	"github.com/nortonlifelock/aegis/internal/database"
-	"github.com/nortonlifelock/crypto"
-	"github.com/nortonlifelock/domain"
+	"github.com/nortonlifelock/aegis/pkg/crypto"
+	"github.com/nortonlifelock/aegis/pkg/domain"
 )
 
 var appConfig config.AppConfig

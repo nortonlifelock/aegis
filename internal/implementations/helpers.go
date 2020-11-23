@@ -3,8 +3,8 @@ package implementations
 import (
 	"context"
 	"github.com/nortonlifelock/aegis/internal/integrations"
-	"github.com/nortonlifelock/domain"
-	"github.com/nortonlifelock/log"
+	"github.com/nortonlifelock/aegis/pkg/domain"
+	"github.com/nortonlifelock/aegis/pkg/log"
 )
 
 func loadTickets(lstream log.Logger, ticketing integrations.TicketingEngine, ticketSlice []string) (tickets []domain.Ticket, err error) {
