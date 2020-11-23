@@ -2,7 +2,7 @@ package domain
 
 import (
 	"context"
-	"github.com/nortonlifelock/log"
+	"github.com/nortonlifelock/aegis/pkg/log"
 )
 
 // Job specifies the interface required by job implementations in order to execute properly through the dispatcher

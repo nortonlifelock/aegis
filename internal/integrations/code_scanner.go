@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/nortonlifelock/aegis/pkg/blackduck"
-	"github.com/nortonlifelock/domain"
+	"github.com/nortonlifelock/aegis/pkg/domain"
 )
 
 type CodeScanner interface {

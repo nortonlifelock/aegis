@@ -3,10 +3,10 @@ package integrations
 import (
 	"context"
 	"encoding/json"
+	"github.com/nortonlifelock/aegis/pkg/dome9"
 
 	"github.com/nortonlifelock/aegis/pkg/crypto"
 	"github.com/nortonlifelock/aegis/pkg/domain"
-	"github.com/nortonlifelock/aegis/pkg/dome9"
 	qualys "github.com/nortonlifelock/aegis/pkg/qualys/connector"
 	"github.com/pkg/errors"
 )

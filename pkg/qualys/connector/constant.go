@@ -1,0 +1,5 @@
+package connector
+
+const (
+	templateDelimiter = ":"
+)
