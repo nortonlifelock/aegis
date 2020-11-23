@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/benjivesterby/validator"
-	"github.com/nortonlifelock/log"
+	"github.com/nortonlifelock/aegis/pkg/log"
 	"github.com/pkg/errors"
 	"io"
 	"io/ioutil"

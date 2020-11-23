@@ -7,7 +7,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/nortonlifelock/files"
+	"github.com/nortonlifelock/aegis/pkg/files"
 
 	"sync"
 

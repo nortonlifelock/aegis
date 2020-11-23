@@ -14,7 +14,7 @@ import (
 	"github.com/nortonlifelock/aegis/api/endpoints"
 	"github.com/nortonlifelock/aegis/internal/config"
 	"github.com/nortonlifelock/aegis/internal/database"
-	"github.com/nortonlifelock/domain"
+	"github.com/nortonlifelock/aegis/pkg/domain"
 	"github.com/rs/cors"
 )
 

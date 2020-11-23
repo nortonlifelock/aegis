@@ -12,11 +12,11 @@ import (
 	"time"
 
 	"github.com/benjivesterby/validator"
-	"github.com/nortonlifelock/domain"
-	"github.com/nortonlifelock/funnel"
-	"github.com/nortonlifelock/log"
-	"github.com/nortonlifelock/nexpose"
-	"github.com/nortonlifelock/ttl"
+	"github.com/nortonlifelock/aegis/pkg/domain"
+	"github.com/nortonlifelock/aegis/pkg/funnel"
+	"github.com/nortonlifelock/aegis/pkg/log"
+	"github.com/nortonlifelock/aegis/pkg/nexpose"
+	"github.com/nortonlifelock/aegis/pkg/ttl"
 	"github.com/pkg/errors"
 )
 

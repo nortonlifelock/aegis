@@ -14,8 +14,8 @@ import (
 
 	"github.com/gorilla/websocket"
 	"github.com/nortonlifelock/aegis/internal/implementations"
-	"github.com/nortonlifelock/domain"
-	"github.com/nortonlifelock/files"
+	"github.com/nortonlifelock/aegis/pkg/domain"
+	"github.com/nortonlifelock/aegis/pkg/files"
 	"github.com/pkg/errors"
 )
 

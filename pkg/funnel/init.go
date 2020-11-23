@@ -3,7 +3,7 @@ package funnel
 import (
 	"context"
 	"github.com/devnw/validator"
-	"github.com/nortonlifelock/log"
+	"github.com/nortonlifelock/aegis/pkg/log"
 	"github.com/pkg/errors"
 	"net/http"
 	"time"

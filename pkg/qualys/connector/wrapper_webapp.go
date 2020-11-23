@@ -3,7 +3,7 @@ package connector
 import (
 	"context"
 	"fmt"
-	"github.com/nortonlifelock/domain"
+	"github.com/nortonlifelock/aegis/pkg/domain"
 )
 
 type WebAppWrapper struct {

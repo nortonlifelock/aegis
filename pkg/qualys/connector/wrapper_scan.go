@@ -1,8 +1,8 @@
 package connector
 
 import (
-	"github.com/nortonlifelock/domain"
-	"github.com/nortonlifelock/qualys"
+	"github.com/nortonlifelock/aegis/pkg/domain"
+	"github.com/nortonlifelock/aegis/pkg/qualys"
 	"strings"
 	"time"
 )

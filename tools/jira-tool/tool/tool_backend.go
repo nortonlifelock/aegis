@@ -10,10 +10,10 @@ import (
 	"time"
 
 	"github.com/nortonlifelock/aegis/internal/database/dal"
-	"github.com/nortonlifelock/crypto"
-	"github.com/nortonlifelock/domain"
-	"github.com/nortonlifelock/jira"
-	"github.com/nortonlifelock/log"
+	"github.com/nortonlifelock/aegis/pkg/crypto"
+	"github.com/nortonlifelock/aegis/pkg/domain"
+	"github.com/nortonlifelock/aegis/pkg/jira"
+	"github.com/nortonlifelock/aegis/pkg/log"
 	"github.com/pkg/errors"
 )
 

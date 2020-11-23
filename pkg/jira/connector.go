@@ -8,9 +8,9 @@ import (
 	"sync"
 
 	"github.com/andygrunwald/go-jira"
-	"github.com/nortonlifelock/domain"
-	"github.com/nortonlifelock/funnel"
-	"github.com/nortonlifelock/log"
+	"github.com/nortonlifelock/aegis/pkg/domain"
+	"github.com/nortonlifelock/aegis/pkg/funnel"
+	"github.com/nortonlifelock/aegis/pkg/log"
 )
 
 type logger interface {

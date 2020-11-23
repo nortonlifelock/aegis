@@ -3,7 +3,7 @@ package qualys
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/nortonlifelock/domain"
+	"github.com/nortonlifelock/aegis/pkg/domain"
 	"io/ioutil"
 	"net/http"
 	"strings"

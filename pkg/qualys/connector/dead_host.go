@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"encoding/xml"
 	"fmt"
-	"github.com/nortonlifelock/qualys"
+	"github.com/nortonlifelock/aegis/pkg/qualys"
 	"net"
 	"strings"
 	"time"

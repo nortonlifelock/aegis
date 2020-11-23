@@ -5,7 +5,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/nortonlifelock/domain"
+	"github.com/nortonlifelock/aegis/pkg/domain"
 )
 
 type hostDetectionCombo struct {

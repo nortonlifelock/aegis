@@ -3,10 +3,10 @@ package connector
 import (
 	"context"
 
-	"github.com/nortonlifelock/domain"
-	"github.com/nortonlifelock/log"
-	"github.com/nortonlifelock/nexpose"
-	"github.com/nortonlifelock/ttl"
+	"github.com/nortonlifelock/aegis/pkg/domain"
+	"github.com/nortonlifelock/aegis/pkg/log"
+	"github.com/nortonlifelock/aegis/pkg/nexpose"
+	"github.com/nortonlifelock/aegis/pkg/ttl"
 	"github.com/pkg/errors"
 )
 

@@ -3,7 +3,7 @@ package dome9
 import (
 	"fmt"
 
-	"github.com/nortonlifelock/domain"
+	"github.com/nortonlifelock/aegis/pkg/domain"
 )
 
 // RescanBundle tests a rule set against a cloud account and returns a slice of findings for each instance of a violation of a

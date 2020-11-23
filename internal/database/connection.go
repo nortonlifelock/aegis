@@ -2,8 +2,8 @@ package database
 
 import (
 	"database/sql"
-	"github.com/nortonlifelock/connection"
-	"github.com/nortonlifelock/domain"
+	"github.com/nortonlifelock/aegis/pkg/connection"
+	"github.com/nortonlifelock/aegis/pkg/domain"
 	"github.com/pkg/errors"
 )
 

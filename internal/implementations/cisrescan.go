@@ -12,8 +12,8 @@ import (
 	"time"
 
 	"github.com/nortonlifelock/aegis/internal/integrations"
-	"github.com/nortonlifelock/domain"
-	"github.com/nortonlifelock/log"
+	"github.com/nortonlifelock/aegis/pkg/domain"
+	"github.com/nortonlifelock/aegis/pkg/log"
 )
 
 // CISRescanJob implements the Job interface and pulls findings from Dome9 and creates tickets when applicable

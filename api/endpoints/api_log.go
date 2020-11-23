@@ -3,7 +3,7 @@ package endpoints
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/nortonlifelock/domain"
+	"github.com/nortonlifelock/aegis/pkg/domain"
 	"net/http"
 	"strings"
 	"time"

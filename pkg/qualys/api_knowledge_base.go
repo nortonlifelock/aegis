@@ -2,7 +2,7 @@ package qualys
 
 import (
 	"fmt"
-	"github.com/nortonlifelock/log"
+	"github.com/nortonlifelock/aegis/pkg/log"
 	"time"
 )
 

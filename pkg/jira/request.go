@@ -9,8 +9,8 @@ import (
 	"net/http"
 
 	"github.com/andygrunwald/go-jira"
-	"github.com/nortonlifelock/domain"
-	"github.com/nortonlifelock/log"
+	"github.com/nortonlifelock/aegis/pkg/domain"
+	"github.com/nortonlifelock/aegis/pkg/log"
 )
 
 // Request contains the fields required to make a JIRA API call and process the result

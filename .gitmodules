@@ -1,39 +1,9 @@
-[submodule "pkg/qualys"]
-	path = pkg/qualys
-	url = git@github.com:nortonlifelock/qualys.git
-[submodule "pkg/log"]
-	path = pkg/log
-	url = git@github.com:nortonlifelock/log.git
 [submodule "pkg/scaffold"]
 	path = pkg/scaffold
 	url = git@github.com:nortonlifelock/scaffold.git
-[submodule "pkg/nexpose"]
-	path = pkg/nexpose
-	url = git@github.com:nortonlifelock/nexpose.git
 [submodule "pkg/job"]
 	path = pkg/job
 	url = git@github.com:nortonlifelock/job.git
 [submodule "pkg/funnel"]
 	path = pkg/funnel
 	url = git@github.com:nortonlifelock/funnel.git
-[submodule "pkg/dome9"]
-	path = pkg/dome9
-	url = git@github.com:nortonlifelock/dome9.git
-[submodule "pkg/azure"]
-	path = pkg/azure
-	url = git@github.com:nortonlifelock/azure.git
-[submodule "pkg/aws"]
-	path = pkg/aws
-	url = git@github.com:nortonlifelock/aws.git
-[submodule "pkg/ttl"]
-	path = pkg/ttl
-	url = git@github.com:nortonlifelock/ttl.git
-[submodule "pkg/domain"]
-	path = pkg/domain
-	url = git@github.com:nortonlifelock/domain.git
-[submodule "pkg/files"]
-	path = pkg/files
-	url = git@github.com:nortonlifelock/files.git
-[submodule "pkg/connection"]
-	path = pkg/connection
-	url = git@github.com:nortonlifelock/connection.git

@@ -2,7 +2,7 @@ package connector
 
 import (
 	"fmt"
-	"github.com/nortonlifelock/nexpose"
+	"github.com/nortonlifelock/aegis/pkg/nexpose"
 	"strconv"
 	"time"
 )

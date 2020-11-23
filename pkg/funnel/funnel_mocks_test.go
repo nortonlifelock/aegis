@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/nortonlifelock/log"
+	"github.com/nortonlifelock/aegis/pkg/log"
 	"github.com/pkg/errors"
 )
 

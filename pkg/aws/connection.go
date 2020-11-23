@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/nortonlifelock/domain"
+	"github.com/nortonlifelock/aegis/pkg/domain"
 
 	// Golang sometimes shows errors on this package because the files are too large for it to work, but it compiles and works
 	"github.com/aws/aws-sdk-go/service/ec2"

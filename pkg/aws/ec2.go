@@ -5,7 +5,7 @@ import (
 	"sync"
 
 	"github.com/aws/aws-sdk-go/service/ec2"
-	"github.com/nortonlifelock/domain"
+	"github.com/nortonlifelock/aegis/pkg/domain"
 )
 
 // GetIPTagMapping returns a map, where the first key is an IP address that returns another map

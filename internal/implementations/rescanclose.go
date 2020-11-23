@@ -10,8 +10,8 @@ import (
 	"time"
 
 	"github.com/nortonlifelock/aegis/internal/integrations"
-	"github.com/nortonlifelock/domain"
-	"github.com/nortonlifelock/log"
+	"github.com/nortonlifelock/aegis/pkg/domain"
+	"github.com/nortonlifelock/aegis/pkg/log"
 )
 
 // ScanCloseJob are created by rescan jobs, and do not have to be made by the user

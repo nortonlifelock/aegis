@@ -8,7 +8,7 @@ import (
 	"strings"
 
 	"github.com/nortonlifelock/aegis/internal/database/dal"
-	"github.com/nortonlifelock/domain"
+	"github.com/nortonlifelock/aegis/pkg/domain"
 	"github.com/pkg/errors"
 )
 

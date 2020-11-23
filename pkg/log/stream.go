@@ -3,8 +3,8 @@ package log
 import (
 	"context"
 	"fmt"
-	"github.com/nortonlifelock/connection"
-	"github.com/nortonlifelock/files"
+	"github.com/nortonlifelock/aegis/pkg/connection"
+	"github.com/nortonlifelock/aegis/pkg/files"
 	"github.com/pkg/errors"
 	"io/ioutil"
 	"os"

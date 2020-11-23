@@ -2,7 +2,7 @@ package crypto
 
 import (
 	"fmt"
-	"github.com/nortonlifelock/domain"
+	"github.com/nortonlifelock/aegis/pkg/domain"
 )
 
 // Client manages

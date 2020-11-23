@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/nortonlifelock/domain"
-	"github.com/nortonlifelock/qualys"
+	"github.com/nortonlifelock/aegis/pkg/domain"
+	"github.com/nortonlifelock/aegis/pkg/qualys"
 )
 
 type host struct {

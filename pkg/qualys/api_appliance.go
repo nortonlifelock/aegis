@@ -5,7 +5,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/nortonlifelock/log"
+	"github.com/nortonlifelock/aegis/pkg/log"
 )
 
 // getAvailableAppliances loads Appliances from the Qualys API returning the Network ID of the appliances and filters out

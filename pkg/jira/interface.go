@@ -12,8 +12,8 @@ import (
 	"time"
 
 	"github.com/andygrunwald/go-jira"
-	"github.com/nortonlifelock/domain"
-	"github.com/nortonlifelock/log"
+	"github.com/nortonlifelock/aegis/pkg/domain"
+	"github.com/nortonlifelock/aegis/pkg/log"
 	"github.com/pkg/errors"
 )
 

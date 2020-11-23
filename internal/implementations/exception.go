@@ -7,8 +7,8 @@ import (
 	"time"
 
 	"github.com/nortonlifelock/aegis/internal/integrations"
-	"github.com/nortonlifelock/domain"
-	"github.com/nortonlifelock/log"
+	"github.com/nortonlifelock/aegis/pkg/domain"
+	"github.com/nortonlifelock/aegis/pkg/log"
 )
 
 // ExceptionJob is the struct used to run the job, which implements the IJob interface

@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/nortonlifelock/aegis/internal/config"
-	"github.com/nortonlifelock/crypto"
+	"github.com/nortonlifelock/aegis/pkg/crypto"
 	"golang.org/x/crypto/ssh/terminal"
 	"io/ioutil"
 	"os"

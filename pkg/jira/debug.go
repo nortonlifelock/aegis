@@ -2,7 +2,7 @@ package jira
 
 import (
 	"fmt"
-	"github.com/nortonlifelock/domain"
+	"github.com/nortonlifelock/aegis/pkg/domain"
 	"html"
 	"io/ioutil"
 	"net/http"

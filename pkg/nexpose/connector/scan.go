@@ -1,9 +1,9 @@
 package connector
 
 import (
-	"github.com/nortonlifelock/domain"
-	"github.com/nortonlifelock/log"
-	"github.com/nortonlifelock/nexpose"
+	"github.com/nortonlifelock/aegis/pkg/domain"
+	"github.com/nortonlifelock/aegis/pkg/log"
+	"github.com/nortonlifelock/aegis/pkg/nexpose"
 	"github.com/pkg/errors"
 	"strconv"
 )

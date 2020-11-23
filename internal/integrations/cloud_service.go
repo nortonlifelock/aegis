@@ -2,10 +2,10 @@ package integrations
 
 import (
 	"fmt"
-	"github.com/nortonlifelock/domain"
-	"github.com/nortonlifelock/aws"
-	"github.com/nortonlifelock/azure"
-	"github.com/nortonlifelock/crypto"
+	"github.com/nortonlifelock/aegis/pkg/aws"
+	"github.com/nortonlifelock/aegis/pkg/azure"
+	"github.com/nortonlifelock/aegis/pkg/crypto"
+	"github.com/nortonlifelock/aegis/pkg/domain"
 )
 
 const (

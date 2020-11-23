@@ -3,7 +3,7 @@ package jira
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/nortonlifelock/domain"
+	"github.com/nortonlifelock/aegis/pkg/domain"
 	"github.com/trivago/tgo/tcontainer"
 	"strings"
 	"time"

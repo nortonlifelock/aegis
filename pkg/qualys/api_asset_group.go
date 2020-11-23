@@ -1,7 +1,7 @@
 package qualys
 
 import (
-	"github.com/nortonlifelock/log"
+	"github.com/nortonlifelock/aegis/pkg/log"
 	"strings"
 )
 

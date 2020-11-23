@@ -7,15 +7,15 @@ import (
 	"encoding/json"
 	"encoding/pem"
 	"fmt"
-	"github.com/nortonlifelock/funnel"
+	"github.com/nortonlifelock/aegis/pkg/funnel"
 	"net/http"
 	"net/url"
 	"strings"
 
 	"github.com/andygrunwald/go-jira"
 	"github.com/dghubble/oauth1"
-	"github.com/nortonlifelock/domain"
-	"github.com/nortonlifelock/log"
+	"github.com/nortonlifelock/aegis/pkg/domain"
+	"github.com/nortonlifelock/aegis/pkg/log"
 )
 
 // Create a jira client instance

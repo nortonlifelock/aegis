@@ -3,8 +3,8 @@ package database
 import (
 	"database/sql"
 	"github.com/nortonlifelock/aegis/internal/database/dal"
-	"github.com/nortonlifelock/connection"
-	"github.com/nortonlifelock/domain"
+	"github.com/nortonlifelock/aegis/pkg/connection"
+	"github.com/nortonlifelock/aegis/pkg/domain"
 	"time"
 )
 

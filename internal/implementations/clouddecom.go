@@ -10,8 +10,8 @@ import (
 	"time"
 
 	"github.com/nortonlifelock/aegis/internal/integrations"
-	"github.com/nortonlifelock/domain"
-	"github.com/nortonlifelock/log"
+	"github.com/nortonlifelock/aegis/pkg/domain"
+	"github.com/nortonlifelock/aegis/pkg/log"
 )
 
 // CloudDecommissionJob pulls a history of tracked assets from the database and compares that to a list of live assets as reported
