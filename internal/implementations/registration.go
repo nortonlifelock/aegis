@@ -1,7 +1,7 @@
 package implementations
 
 import (
-	"github.com/nortonlifelock/job"
+	"github.com/nortonlifelock/aegis/pkg/job"
 	"sync"
 )
 

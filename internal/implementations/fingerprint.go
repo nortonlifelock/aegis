@@ -10,7 +10,7 @@ package implementations
 // 	"sync"
 
 // 	"github.com/nortonlifelock/aegis/pkg/domain"
-// 	"github.com/nortonlifelock/job"
+// 	"github.com/nortonlifelock/aegis/pkg/job"
 // 	"github.com/nortonlifelock/shared"
 // 	"github.com/xrash/smetrics"
 // )

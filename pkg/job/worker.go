@@ -2,7 +2,7 @@ package job
 
 import (
 	"context"
-	"github.com/nortonlifelock/log"
+	"github.com/nortonlifelock/aegis/pkg/log"
 	"github.com/pkg/errors"
 )
 

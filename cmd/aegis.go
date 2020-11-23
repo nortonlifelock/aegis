@@ -16,8 +16,8 @@ import (
 	"time"
 
 	_ "github.com/nortonlifelock/aegis/internal/implementations"
+	"github.com/nortonlifelock/aegis/pkg/job"
 	"github.com/nortonlifelock/aegis/pkg/log"
-	"github.com/nortonlifelock/job"
 )
 
 func main() {

@@ -10,8 +10,8 @@ import (
 	"time"
 
 	"github.com/benjivesterby/validator"
-	"github.com/nortonlifelock/domain"
-	"github.com/nortonlifelock/log"
+	"github.com/nortonlifelock/aegis/pkg/domain"
+	"github.com/nortonlifelock/aegis/pkg/log"
 	"github.com/pkg/errors"
 )
 
