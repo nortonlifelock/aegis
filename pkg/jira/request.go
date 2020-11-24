@@ -80,10 +80,12 @@ func (connector *ConnectorJira) getSearchResults(query *Query) (<-chan domain.Ti
 					} else {
 						connector.lstream.Send(log.Errorf(nil, "[%v] was NOT a JIRA issue", res))
 						errChan <- fmt.Errorf("failed to load search result issue for [%s]", query.JQL)
+						break
 					}
 				} else {
 					connector.lstream.Send(log.Error(fmt.Sprintf("error while gathering search results [%s]", query.JQL), err))
 					errChan <- err
+					break
 				}
 
 				startIndex = startIndex + 1000

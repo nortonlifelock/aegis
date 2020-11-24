@@ -94,18 +94,18 @@ func (job *RescanQueueJob) Process(ctx context.Context, id string, appconfig dom
 				if cerfs, err = job.db.GetExceptionsDueNext30Days(); err == nil {
 					var errChan <-chan error
 					issues, errChan = eng.GetTicketsForRescan(cerfs, job.outsource.Source(), orgcode, job.Payload.Type)
-					if err = getFirstErrorFromChannel(errChan); err == nil { //pulls all resolved remediated tickets from jira
-						job.lstream.Send(log.Debugf("[%v] Tickets Loaded for Rescan", len(issues)))
+					job.lstream.Send(log.Debugf("[%v] Tickets Loaded for Rescan", len(issues)))
 
+					if fannedIssues, err := fanInChannel(job.ctx, issues, errChan); err == nil {
 						// exclude issues that are already being processed
 						var cleanedIssues <-chan domain.Ticket
-						if cleanedIssues, err = job.cleanTickets(issues); err == nil {
+						if cleanedIssues, err = job.cleanTickets(fanOutChannel(job.ctx, fannedIssues)); err == nil {
 							job.processCleanedIssues(cleanedIssues)
 						} else {
 							job.lstream.Send(log.Error("Error occurred while sorting tickets to re-scan", err))
 						}
 					} else {
-						job.lstream.Send(log.Error("while retrieving tickets", err))
+						job.lstream.Send(log.Errorf(err, "error while loading tickets"))
 					}
 				} else {
 					job.lstream.Send(log.Errorf(err, "error while gathering exceptions"))
@@ -388,6 +388,7 @@ func (job *RescanQueueJob) cleanTickets(tickets <-chan domain.Ticket) (<-chan do
 				} else {
 					break
 				}
+
 			}
 
 			for groupID, listOfIpsForCloudDecomm := range groupIDToListOfIPsForCloudDecomm {

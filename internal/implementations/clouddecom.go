@@ -132,10 +132,10 @@ func (job *CloudDecommissionJob) decommissionCloudAssets(cloudConnections []inte
 						if sourceIDToSource, err = job.getSourceMap(); err == nil {
 
 							var tickets chan domain.Ticket
-							if tickets, err = job.getTicketsForDecommCheck(assetGroups, sourceIDToSource, ticketingEngine, orgInfo); err == nil {
-								job.closeTicketsForDecommissionedAssets(tickets, deviceIDToDecommissionedDevice, ticketingEngine, sourceIDToSource)
-							}
+							var errs <-chan error
 
+							tickets, errs = job.getTicketsForDecommCheck(assetGroups, sourceIDToSource, ticketingEngine, orgInfo)
+							job.closeTicketsForDecommissionedAssets(tickets, errs, deviceIDToDecommissionedDevice, ticketingEngine, sourceIDToSource)
 							job.findIncorrectlyDecommissionedAssets(deviceIDToDecommissionedDevice)
 						} else {
 							job.lstream.Send(log.Errorf(err, "error while loading sources from database"))
@@ -157,8 +157,10 @@ func (job *CloudDecommissionJob) decommissionCloudAssets(cloudConnections []inte
 	}
 }
 
-func (job *CloudDecommissionJob) getTicketsForDecommCheck(assetGroups []domain.AssetGroup, sourceIDToSource map[string]domain.Source, ticketingEngine integrations.TicketingEngine, orgInfo domain.Organization) (tickets chan domain.Ticket, err error) {
+func (job *CloudDecommissionJob) getTicketsForDecommCheck(assetGroups []domain.AssetGroup, sourceIDToSource map[string]domain.Source, ticketingEngine integrations.TicketingEngine, orgInfo domain.Organization) (tickets chan domain.Ticket, errs <-chan error) {
 	tickets = make(chan domain.Ticket)
+	errOut := make(chan error)
+	errs = errOut
 
 	wg := &sync.WaitGroup{}
 	for _, assetGroup := range assetGroups {
@@ -168,32 +170,38 @@ func (job *CloudDecommissionJob) getTicketsForDecommCheck(assetGroups []domain.A
 			var groupTickets <-chan domain.Ticket
 			var errChan <-chan error
 			groupTickets, errChan = ticketingEngine.GetOpenTicketsByGroupID(vulnSource.Source(), orgInfo.Code(), assetGroup.GroupID())
-			if err = getFirstErrorFromChannel(errChan); err == nil {
+			wg.Add(1)
+			go func(groupTickets <-chan domain.Ticket, errChan <-chan error) {
+				defer handleRoutinePanic(job.lstream)
+				defer wg.Done()
 
-				wg.Add(1)
-				go func(groupTickets <-chan domain.Ticket) {
-					defer handleRoutinePanic(job.lstream)
-					defer wg.Done()
-
-					for {
-						if ticket, ok := <-groupTickets; ok {
+				for {
+					select {
+					case <-job.ctx.Done():
+						return
+					case ticket, ok := <-groupTickets:
+						if ok {
 							select {
 							case <-job.ctx.Done():
 								return
 							case tickets <- ticket:
 							}
 						} else {
-							break
+							return
+						}
+					case err := <-errChan:
+						select {
+						case <-job.ctx.Done():
+							return
+						case errOut <- err:
 						}
 					}
-				}(groupTickets)
-			} else {
-				job.lstream.Send(log.Errorf(err, "error while loading tickets"))
-				break
-			}
+				}
+			}(groupTickets, errChan)
 		} else {
-			err = fmt.Errorf("could not find source with ID [%v]", assetGroup.ScannerSourceID())
+			err := fmt.Errorf("could not find source with ID [%v]", assetGroup.ScannerSourceID())
 			job.lstream.Send(log.Errorf(err, "error while gathering source"))
+			errOut <- err
 			break
 		}
 	}
@@ -201,10 +209,11 @@ func (job *CloudDecommissionJob) getTicketsForDecommCheck(assetGroups []domain.A
 	go func() {
 		defer handleRoutinePanic(job.lstream)
 		defer close(tickets)
+		defer close(errOut)
 		wg.Wait()
 	}()
 
-	return tickets, err
+	return tickets, errs
 }
 
 func (job *CloudDecommissionJob) findIncorrectlyDecommissionedAssets(deviceIDToDecommDevice map[string]domain.Device) {
@@ -249,7 +258,7 @@ func (job *CloudDecommissionJob) findIncorrectlyDecommissionedAssets(deviceIDToD
 	}
 }
 
-func (job *CloudDecommissionJob) closeTicketsForDecommissionedAssets(tickets <-chan domain.Ticket, deviceIDToDecommDevice map[string]domain.Device, ticketingEngine integrations.TicketingEngine, sourceIDToSource map[string]domain.Source) {
+func (job *CloudDecommissionJob) closeTicketsForDecommissionedAssets(tickets <-chan domain.Ticket, errs <-chan error, deviceIDToDecommDevice map[string]domain.Device, ticketingEngine integrations.TicketingEngine, sourceIDToSource map[string]domain.Source) {
 	var deviceAlreadyDecommedInDB sync.Map
 
 	wg := &sync.WaitGroup{}
@@ -312,6 +321,9 @@ func (job *CloudDecommissionJob) closeTicketsForDecommissionedAssets(tickets <-c
 				} else {
 					return
 				}
+
+			case err := <-errs:
+				job.lstream.Send(log.Errorf(err, "error while loading tickets"))
 			}
 		}
 	}()

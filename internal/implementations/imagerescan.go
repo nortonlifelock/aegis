@@ -90,34 +90,34 @@ func (job *ImageRescanJob) processImageFindings(engine integrations.TicketingEng
 		var tickets <-chan domain.Ticket
 		var errChan <-chan error
 		tickets, errChan = engine.GetOpenTicketsByGroupID(job.insource.Source(), job.orgCode, registry)
-		if err = getFirstErrorFromChannel(errChan); err == nil {
-			var findings []domain.ImageFinding
-			if findings, err = scanner.RescanImage(job.ctx, image, registry); err == nil {
-				var findingsAsTickets = make([]domain.Ticket, 0)
-				for index := range findings {
-					finding := findings[index]
+		var findings []domain.ImageFinding
+		if findings, err = scanner.RescanImage(job.ctx, image, registry); err == nil {
+			var findingsAsTickets = make([]domain.Ticket, 0)
+			for index := range findings {
+				finding := findings[index]
 
-					var priority string
-					var dueDate time.Time
-					if priority, dueDate, err = calculateSLAForImageFinding(finding, job.orgPayload); err == nil {
-						findingTic := &ImageFinding{
-							finding,
-							job.insource.Source(),
-							job.orgCode,
-							dueDate,
-							priority,
-						}
-
-						if len(findingTic.DeviceID()) > 0 && len(findingTic.VulnerabilityID()) > 0 {
-							findingsAsTickets = append(findingsAsTickets, findingTic)
-						}
-					} else {
-						job.lstream.Send(log.Errorf(err, "error while calculating priority for ticket"))
+				var priority string
+				var dueDate time.Time
+				if priority, dueDate, err = calculateSLAForImageFinding(finding, job.orgPayload); err == nil {
+					findingTic := &ImageFinding{
+						finding,
+						job.insource.Source(),
+						job.orgCode,
+						dueDate,
+						priority,
 					}
-				}
 
-				findingMap := mapImageFindingsByDeviceIDVulnID(findings)
-				ticketSlice := fanInChannel(tickets)
+					if len(findingTic.DeviceID()) > 0 && len(findingTic.VulnerabilityID()) > 0 {
+						findingsAsTickets = append(findingsAsTickets, findingTic)
+					}
+				} else {
+					job.lstream.Send(log.Errorf(err, "error while calculating priority for ticket"))
+				}
+			}
+
+			findingMap := mapImageFindingsByDeviceIDVulnID(findings)
+			ticketSlice, err := fanInChannel(job.ctx, tickets, errChan)
+			if err == nil {
 				ticketsForImage := make([]domain.Ticket, 0)
 				for index := range ticketSlice {
 					if ticketSlice[index].DeviceID() == image {
@@ -171,7 +171,10 @@ func (job *ImageRescanJob) processImageFindings(engine integrations.TicketingEng
 						job.lstream.Send(log.Errorf(err, "could not find finding [%s] while checking for exceptions", key))
 					}
 				}
+			} else {
+				job.lstream.Send(log.Errorf(err, "error while loading tickets"))
 			}
+
 		}
 	} else {
 		err = fmt.Errorf("registry_image appears to be malformed, expected it to be in the form [REGISTRY;IMAGE]")

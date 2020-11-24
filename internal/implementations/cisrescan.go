@@ -137,42 +137,41 @@ func (job *CISRescanJob) processRuleOnCloud(scanner integrations.CISScanner, eng
 		var tickets <-chan domain.Ticket
 		var errChan <-chan error
 		tickets, errChan = engine.GetOpenTicketsByGroupID(job.insource.Source(), job.orgCode, cloudAccountID)
-		err = getFirstErrorFromChannel(errChan)
-		if err == nil {
+		assignmentInformation, err := job.db.GetCISAssignments(job.config.OrganizationID())
+		if err != nil {
+			job.lstream.Send(log.Errorf(err, "error while loading assignment group information"))
+		}
 
-			assignmentInformation, err := job.db.GetCISAssignments(job.config.OrganizationID())
-			if err != nil {
-				job.lstream.Send(log.Errorf(err, "error while loading assignment group information"))
+		var findingsAsTickets = make([]domain.Ticket, 0)
+		for index := range findings {
+			finding := findings[index]
+
+			findingTic := &FindingWrapper{
+				finding,
+				job,
+				job.getAssignmentGroupForFinding(assignmentInformation, finding),
+				getCategoryBasedOnRule(job.catRules, finding.VulnerabilityTitle(), "", ""),
 			}
 
-			var findingsAsTickets = make([]domain.Ticket, 0)
-			for index := range findings {
-				finding := findings[index]
-
-				findingTic := &FindingWrapper{
-					finding,
-					job,
-					job.getAssignmentGroupForFinding(assignmentInformation, finding),
-					getCategoryBasedOnRule(job.catRules, finding.VulnerabilityTitle(), "", ""),
-				}
-
-				if len(findingTic.DeviceID()) > 0 && len(findingTic.VulnerabilityID()) > 0 {
-					findingsAsTickets = append(findingsAsTickets, findingTic)
-				}
+			if len(findingTic.DeviceID()) > 0 && len(findingTic.VulnerabilityID()) > 0 {
+				findingsAsTickets = append(findingsAsTickets, findingTic)
 			}
+		}
 
-			var assessmentID int
-			if len(findings) > 0 {
-				assessmentID = findings[0].ScanID()
-			}
+		var assessmentID int
+		if len(findings) > 0 {
+			assessmentID = findings[0].ScanID()
+		}
 
+		var fannedInTickets []domain.Ticket
+		if fannedInTickets, err = fanInChannel(job.ctx, tickets, errChan); err == nil {
 			processFindingsAndTickets(
 				job.lstream,
 				job.db,
 				job.config.OrganizationID(),
 				job.insource.SourceID(),
 				engine,
-				fanInChannel(tickets),
+				fannedInTickets,
 				findingsAsTickets,
 				fmt.Sprintf("finding was NOT by %s in assessment [%d]", job.insource.Source(), assessmentID),
 				fmt.Sprintf("finding still detected by %s in assessment [%d]", job.insource.Source(), assessmentID),
@@ -183,6 +182,8 @@ func (job *CISRescanJob) processRuleOnCloud(scanner integrations.CISScanner, eng
 					return strings.ToLower(sord(ticket.Priority())) != "low"
 				},
 			)
+		} else {
+			job.lstream.Send(log.Errorf(err, "error while loading tickets"))
 		}
 	}
 
@@ -637,15 +638,37 @@ func mapTicketsByDeviceIDVulnID(tickets []domain.Ticket, getKey func(ticket doma
 }
 
 // fanInChannel is useful because we want to reuse the ticket information, so we store it in a slice
-func fanInChannel(in <-chan domain.Ticket) (out []domain.Ticket) {
+func fanInChannel(ctx context.Context, in <-chan domain.Ticket, errChan <-chan error) (out []domain.Ticket, err error) {
 	out = make([]domain.Ticket, 0)
 	for {
-		if ticket, ok := <-in; ok {
-			out = append(out, ticket)
-		} else {
-			break
+		select {
+		case <-ctx.Done():
+			return nil, fmt.Errorf("context closed")
+		case err = <-errChan:
+			return nil, err
+		case ticket, ok := <-in:
+			if ok {
+				out = append(out, ticket)
+			} else {
+				return out, err
+			}
 		}
 	}
+}
+
+func fanOutChannel(ctx context.Context, tics []domain.Ticket) <-chan domain.Ticket {
+	out := make(chan domain.Ticket)
+	go func() {
+		defer close(out)
+
+		for index := range tics {
+			select {
+			case <-ctx.Done():
+				return
+			case out <- tics[index]:
+			}
+		}
+	}()
 
 	return out
 }
