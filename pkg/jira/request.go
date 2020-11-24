@@ -43,11 +43,13 @@ func (connector *ConnectorJira) buildPOSTSearchRequest(query *Query, startIndex 
 	return req, err
 }
 
-func (connector *ConnectorJira) getSearchResults(query *Query) <-chan domain.Ticket {
+func (connector *ConnectorJira) getSearchResults(query *Query) (<-chan domain.Ticket, <-chan error) {
 	results := make(chan domain.Ticket)
+	errChan := make(chan error)
 
 	go func(results chan<- domain.Ticket) {
 		defer close(results)
+		defer close(errChan)
 
 		var err error
 		var startIndex int
@@ -77,19 +79,22 @@ func (connector *ConnectorJira) getSearchResults(query *Query) <-chan domain.Tic
 						}
 					} else {
 						connector.lstream.Send(log.Errorf(nil, "[%v] was NOT a JIRA issue", res))
+						errChan <- fmt.Errorf("failed to load search result issue for [%s]", query.JQL)
 					}
 				} else {
 					connector.lstream.Send(log.Error(fmt.Sprintf("error while gathering search results [%s]", query.JQL), err))
+					errChan <- err
 				}
 
 				startIndex = startIndex + 1000
 			}
 		} else {
 			connector.lstream.Send(log.Error(fmt.Sprintf("Error while gathering query total for request [%s]", query.JQL), err))
+			errChan <- err
 		}
 	}(results)
 
-	return results
+	return results, errChan
 }
 
 func (connector *ConnectorJira) getQueryTotal(query *Query) (total int, err error) {
@@ -200,4 +205,14 @@ func newSearchResult() (result *searchResult) {
 	}
 
 	return result
+}
+
+func emptyErrChan(errChan <-chan error) {
+	go func() {
+		for {
+			if _, ok := <-errChan; !ok {
+				break
+			}
+		}
+	}()
 }

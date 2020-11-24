@@ -94,8 +94,6 @@ func (job *ExceptionJob) Process(ctx context.Context, id string, appconfig domai
 				job.lstream.Send(log.Error("error while gathering organization code from the database", err))
 			}
 
-			job.updateCERFExpirationsInDB(eng)
-
 			// TODO this requires further testing - this is only required for detections that are no longer synced which have expired ignores
 			// TODO Synced detections have expired ignores removed
 			_, _, err = job.db.RemoveExpiredIgnoreIDs(job.config.OrganizationID())
@@ -232,31 +230,4 @@ func processExceptionOrFalsePositive(db domain.DatabaseConnection, engine integr
 	//		lstream.Send(log.Errorf(err, "error while loading ignore entry for [%s/%s]", deviceID, vulnID))
 	//	}
 	//}
-}
-
-// This method updates the expiration date of the CERFs in the database that are past the date of the last job start
-func (job *ExceptionJob) updateCERFExpirationsInDB(eng integrations.TicketingEngine) {
-	var err error
-	var cerfUpdates map[string]time.Time
-	// Handle updated CERF tickets
-	if cerfUpdates, err = eng.GetCERFExpirationUpdates(tord1970(job.config.LastJobStart())); err == nil {
-
-		if len(cerfUpdates) > 0 {
-
-			for key := range cerfUpdates {
-				if !cerfUpdates[key].IsZero() {
-					job.lstream.Send(log.Infof("Updating expiration date for exceptions with [%s] to [%s]", key, cerfUpdates[key].Format(time.RFC1123Z)))
-					if _, _, err = job.db.UpdateExpirationDateByCERF(key, job.config.OrganizationID(), cerfUpdates[key]); err != nil {
-						job.lstream.Send(log.Error("error while updating cerf expiration date", err))
-					}
-				} else {
-					// TODO do we want to skip the update? or set the expiration date to a value in the past?
-					job.lstream.Send(log.Infof("Skipping expiration date update for [%s] as it was not set in JIRA", key))
-				}
-			}
-
-		}
-	} else {
-		job.lstream.Send(log.Error("Error when loading CERF expiration updates from JIRA", err))
-	}
 }

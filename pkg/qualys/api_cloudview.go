@@ -140,7 +140,7 @@ func (session *Session) GetCloudAccountEvaluationsWithCloudAccountType(accountID
 		var req *http.Request
 		req, err = http.NewRequest(http.MethodGet, session.Config.Address()+fmt.Sprintf("/cloudview-api/rest/v1/%s/evaluations/%s?pageNo=%d&sortOrder=asc", cloudAccountType, accountID, accPage), nil)
 		if err == nil {
-			err = session.makeRequest(req, func(resp *http.Response) (err error) {
+			err = session.makeRequest(false, req, func(resp *http.Response) (err error) {
 				var body []byte
 				body, err = ioutil.ReadAll(resp.Body)
 				if err == nil {
@@ -178,7 +178,7 @@ func (session *Session) GetCloudEvaluationFindings(accountID string, content Acc
 		var req *http.Request
 		req, err = http.NewRequest(http.MethodGet, session.Config.Address()+fmt.Sprintf("/cloudview-api/rest/v1/%s/evaluations/%s/resources/%s?pageNo=%d&sortOrder=asc", cloudAccountType, accountID, content.ControlID, page), nil)
 		if err == nil {
-			err = session.makeRequest(req, func(resp *http.Response) (err error) {
+			err = session.makeRequest(false, req, func(resp *http.Response) (err error) {
 				var body []byte
 				body, err = ioutil.ReadAll(resp.Body)
 				if err == nil {

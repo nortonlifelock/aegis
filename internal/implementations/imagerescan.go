@@ -88,8 +88,9 @@ func (job *ImageRescanJob) processImageFindings(engine integrations.TicketingEng
 		var image = strings.Split(registryImage, ";")[1]
 
 		var tickets <-chan domain.Ticket
-		tickets, err = engine.GetOpenTicketsByGroupID(job.insource.Source(), job.orgCode, registry)
-		if err == nil {
+		var errChan <-chan error
+		tickets, errChan = engine.GetOpenTicketsByGroupID(job.insource.Source(), job.orgCode, registry)
+		if err = getFirstErrorFromChannel(errChan); err == nil {
 			var findings []domain.ImageFinding
 			if findings, err = scanner.RescanImage(job.ctx, image, registry); err == nil {
 				var findingsAsTickets = make([]domain.Ticket, 0)

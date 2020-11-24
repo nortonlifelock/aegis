@@ -92,7 +92,9 @@ func (job *RescanQueueJob) Process(ctx context.Context, id string, appconfig dom
 				job.lstream.Send(log.Debug("Loading tickets for Rescan"))
 				var cerfs []domain.CERF
 				if cerfs, err = job.db.GetExceptionsDueNext30Days(); err == nil {
-					if issues, err = eng.GetTicketsForRescan(cerfs, job.outsource.Source(), orgcode, job.Payload.Type); err == nil { //pulls all resolved remediated tickets from jira
+					var errChan <-chan error
+					issues, errChan = eng.GetTicketsForRescan(cerfs, job.outsource.Source(), orgcode, job.Payload.Type)
+					if err = getFirstErrorFromChannel(errChan); err == nil { //pulls all resolved remediated tickets from jira
 						job.lstream.Send(log.Debugf("[%v] Tickets Loaded for Rescan", len(issues)))
 
 						// exclude issues that are already being processed

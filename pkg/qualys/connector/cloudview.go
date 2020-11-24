@@ -18,12 +18,12 @@ func (session *QsSession) RescanBundle(policyName string, cloudAccountID string)
 		var lock sync.Mutex
 
 		for _, evaluation := range evaluations {
-			<-permit
 			wg.Add(1)
+			<-permit
 			go func(evaluation qualys.AccountEvaluationContent) {
-				defer wg.Done()
 				defer func() {
 					permit <- true
+					wg.Done()
 				}()
 
 				if evaluationFindings, threadErr := session.apiSession.GetCloudEvaluationFindings(cloudAccountID, evaluation, policyName, cloudAccountType); threadErr == nil {

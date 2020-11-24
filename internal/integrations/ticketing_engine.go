@@ -20,15 +20,12 @@ type TicketingEngine interface {
 	GetTicket(sourceKey string) (ticket domain.Ticket, err error)
 	GetTicketsByClosedStatus(orgCode string, methodOfDiscovery string, startDate time.Time) (tix <-chan domain.Ticket)
 	GetTicketsUpdatedSince(since time.Time, orgCode string, methodOfDiscovery string) <-chan domain.Ticket
-	GetTicketsForRescan(cerfs []domain.CERF, methodOfDiscovery string, orgCode string, algorithm string) (issues <-chan domain.Ticket, err error)
-	GetTicketsByDeviceIDVulnID(methodOfDiscovery string, orgCode string, deviceID string, vulnID string, statuses map[string]bool, port int, protocol string) (issues <-chan domain.Ticket, err error)
-	GetCERFExpirationUpdates(startDate time.Time) (cerfs map[string]time.Time, err error)
-	GetOpenTicketsByGroupID(methodOfDiscovery string, orgCode string, groupID string) (tickets <-chan domain.Ticket, err error)
 
+	GetTicketsForRescan(cerfs []domain.CERF, methodOfDiscovery string, orgCode string, algorithm string) (issues <-chan domain.Ticket, errChan <-chan error)
+	GetOpenTicketsByGroupID(methodOfDiscovery string, orgCode string, groupID string) (tickets <-chan domain.Ticket, errChan <-chan error)
 	GetRelatedTicketsForRescan(tickets []domain.Ticket, groupID string, methodOfDiscovery string, orgCode string, rescanType string) (issues <-chan domain.Ticket, err error)
 
 	AssignmentGroupExists(groupName string) (exists bool, err error)
-
 	GetStatusMap(backendStatus string) (equivalentTicketStatus string)
 }
 

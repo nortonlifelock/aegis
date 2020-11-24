@@ -166,7 +166,9 @@ func (job *CloudDecommissionJob) getTicketsForDecommCheck(assetGroups []domain.A
 		if vulnSource := sourceIDToSource[assetGroup.ScannerSourceID()]; vulnSource != nil {
 
 			var groupTickets <-chan domain.Ticket
-			if groupTickets, err = ticketingEngine.GetOpenTicketsByGroupID(vulnSource.Source(), orgInfo.Code(), assetGroup.GroupID()); err == nil {
+			var errChan <-chan error
+			groupTickets, errChan = ticketingEngine.GetOpenTicketsByGroupID(vulnSource.Source(), orgInfo.Code(), assetGroup.GroupID())
+			if err = getFirstErrorFromChannel(errChan); err == nil {
 
 				wg.Add(1)
 				go func(groupTickets <-chan domain.Ticket) {

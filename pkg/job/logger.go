@@ -2,7 +2,7 @@ package job
 
 import (
 	"fmt"
-	"github.com/nortonlifelock/log"
+	"github.com/nortonlifelock/aegis/pkg/log"
 )
 
 type logger struct {

@@ -740,35 +740,12 @@ func (connector *ConnectorJira) GetTicketsByClosedStatus(orgCode string, methodO
 	return connector.getTicketsByClosedStatus(orgCode, methodOfDiscovery, startDate)
 }
 
-// GetCERFExpirationUpdates returns a map relating CERF tickets to their expiration date. It only grabs tickets that expire after the startDate parameter
-func (connector *ConnectorJira) GetCERFExpirationUpdates(startDate time.Time) (cerfs map[string]time.Time, err error) {
-	cerfs = make(map[string]time.Time)
-
-	var issues <-chan domain.Ticket
-	if issues, err = connector.getCERFExpirationUpdates(startDate); err == nil {
-
-		for {
-
-			if issue, ok := <-issues; ok {
-				if len(issue.Title()) > 0 {
-					cerfs[issue.Title()] = issue.ExceptionExpiration()
-				}
-			} else {
-				break
-			}
-		}
-
-	}
-
-	return cerfs, err
-}
-
 // GetTicketsForRescan returns tickets for the rescan job. The type of rescan job is defined in Algorithm, and controls the tickets that are returned
-func (connector *ConnectorJira) GetTicketsForRescan(cerfs []domain.CERF, MethodOfDiscovery string, OrgCode string, Algorithm string) (tickets <-chan domain.Ticket, err error) {
+func (connector *ConnectorJira) GetTicketsForRescan(cerfs []domain.CERF, MethodOfDiscovery string, OrgCode string, Algorithm string) (tickets <-chan domain.Ticket, errChan <-chan error) {
 	var groupID = "" // empty group ID, as we do not discriminate the tickets we look for based on group ID
 
-	tickets, err = connector.getTicketsForRescan(cerfs, groupID, MethodOfDiscovery, OrgCode, Algorithm)
-	return tickets, err
+	tickets, errChan = connector.getTicketsForRescan(cerfs, groupID, MethodOfDiscovery, OrgCode, Algorithm)
+	return tickets, errChan
 }
 
 // GetTicketsByDeviceIDVulnID returns tickets with the device and vulnerability id provided in the parameters
@@ -780,7 +757,7 @@ func (connector *ConnectorJira) GetTicketsByDeviceIDVulnID(methodOfDiscovery str
 // GetOpenTicketsByGroupID returns tickets with an open status for an organization/method of discovery within a specified group
 // For CIS tickets the entity ID is stored in the deviceID field, the ruleHash is stored in the vulnerabilityID field
 // and the cloudAccountID is stored in the group ID
-func (connector *ConnectorJira) GetOpenTicketsByGroupID(methodOfDiscovery string, orgCode string, groupID string) (tickets <-chan domain.Ticket, err error) {
+func (connector *ConnectorJira) GetOpenTicketsByGroupID(methodOfDiscovery string, orgCode string, groupID string) (tickets <-chan domain.Ticket, errChan <-chan error) {
 	statuses := make(map[string]bool)
 	statuses[connector.GetStatusMap(domain.StatusOpen)] = true
 	statuses[connector.GetStatusMap(domain.StatusReopened)] = true
@@ -792,8 +769,8 @@ func (connector *ConnectorJira) GetOpenTicketsByGroupID(methodOfDiscovery string
 	statuses[connector.GetStatusMap(domain.StatusScanError)] = true
 	statuses[connector.GetStatusMap(domain.StatusClosedException)] = true
 
-	tickets, err = connector.getOpenTicketsByGroupID(statuses, methodOfDiscovery, orgCode, groupID)
-	return tickets, err
+	tickets, errChan = connector.getOpenTicketsByGroupID(statuses, methodOfDiscovery, orgCode, groupID)
+	return tickets, errChan
 }
 
 // GetStatusMap returns the mapped status to the status provided in the parameter. This is required as a JIRA project will have their own custom statuses

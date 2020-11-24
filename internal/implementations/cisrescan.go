@@ -72,21 +72,12 @@ func (job *CISRescanJob) Process(ctx context.Context, id string, appconfig domai
 					if scanner, err = integrations.GetCISScanner(job.ctx, job.insource.Source(), job.db, job.insource, job.appconfig, job.lstream); err == nil {
 
 						if job.catRules, err = job.db.GetCategoryRules(job.config.OrganizationID(), job.insource.SourceID()); err == nil {
-							wg := &sync.WaitGroup{}
 							for _, cloudID := range job.Payload.CloudAccountIDs {
-								wg.Add(1)
-								go func(cloudID string) {
-									defer handleRoutinePanic(job.lstream)
-									defer wg.Done()
-
-									var err error // error is scoped intentionally
-									err = job.processRuleOnCloud(scanner, engine, job.Payload.RuleID, cloudID)
-									if err != nil {
-										job.lstream.Send(log.Errorf(err, "error while processing rule ID [%s] for cloud account [%s]", job.Payload.RuleID, cloudID))
-									}
-								}(cloudID)
+								err = job.processRuleOnCloud(scanner, engine, job.Payload.RuleID, cloudID)
+								if err != nil {
+									job.lstream.Send(log.Errorf(err, "error while processing rule ID [%s] for cloud account [%s]", job.Payload.RuleID, cloudID))
+								}
 							}
-							wg.Wait()
 						} else {
 							err = fmt.Errorf("error while loading category rules [%s]", err.Error())
 						}
@@ -144,7 +135,9 @@ func (job *CISRescanJob) processRuleOnCloud(scanner integrations.CISScanner, eng
 	if err == nil {
 
 		var tickets <-chan domain.Ticket
-		tickets, err = engine.GetOpenTicketsByGroupID(job.insource.Source(), job.orgCode, cloudAccountID)
+		var errChan <-chan error
+		tickets, errChan = engine.GetOpenTicketsByGroupID(job.insource.Source(), job.orgCode, cloudAccountID)
+		err = getFirstErrorFromChannel(errChan)
 		if err == nil {
 
 			assignmentInformation, err := job.db.GetCISAssignments(job.config.OrganizationID())

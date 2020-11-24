@@ -37,7 +37,9 @@ func (connector *ConnectorJira) getTicketsUpdatedSince(since time.Time, orgCode 
 			equals(connector.GetFieldMap(backendMOD), methodOfDiscovery).
 			orderByAscend(connector.GetFieldMap(backendUpdated).Name)
 
-		issues = connector.getSearchResults(q)
+		var errChan <-chan error
+		issues, errChan = connector.getSearchResults(q)
+		emptyErrChan(errChan) // the errors are logged but do not need to be processed by the caller
 	} else {
 		connector.lstream.Send(log.Error("zero date passed to getTicketsUpdatedSince", nil))
 	}
@@ -65,25 +67,13 @@ func (connector *ConnectorJira) getTicketsByClosedStatus(orgCode string, methodO
 		greaterOrEquals(connector.GetFieldMap(backendUpdated), fmt.Sprintf("\"%s\"", startDate.Format(QueryDateTimeFormatJira))).
 		orderByAscend(connector.GetFieldMap(backendUpdated).Name)
 
-	issues = connector.getSearchResults(q)
+	var errChan <-chan error
+	issues, errChan = connector.getSearchResults(q)
+	emptyErrChan(errChan) // the errors are logged but do not need to be processed by the caller
 	return issues
 }
 
-func (connector *ConnectorJira) getCERFExpirationUpdates(startDate time.Time) (issues <-chan domain.Ticket, err error) {
-
-	q := NewQuery().
-		equals(connector.GetFieldMap(backendProject), "CERF").
-		and().
-		greaterOrEquals(connector.GetFieldMap(backendUpdated), fmt.Sprintf("\"%s\"", startDate.Format(QueryDateTimeFormatJira))).
-		orderByAscend(connector.GetFieldMap(backendUpdated).Name)
-
-	q.Size = 200 // for some reason, loading CERFs seems to be a bit harder on JIRA, so we only load 200 at a time to avoid a gateway timeout from JIRA
-	issues = connector.getSearchResults(q)
-
-	return issues, err
-}
-
-func (connector *ConnectorJira) getOpenTicketsByGroupID(statuses map[string]bool, methodOfDiscovery string, orgCode string, groupID string) (issues <-chan domain.Ticket, err error) {
+func (connector *ConnectorJira) getOpenTicketsByGroupID(statuses map[string]bool, methodOfDiscovery string, orgCode string, groupID string) (issues <-chan domain.Ticket, errChan <-chan error) {
 	if len(statuses) > 0 {
 		if len(methodOfDiscovery) > 0 {
 			if len(orgCode) > 0 {
@@ -112,22 +102,34 @@ func (connector *ConnectorJira) getOpenTicketsByGroupID(statuses map[string]bool
 
 					q.endGroup()
 
-					issues = connector.getSearchResults(q)
+					issues, errChan = connector.getSearchResults(q)
 				} else {
-					err = fmt.Errorf("zero length groupID sent to getOpenTicketsByGroupID")
+					out := make(chan error, 1)
+					out <- fmt.Errorf("zero length groupID sent to getOpenTicketsByGroupID")
+					close(out)
+					errChan = out
 				}
 
 			} else {
-				err = fmt.Errorf("zero length orgCode sent to getOpenTicketsByGroupID")
+				out := make(chan error, 1)
+				out <- fmt.Errorf("zero length orgCode sent to getOpenTicketsByGroupID")
+				close(out)
+				errChan = out
 			}
 		} else {
-			err = fmt.Errorf("zero length methodOfDiscovery sent to getOpenTicketsByGroupID")
+			out := make(chan error, 1)
+			out <- fmt.Errorf("zero length methodOfDiscovery sent to getOpenTicketsByGroupID")
+			close(out)
+			errChan = out
 		}
 	} else {
-		err = fmt.Errorf("zero length statuses sent to getOpenTicketsByGroupID")
+		out := make(chan error, 1)
+		out <- fmt.Errorf("zero length statuses sent to getOpenTicketsByGroupID")
+		close(out)
+		errChan = out
 	}
 
-	return issues, err
+	return issues, errChan
 }
 
 func (connector *ConnectorJira) getTicketsByDeviceIDVulnID(methodOfDiscovery string, orgCode string, deviceID string, vulnID string, statuses map[string]bool, port int, protocol string) (issues <-chan domain.Ticket, err error) {
@@ -172,7 +174,9 @@ func (connector *ConnectorJira) getTicketsByDeviceIDVulnID(methodOfDiscovery str
 
 					q.endGroup()
 
-					issues = connector.getSearchResults(q)
+					var errChan <-chan error
+					issues, errChan = connector.getSearchResults(q)
+					emptyErrChan(errChan) // the errors are logged but do not need to be processed by the caller
 				} else {
 					err = errors.New("Must pass more than one status")
 				}
@@ -189,7 +193,7 @@ func (connector *ConnectorJira) getTicketsByDeviceIDVulnID(methodOfDiscovery str
 	return issues, err
 }
 
-func (connector *ConnectorJira) getTicketsForRescan(cerfs []domain.CERF, groupID string, methodOfDiscovery string, orgCode string, algorithm string) (issues <-chan domain.Ticket, err error) {
+func (connector *ConnectorJira) getTicketsForRescan(cerfs []domain.CERF, groupID string, methodOfDiscovery string, orgCode string, algorithm string) (issues <-chan domain.Ticket, errChan <-chan error) {
 
 	if len(methodOfDiscovery) > 0 {
 		if len(orgCode) > 0 {
@@ -198,7 +202,7 @@ func (connector *ConnectorJira) getTicketsForRescan(cerfs []domain.CERF, groupID
 				var status = make(map[string]bool)
 				status[connector.GetStatusMap(domain.StatusClosedException)] = true
 
-				issues, err = connector.getTicketsForExceptionRescan(cerfs, methodOfDiscovery, orgCode, status)
+				issues, errChan = connector.getTicketsForExceptionRescan(cerfs, methodOfDiscovery, orgCode, status)
 				break
 			case domain.RescanPassive:
 				var status = make(map[string]bool)
@@ -207,35 +211,44 @@ func (connector *ConnectorJira) getTicketsForRescan(cerfs []domain.CERF, groupID
 				status[connector.GetStatusMap(domain.StatusReopened)] = true
 				status[connector.GetStatusMap(domain.StatusResolvedException)] = true
 
-				issues, err = connector.getTicketsForPassiveRescan(methodOfDiscovery, orgCode, status)
+				issues, errChan = connector.getTicketsForPassiveRescan(methodOfDiscovery, orgCode, status)
 				break
 			case domain.RescanNormal:
 				var status = make(map[string]bool)
 				status[connector.GetStatusMap(domain.StatusResolvedRemediated)] = true
 
-				issues, err = connector.getTicketsByStatusDueDateAscending(groupID, methodOfDiscovery, orgCode, status)
+				issues, errChan = connector.getTicketsByStatusDueDateAscending(groupID, methodOfDiscovery, orgCode, status)
 				break
 			case domain.RescanDecommission:
 				var status = make(map[string]bool)
 				status[connector.GetStatusMap(domain.StatusResolvedDecom)] = true
 
-				issues, err = connector.getTicketsByStatusDueDateAscending(groupID, methodOfDiscovery, orgCode, status)
+				issues, errChan = connector.getTicketsByStatusDueDateAscending(groupID, methodOfDiscovery, orgCode, status)
 				break
 			default:
-				err = fmt.Errorf("error: unknown algorithm [%s]", algorithm)
+				out := make(chan error, 1)
+				out <- fmt.Errorf("error: unknown algorithm [%s]", algorithm)
+				close(out)
+				errChan = out
 				break
 			}
 		} else {
-			err = fmt.Errorf("error: empty organization code passed to getTicketsForRescan")
+			out := make(chan error, 1)
+			out <- fmt.Errorf("error: empty organization code passed to getTicketsForRescan")
+			close(out)
+			errChan = out
 		}
 	} else {
-		err = fmt.Errorf("error: empty method of discovery passed to getTicketsForRescan")
+		out := make(chan error, 1)
+		out <- fmt.Errorf("error: empty method of discovery passed to getTicketsForRescan")
+		close(out)
+		errChan = out
 	}
 
-	return issues, err
+	return issues, errChan
 }
 
-func (connector *ConnectorJira) getTicketsByStatusDueDateAscending(groupID string, methodOfDiscovery string, orgCode string, statuses map[string]bool) (issues <-chan domain.Ticket, err error) {
+func (connector *ConnectorJira) getTicketsByStatusDueDateAscending(groupID string, methodOfDiscovery string, orgCode string, statuses map[string]bool) (issues <-chan domain.Ticket, errChan <-chan error) {
 	if statuses != nil {
 
 		if len(statuses) > 0 {
@@ -267,17 +280,23 @@ func (connector *ConnectorJira) getTicketsByStatusDueDateAscending(groupID strin
 			q.endGroup().
 				orderByAscend("due")
 
-			issues = connector.getSearchResults(q)
+			issues, errChan = connector.getSearchResults(q)
 		} else {
-			err = errors.New("zero length status slice passed to getTicketsByStatusDueDateAscending")
+			out := make(chan error, 1)
+			out <- errors.New("zero length status slice passed to getTicketsByStatusDueDateAscending")
+			close(out)
+			errChan = out
 		}
 	} else {
-		err = errors.New("nil status slice passed to getTicketsByStatusDueDateAscending")
+		out := make(chan error, 1)
+		out <- errors.New("nil status slice passed to getTicketsByStatusDueDateAscending")
+		close(out)
+		errChan = out
 	}
-	return issues, err
+	return issues, errChan
 }
 
-func (connector *ConnectorJira) getTicketsForPassiveRescan(methodOfDiscovery string, orgCode string, statuses map[string]bool) (issues <-chan domain.Ticket, err error) {
+func (connector *ConnectorJira) getTicketsForPassiveRescan(methodOfDiscovery string, orgCode string, statuses map[string]bool) (issues <-chan domain.Ticket, errChan <-chan error) {
 	if statuses != nil {
 		if len(statuses) > 0 {
 
@@ -299,17 +318,23 @@ func (connector *ConnectorJira) getTicketsForPassiveRescan(methodOfDiscovery str
 				endGroup().
 				orderByAscend("created")
 
-			issues = connector.getSearchResults(q)
+			issues, errChan = connector.getSearchResults(q)
 		} else {
-			err = errors.New("zero length status slice passed to getTicketsByStatusDueDateAscending")
+			out := make(chan error, 1)
+			out <- errors.New("zero length status slice passed to getTicketsByStatusDueDateAscending")
+			close(out)
+			errChan = out
 		}
 	} else {
-		err = errors.New("nil status slice passed to getTicketsByStatusDueDateAscending")
+		out := make(chan error, 1)
+		out <- errors.New("nil status slice passed to getTicketsByStatusDueDateAscending")
+		close(out)
+		errChan = out
 	}
-	return issues, err
+	return issues, errChan
 }
 
-func (connector *ConnectorJira) getTicketsForExceptionRescan(cerfs []domain.CERF, methodOfDiscovery string, orgCode string, statuses map[string]bool) (issues <-chan domain.Ticket, err error) {
+func (connector *ConnectorJira) getTicketsForExceptionRescan(cerfs []domain.CERF, methodOfDiscovery string, orgCode string, statuses map[string]bool) (issues <-chan domain.Ticket, errChan <-chan error) {
 	if statuses != nil {
 
 		if len(statuses) > 0 {
@@ -340,16 +365,23 @@ func (connector *ConnectorJira) getTicketsForExceptionRescan(cerfs []domain.CERF
 
 				q.orderByAscend("created")
 
-				issues = connector.getSearchResults(q)
+				issues, errChan = connector.getSearchResults(q)
 			}
 
 		} else {
-			err = errors.New("zero length status slice passed to getTicketsByStatusDueDateAscending")
+			out := make(chan error, 1)
+			out <- errors.New("zero length status slice passed to getTicketsByStatusDueDateAscending")
+			close(out)
+			errChan = out
 		}
 	} else {
-		err = errors.New("nil status slice passed to getTicketsByStatusDueDateAscending")
+		out := make(chan error, 1)
+		out <- errors.New("nil status slice passed to getTicketsByStatusDueDateAscending")
+		close(out)
+		errChan = out
 	}
-	return issues, err
+
+	return issues, errChan
 }
 
 func (connector *ConnectorJira) getByCustomJQL(JQL string) (issues <-chan domain.Ticket, err error) {
@@ -357,7 +389,9 @@ func (connector *ConnectorJira) getByCustomJQL(JQL string) (issues <-chan domain
 		JQL:  JQL,
 		Size: 1000,
 	}
-	issues = connector.getSearchResults(q)
+	var errChan <-chan error
+	issues, errChan = connector.getSearchResults(q)
+	emptyErrChan(errChan) // the errors are logged but do not need to be processed by the caller
 	return issues, err
 }
 
@@ -366,7 +400,9 @@ func (connector *ConnectorJira) getByCustomJQLChan(JQL string) (issues <-chan do
 		JQL:  JQL,
 		Size: 1000,
 	}
-	issues = connector.getSearchResults(q)
+	var errChan <-chan error
+	issues, errChan = connector.getSearchResults(q)
+	emptyErrChan(errChan) // the errors are logged but do not need to be processed by the caller
 	return issues
 }
 
@@ -593,9 +629,13 @@ func (connector *ConnectorJira) runQueriesForScheduledScan(groupID string, metho
 	var out = make(chan domain.Ticket)
 	go func() {
 		defer close(out)
+		var errChan <-chan error
 		var normalTickets, decommTickets <-chan domain.Ticket
-		if normalTickets, err = connector.getTicketsForRescan(nil, groupID, methodOfDiscovery, orgCode, domain.RescanNormal); err == nil {
-			if decommTickets, err = connector.getTicketsForRescan(nil, groupID, methodOfDiscovery, orgCode, domain.RescanDecommission); err == nil {
+		normalTickets, errChan = connector.getTicketsForRescan(nil, groupID, methodOfDiscovery, orgCode, domain.RescanNormal)
+		if err = getFirstErrorFromChannel(errChan); err == nil {
+
+			decommTickets, errChan = connector.getTicketsForRescan(nil, groupID, methodOfDiscovery, orgCode, domain.RescanDecommission)
+			if err = getFirstErrorFromChannel(errChan); err == nil {
 
 				for {
 					if tic, ok := <-normalTickets; ok {
@@ -646,8 +686,9 @@ func (connector *ConnectorJira) runQueriesForIssues(qs []Query, tickets []domain
 		if qs != nil {
 			//Issues, err = this.mapResultsToIssues(q)
 			for index := range qs {
+				var errChan <-chan error
 				var vulnIssues <-chan domain.Ticket
-				if vulnIssues = connector.getSearchResults(&qs[index]); vulnIssues != nil {
+				if vulnIssues, errChan = connector.getSearchResults(&qs[index]); vulnIssues != nil {
 
 					// TODO we query based on the device ID, which must be accomplished using a contains
 					// this means an incorrect device ID may pass the query if it contains the other device ID
@@ -665,6 +706,8 @@ func (connector *ConnectorJira) runQueriesForIssues(qs []Query, tickets []domain
 				} else {
 					connector.lstream.Send(log.Errorf(err, "error while mapping result to issue [%v]", qs[index]))
 				}
+
+				emptyErrChan(errChan) // the errors are logged but do not need to be processed by the caller
 			}
 		}
 	}()
@@ -693,4 +736,15 @@ func (connector *ConnectorJira) getVulnsFromIssues(issues []domain.Ticket) (vuln
 	}
 
 	return vulnPerDevices, err
+}
+
+func getFirstErrorFromChannel(errChan <-chan error) (err error) {
+	for {
+		var ok bool
+		if err, ok = <-errChan; !ok || err != nil {
+			break
+		}
+	}
+
+	return err
 }

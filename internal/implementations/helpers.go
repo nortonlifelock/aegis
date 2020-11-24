@@ -118,3 +118,14 @@ func getCategoryBasedOnRule(rules []domain.CategoryRule, vulnTitle, vulnCategory
 
 	return category
 }
+
+func getFirstErrorFromChannel(errChan <-chan error) (err error) {
+	var ok bool
+	for {
+		if err, ok = <-errChan; err != nil || !ok {
+			break
+		}
+	}
+
+	return err
+}
