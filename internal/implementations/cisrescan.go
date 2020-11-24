@@ -640,12 +640,15 @@ func mapTicketsByDeviceIDVulnID(tickets []domain.Ticket, getKey func(ticket doma
 // fanInChannel is useful because we want to reuse the ticket information, so we store it in a slice
 func fanInChannel(ctx context.Context, in <-chan domain.Ticket, errChan <-chan error) (out []domain.Ticket, err error) {
 	out = make([]domain.Ticket, 0)
+	var ok bool
 	for {
 		select {
 		case <-ctx.Done():
 			return nil, fmt.Errorf("context closed")
-		case err = <-errChan:
-			return nil, err
+		case err, ok = <-errChan:
+			if ok && err != nil {
+				return nil, err
+			}
 		case ticket, ok := <-in:
 			if ok {
 				out = append(out, ticket)

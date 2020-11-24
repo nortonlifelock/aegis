@@ -189,11 +189,13 @@ func (job *CloudDecommissionJob) getTicketsForDecommCheck(assetGroups []domain.A
 						} else {
 							return
 						}
-					case err := <-errChan:
-						select {
-						case <-job.ctx.Done():
-							return
-						case errOut <- err:
+					case err, ok := <-errChan:
+						if ok {
+							select {
+							case <-job.ctx.Done():
+								return
+							case errOut <- err:
+							}
 						}
 					}
 				}
@@ -322,8 +324,11 @@ func (job *CloudDecommissionJob) closeTicketsForDecommissionedAssets(tickets <-c
 					return
 				}
 
-			case err := <-errs:
-				job.lstream.Send(log.Errorf(err, "error while loading tickets"))
+			case err, ok := <-errs:
+				if ok {
+					job.lstream.Send(log.Errorf(err, "error while loading tickets"))
+				}
+
 			}
 		}
 	}()
