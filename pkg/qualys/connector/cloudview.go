@@ -17,7 +17,7 @@ func (session *QsSession) RescanBundle(policyName string, cloudAccountID string)
 		permit := getPermitThread(10)
 		var lock sync.Mutex
 
-		for _, evaluation := range evaluations {
+		for index := range evaluations {
 			wg.Add(1)
 			<-permit
 			go func(evaluation qualys.AccountEvaluationContent) {
@@ -33,7 +33,7 @@ func (session *QsSession) RescanBundle(policyName string, cloudAccountID string)
 				} else {
 					err = threadErr // only one error needs to make it out, so overwrite isn't concerning
 				}
-			}(evaluation)
+			}(evaluations[index])
 		}
 		wg.Wait()
 	}

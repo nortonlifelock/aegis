@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"strings"
+	"time"
 )
 
 type EvaluationResult struct {
@@ -176,7 +177,7 @@ func (session *Session) GetCloudEvaluationFindings(accountID string, content Acc
 		evaluationResult := &EvaluationResult{}
 
 		var req *http.Request
-		req, err = http.NewRequest(http.MethodGet, session.Config.Address()+fmt.Sprintf("/cloudview-api/rest/v1/%s/evaluations/%s/resources/%s?pageNo=%d&sortOrder=asc", cloudAccountType, accountID, content.ControlID, page), nil)
+		req, err = http.NewRequest(http.MethodGet, session.Config.Address()+fmt.Sprintf("/cloudview-api/rest/v1/%s/evaluations/%s/resources/%s?pageNo=%d&pageSize=10000&sortOrder=asc", cloudAccountType, accountID, content.ControlID, page), nil)
 		if err == nil {
 			err = session.makeRequest(false, req, func(resp *http.Response) (err error) {
 				var body []byte
@@ -274,6 +275,11 @@ func (f *cloudViewFinding) VulnerabilityTitle() string {
 }
 func (f *cloudViewFinding) Priority() string {
 	return strings.Title(strings.ToLower(f.accountContent.Criticality))
+}
+
+func (f *cloudViewFinding) LastFound() time.Time {
+	val, _ := time.Parse("2006-01-02T15:04:05+0000", f.evaluationContent.EvaluatedOn)
+	return val
 }
 
 // String extracts relevant information from the finding
