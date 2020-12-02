@@ -686,7 +686,12 @@ type FindingWrapper struct {
 
 // AlertDate returns the AlertDate of the ticket
 func (wrapper *FindingWrapper) AlertDate() (param *time.Time) {
-	return
+	val := wrapper.Finding.LastFound()
+	if !val.IsZero() {
+		return &val
+	} else {
+		return nil
+	}
 }
 
 // AssignedTo returns the AssignedTo of the ticket

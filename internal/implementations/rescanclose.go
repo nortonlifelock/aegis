@@ -434,9 +434,14 @@ func (job *ScanCloseJob) modifyJiraTicketAccordingToVulnerabilityStatus(engine i
 	// device was explicitly reported dead by the scanner
 	var deviceReportedAsDead = len(deadHostIPToProofMap[sord(ticket.IPAddress())]) > 0 && len(sord(ticket.IPAddress())) > 0
 
-	// certain types of assets have their host data purged when they are decommissioned (EC2/Agent), so if no detections are found for
+	// EC2/Agent assets have their host data purged when they are decommissioned, so if no detections are found for
 	// such devices, it's a good sign that they can be considered dead hosts
 	var deviceWithoutDetectionsLikelyDead bool
+
+	// Agent assets can report data back to Qualys without being scanned. There are instances where Qualys fails to scan an agent
+	// host that is still alive and reports it as dead. Thus, it is best to use the purging rules for Agent assets to tell if a device is decommissioned
+	// instead of relying on the Qualys scan saying it is dead
+	var deviceReportedAsDeadLikelyDead = deviceReportedAsDead // value later set to false if the device is an agent ticket
 
 	var trackingMethod string
 
@@ -454,6 +459,10 @@ func (job *ScanCloseJob) modifyJiraTicketAccordingToVulnerabilityStatus(engine i
 					deviceWithoutDetectionsLikelyDead = true
 				}
 			}
+		}
+
+		if trackingMethod == AgentDevice {
+			deviceReportedAsDeadLikelyDead = false
 		}
 	} else {
 		job.lstream.Send(log.Errorf(err, "error while loading device for %s [%v|%v]", ticket.Title(), err, device))
@@ -478,12 +487,12 @@ func (job *ScanCloseJob) modifyJiraTicketAccordingToVulnerabilityStatus(engine i
 		}
 	}
 
-	if detectionsFoundForDevice || deviceReportedAsDead || deviceWithoutDetectionsLikelyDead {
+	if detectionsFoundForDevice || deviceReportedAsDeadLikelyDead || deviceWithoutDetectionsLikelyDead {
 		switch job.Payload.Type {
 		case domain.RescanNormal:
 			job.processTicketForNormalRescan(deadHostIPToProofMap, ticket, detection, engine, status, inactiveKernel, scan, trackingMethod)
 		case domain.RescanDecommission:
-			job.processTicketForDecommRescan(deadHostIPToProofMap, ticket, detection, engine, scan, status, deviceWithoutDetectionsLikelyDead, deviceReportedAsDead, ipsForCloudDecommissionScan, trackingMethod)
+			job.processTicketForDecommRescan(deadHostIPToProofMap, ticket, detection, engine, scan, status, deviceWithoutDetectionsLikelyDead, deviceReportedAsDeadLikelyDead, ipsForCloudDecommissionScan, trackingMethod)
 		case domain.RescanScheduled:
 			job.processTicketForScheduledScan(ticket, detection, engine, status, inactiveKernel, scan, deviceWithoutDetectionsLikelyDead, ipsForCloudDecommissionScan)
 		case domain.RescanExceptions, domain.RescanPassive:
@@ -541,9 +550,9 @@ func (job *ScanCloseJob) processTicketForPassiveOrExceptionRescan(deadHostIPToPr
 }
 
 // TODO informationals to prevent false decoms?
-func (job *ScanCloseJob) processTicketForDecommRescan(deadHostIPToProofMap map[string]string, ticket domain.Ticket, detection domain.Detection, engine integrations.TicketingEngine, scan domain.ScanSummary, status string, deviceWithoutDetectionsLikelyDead bool, deviceReportedAsDead bool, ipsForCloudDecommissionScan chan<- string, trackingMethod string) {
+func (job *ScanCloseJob) processTicketForDecommRescan(deadHostIPToProofMap map[string]string, ticket domain.Ticket, detection domain.Detection, engine integrations.TicketingEngine, scan domain.ScanSummary, status string, deviceWithoutDetectionsLikelyDead bool, deviceReportedAsDeadLikelyDead bool, ipsForCloudDecommissionScan chan<- string, trackingMethod string) {
 	var err error
-	if deviceWithoutDetectionsLikelyDead || deviceReportedAsDead || (detection != nil && detection.Status() == domain.DeadHost) {
+	if deviceWithoutDetectionsLikelyDead || deviceReportedAsDeadLikelyDead || (detection != nil && detection.Status() == domain.DeadHost) {
 		err = job.closeTicketAccordingToDeviceType(ticket, detection, deadHostIPToProofMap, engine, scan, ipsForCloudDecommissionScan, trackingMethod)
 	} else if detection == nil || status == domain.Fixed || status == domain.Vulnerable {
 		// Decommission scan - this block hitting means that the host wasn't marked as dead, so we should reopen the associated tickets
