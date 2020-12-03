@@ -539,13 +539,18 @@ func (job *CISRescanJob) calculateSLAForCISTicket(severity string) (due time.Tim
 
 type staleTicket struct {
 	domain.Ticket
-	engine integrations.TicketingEngine
+	engine    integrations.TicketingEngine
+	lastFound *time.Time
 }
 
 // LastChecked overrides the domain.Ticket method
 func (t *staleTicket) LastChecked() *time.Time {
 	val := time.Now()
 	return &val
+}
+
+func (t *staleTicket) AlertDate() *time.Time {
+	return t.lastFound
 }
 
 // Status opens the stale ticket if it's in resolved-remediated
@@ -572,6 +577,7 @@ func updateTicketsWithStaleFindings(lstream log.Logger, engine integrations.Tick
 				&staleTicket{
 					pair.ticket,
 					engine,
+					pair.finding.LastChecked(),
 				},
 				updatingComment,
 			)

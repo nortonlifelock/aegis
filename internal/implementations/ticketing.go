@@ -209,55 +209,50 @@ func (job *TicketingJob) Process(ctx context.Context, id string, appconfig domai
 
 			var org domain.Organization
 			if org, err = job.db.GetOrganizationByID(job.config.OrganizationID()); err == nil {
-				var vscanner integrations.Vscanner
-				if vscanner, err = integrations.NewVulnScanner(job.ctx, job.insource.Source(), job.db, job.lstream, job.appconfig, job.insource); vscanner != nil && err == nil {
-					if org != nil {
+				if org != nil {
 
-						// the organization Payload holds the SLA configuration
-						if err = job.buildOrgPayload(org); err == nil {
-							if job.assignmentRules, err = job.loadAssignmentRules(); err == nil {
-								if job.categoryRules, err = job.db.GetCategoryRules(job.config.OrganizationID(), job.insource.SourceID()); err == nil {
-									if job.tagMaps, err = job.db.GetTagMapsByOrg(job.config.OrganizationID()); err == nil {
-										job.lstream.Send(log.Debug("Scanner connection initialized."))
+					// the organization Payload holds the SLA configuration
+					if err = job.buildOrgPayload(org); err == nil {
+						if job.assignmentRules, err = job.loadAssignmentRules(); err == nil {
+							if job.categoryRules, err = job.db.GetCategoryRules(job.config.OrganizationID(), job.insource.SourceID()); err == nil {
+								if job.tagMaps, err = job.db.GetTagMapsByOrg(job.config.OrganizationID()); err == nil {
+									job.lstream.Send(log.Debug("Scanner connection initialized."))
 
-										if len(job.Payload.Devices) > 0 {
-											err = job.ticketDevices(job.Payload.Devices)
-										} else {
-											var groupsToRunTicketingAgainst = make([]string, 0)
-											if len(job.Payload.Groups) == 0 {
-												// if there are no groups specified in the ticketing payload, we ticket all the groups that belong to the organization
-												var assetGroups []domain.AssetGroup
-												if assetGroups, err = job.db.GetAssetGroupsForOrg(job.config.OrganizationID()); err == nil {
-													for _, assetGroup := range assetGroups {
-														groupsToRunTicketingAgainst = append(groupsToRunTicketingAgainst, assetGroup.GroupID())
-													}
-												} else {
-													job.lstream.Send(log.Criticalf(err, "error while loading asset groups for ticketing"))
+									if len(job.Payload.Devices) > 0 {
+										err = job.ticketDevices(job.Payload.Devices)
+									} else {
+										var groupsToRunTicketingAgainst = make([]string, 0)
+										if len(job.Payload.Groups) == 0 {
+											// if there are no groups specified in the ticketing payload, we ticket all the groups that belong to the organization
+											var assetGroups []domain.AssetGroup
+											if assetGroups, err = job.db.GetAssetGroupsForOrg(job.config.OrganizationID()); err == nil {
+												for _, assetGroup := range assetGroups {
+													groupsToRunTicketingAgainst = append(groupsToRunTicketingAgainst, assetGroup.GroupID())
 												}
 											} else {
-												groupsToRunTicketingAgainst = job.Payload.Groups
+												job.lstream.Send(log.Criticalf(err, "error while loading asset groups for ticketing"))
 											}
-
-											err = job.ticketAssetGroups(groupsToRunTicketingAgainst, err)
+										} else {
+											groupsToRunTicketingAgainst = job.Payload.Groups
 										}
-									} else {
-										job.lstream.Send(log.Error("error while loading tag maps", err))
+
+										err = job.ticketAssetGroups(groupsToRunTicketingAgainst, err)
 									}
 								} else {
-									job.lstream.Send(log.Error("error while loading category rules", err))
+									job.lstream.Send(log.Error("error while loading tag maps", err))
 								}
 							} else {
-								job.lstream.Send(log.Errorf(err, "error while loading assignment rules"))
+								job.lstream.Send(log.Error("error while loading category rules", err))
 							}
 						} else {
-							job.lstream.Send(log.Error("error while processing the organization Payload", err))
+							job.lstream.Send(log.Errorf(err, "error while loading assignment rules"))
 						}
-
 					} else {
-						job.lstream.Send(log.Errorf(nil, "Null org object returned."))
+						job.lstream.Send(log.Error("error while processing the organization Payload", err))
 					}
+
 				} else {
-					err = fmt.Errorf("error while creating the vuln scanner: [%v]", err)
+					job.lstream.Send(log.Errorf(nil, "Null org object returned."))
 				}
 			} else {
 				err = fmt.Errorf("could not find organization by this ID: [%s] - %s", job.config.OrganizationID(), err.Error())
