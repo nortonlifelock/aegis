@@ -577,7 +577,7 @@ func updateTicketsWithStaleFindings(lstream log.Logger, engine integrations.Tick
 				&staleTicket{
 					pair.ticket,
 					engine,
-					pair.finding.LastChecked(),
+					pair.finding.AlertDate(),
 				},
 				updatingComment,
 			)

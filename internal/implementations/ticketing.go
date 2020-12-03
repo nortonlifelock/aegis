@@ -903,6 +903,7 @@ func (job *TicketingJob) payloadToTicket(payload *vulnerabilityPayload) (newtix 
 		var vulnerabilityTitle = payload.vuln.Name()
 		var cvss = job.getCVSSScore(payload.vuln)
 		var fullOSName = payload.device.OS()
+		var trackingMethod = payload.device.TrackingMethod()
 		var reportedBy = job.getCachedReportedBy()
 		var created = time.Now()
 		var patchable string
@@ -924,6 +925,7 @@ func (job *TicketingJob) payloadToTicket(payload *vulnerabilityPayload) (newtix 
 			VulnerabilityTitlevar: &vulnerabilityTitle,
 			CVSSvar:               &cvss,
 			Patchablevar:          &patchable,
+			TrackingMethodvar:     trackingMethod,
 
 			OSDetailedvar:      &fullOSName,
 			OperatingSystemvar: &operatingSystem,
