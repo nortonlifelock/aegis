@@ -9,7 +9,7 @@ import (
 	"github.com/nortonlifelock/aegis/internal/config"
 	"github.com/nortonlifelock/aegis/pkg/connection"
 	"github.com/nortonlifelock/aegis/pkg/files"
-	"github.com/nortonlifelock/scaffold"
+	"github.com/nortonlifelock/aegis/pkg/scaffold"
 )
 
 const (

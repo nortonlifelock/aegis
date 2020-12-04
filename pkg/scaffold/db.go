@@ -84,7 +84,7 @@ func dbTypeToGoType(DBType string, size int, imports *map[string]bool, nullable 
 		goType = types[strings.ToUpper(DBType)]
 		if len(goType) == 0 {
 			goType = DBType
-			(*imports)["github.com/nortonlifelock/domain"] = true
+			(*imports)["github.com/nortonlifelock/aegis/pkg/domain"] = true
 			customType = true
 
 			arrayIndex := strings.Index(DBType, "[]")

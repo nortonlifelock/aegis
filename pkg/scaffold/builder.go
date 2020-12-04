@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/nortonlifelock/files"
+	"github.com/nortonlifelock/aegis/pkg/files"
 	"github.com/pkg/errors"
 )
 

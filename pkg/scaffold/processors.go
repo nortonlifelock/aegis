@@ -2,7 +2,7 @@ package scaffold
 
 import (
 	"fmt"
-	"github.com/nortonlifelock/files"
+	"github.com/nortonlifelock/aegis/pkg/files"
 	"go/format"
 	"io/ioutil"
 	"os"
@@ -203,7 +203,7 @@ func generateMockSQLDriver(signatures string, templatePath string, interfaceImpo
 
 		var methods, imports, class, parameters, json string
 
-		imports = "\"github.com/nortonlifelock/domain\""
+		imports = "\"github.com/nortonlifelock/aegis/pkg/domain\""
 
 		parameters = "\tdomain.DatabaseConnection"
 
