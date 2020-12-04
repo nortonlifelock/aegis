@@ -8,7 +8,7 @@ package dal
 
 import (
 	"encoding/json"
-	"github.com/nortonlifelock/aegis/pkg/domain"
+	"github.com/nortonlifelock/domain"
 )
 
 //**********************************************************

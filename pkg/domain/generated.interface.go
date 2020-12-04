@@ -1,7 +1,7 @@
 package domain
 
 import (
-	"github.com/nortonlifelock/aegis/pkg/connection"
+	"github.com/nortonlifelock/pkg/connection"
 
 	"time"
 )

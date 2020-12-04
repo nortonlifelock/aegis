@@ -3,8 +3,8 @@ package database
 import (
 "database/sql"
 "github.com/nortonlifelock/aegis/internal/database/dal"
-"github.com/nortonlifelock/domain"
-"github.com/nortonlifelock/connection"
+"github.com/nortonlifelock/pkg/domain"
+"github.com/nortonlifelock/pkg/connection"
 %imports
 )
 
