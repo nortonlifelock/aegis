@@ -80,10 +80,6 @@ func (job *ImageRescanJob) Process(ctx context.Context, id string, appconfig dom
 								job.lstream.Send(log.Errorf(err, "empty registry;image found in the payload"))
 							}
 						}
-
-						for _, namespace := range job.Payload.ContainerNamespace {
-
-						}
 					}
 				}
 			}
