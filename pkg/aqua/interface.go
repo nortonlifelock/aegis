@@ -13,6 +13,21 @@ const (
 	failed   = "failed"
 )
 
+func (cli *APIClient) RescanContainer(ctx context.Context, namespace string) (findings []domain.ImageFinding, err error) {
+	// TODO exceptions, the mapping will be different here
+
+	var containers []ContainerInfo
+	if containers, err = cli.GetContainersForNamespace(namespace); err == nil {
+		for _, container := range containers {
+			fmt.Println(container)
+		}
+	} else {
+		err = fmt.Errorf("error whiel gathering container info for [%s] - %s", namespace, err.Error())
+	}
+
+	return findings, err
+}
+
 func (cli *APIClient) RescanImage(ctx context.Context, repository string, registry string) (findings []domain.ImageFinding, err error) {
 	findings = make([]domain.ImageFinding, 0)
 
