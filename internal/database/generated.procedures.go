@@ -3022,6 +3022,74 @@ func (conn *dbconn) GetDetectionsInfoForDevice(_DeviceID string) ([]domain.Detec
 	return retDetectionInfo, err
 }
 
+// GetDeviceInfoByAssetIDNoOrg executes the stored procedure GetDeviceInfoByAssetIDNoOrg against the database and returns the read results
+func (conn *dbconn) GetDeviceInfoByAssetIDNoOrg(inAssetID string) (domain.DeviceInfo, error) {
+	var err error
+	var retDeviceInfo domain.DeviceInfo
+
+	conn.Read(&connection.Procedure{
+		Proc:       "GetDeviceInfoByAssetIDNoOrg",
+		Parameters: []interface{}{inAssetID},
+		Callback: func(results interface{}, dberr error) {
+			err = dberr
+
+			if err == nil {
+
+				err = conn.getRows(results,
+					func(rows *sql.Rows) (err error) {
+						if err = rows.Err(); err == nil {
+
+							var myID string
+							var mySourceID *string
+							var myOS string
+							var myMAC string
+							var myIP string
+							var myHostName string
+							var myRegion *string
+							var myGroupID *string
+							var myInstanceID *string
+							var myTrackingMethod *string
+
+							if err = rows.Scan(
+
+								&myID,
+								&mySourceID,
+								&myOS,
+								&myMAC,
+								&myIP,
+								&myHostName,
+								&myRegion,
+								&myGroupID,
+								&myInstanceID,
+								&myTrackingMethod,
+							); err == nil {
+
+								newDeviceInfo := &dal.DeviceInfo{
+									IDvar:             myID,
+									SourceIDvar:       mySourceID,
+									OSvar:             myOS,
+									MACvar:            myMAC,
+									IPvar:             myIP,
+									HostNamevar:       myHostName,
+									Regionvar:         myRegion,
+									GroupIDvar:        myGroupID,
+									InstanceIDvar:     myInstanceID,
+									TrackingMethodvar: myTrackingMethod,
+								}
+
+								retDeviceInfo = newDeviceInfo
+							}
+						}
+
+						return err
+					})
+			}
+		},
+	})
+
+	return retDeviceInfo, err
+}
+
 // GetDeviceInfoByAssetOrgID executes the stored procedure GetDeviceInfoByAssetOrgID against the database and returns the read results
 func (conn *dbconn) GetDeviceInfoByAssetOrgID(inAssetID string, inOrgID string) (domain.DeviceInfo, error) {
 	var err error

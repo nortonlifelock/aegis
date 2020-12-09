@@ -80,6 +80,7 @@ type GeneratedDatabaseConnection interface {
 	GetDetectionStatusByName(_Name string) (DetectionStatus, error)
 	GetDetectionStatuses() ([]DetectionStatus, error)
 	GetDetectionsInfoForDevice(_DeviceID string) ([]DetectionInfo, error)
+	GetDeviceInfoByAssetIDNoOrg(inAssetID string) (DeviceInfo, error)
 	GetDeviceInfoByAssetOrgID(inAssetID string, inOrgID string) (DeviceInfo, error)
 	GetDeviceInfoByCloudSourceIDAndIP(_IP string, _CloudSourceID string, _OrgID string) ([]DeviceInfo, error)
 	GetDeviceInfoByGroupIP(inIP string, inGroupID string, inOrgID string) (DeviceInfo, error)

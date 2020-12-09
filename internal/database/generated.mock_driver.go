@@ -82,6 +82,7 @@ type MockSQLDriver struct {
 	FuncGetDetectionStatusByName                      func(_Name string) (domain.DetectionStatus, error)
 	FuncGetDetectionStatuses                          func() ([]domain.DetectionStatus, error)
 	FuncGetDetectionsInfoForDevice                    func(_DeviceID string) ([]domain.DetectionInfo, error)
+	FuncGetDeviceInfoByAssetIDNoOrg                   func(inAssetID string) (domain.DeviceInfo, error)
 	FuncGetDeviceInfoByAssetOrgID                     func(inAssetID string, inOrgID string) (domain.DeviceInfo, error)
 	FuncGetDeviceInfoByCloudSourceIDAndIP             func(_IP string, _CloudSourceID string, _OrgID string) ([]domain.DeviceInfo, error)
 	FuncGetDeviceInfoByGroupIP                        func(inIP string, inGroupID string, inOrgID string) (domain.DeviceInfo, error)
@@ -716,6 +717,14 @@ func (myMockSQLDriver *MockSQLDriver) GetDetectionStatuses() ([]domain.Detection
 func (myMockSQLDriver *MockSQLDriver) GetDetectionsInfoForDevice(_DeviceID string) ([]domain.DetectionInfo, error) {
 	if myMockSQLDriver.FuncGetDetectionsInfoForDevice != nil {
 		return myMockSQLDriver.FuncGetDetectionsInfoForDevice(_DeviceID)
+	} else {
+		panic("method not implemented") // mock SQL drivers should only be used in testing
+	}
+}
+
+func (myMockSQLDriver *MockSQLDriver) GetDeviceInfoByAssetIDNoOrg(inAssetID string) (domain.DeviceInfo, error) {
+	if myMockSQLDriver.FuncGetDeviceInfoByAssetIDNoOrg != nil {
+		return myMockSQLDriver.FuncGetDeviceInfoByAssetIDNoOrg(inAssetID)
 	} else {
 		panic("method not implemented") // mock SQL drivers should only be used in testing
 	}
