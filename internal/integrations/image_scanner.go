@@ -8,7 +8,8 @@ import (
 )
 
 type IScanner interface {
-	RescanImage(ctx context.Context, image string, groupID string) (findings []domain.ImageFinding, err error)
+	RescanImage(ctx context.Context, image string, registry string) (findings []domain.ImageFinding, err error)
+	RescanContainer(ctx context.Context, namespace string) (findings []domain.ImageFinding, err error)
 	CreateException(finding domain.ImageFinding, comment string) (err error)
 }
 

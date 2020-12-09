@@ -30,8 +30,17 @@ type ImageRescanJob struct {
 }
 
 type ImageRescanPayload struct {
-	RegistryImage     []string `json:"registry_image"`
-	ExceptionAssignee string   `json:"exception_assignee"`
+	// if you want to do ticketing based on registries/images
+	// this doesn't ticket based of live containers running in the wild
+	// this is in the form registry;image for each string. note the ';' delimiter
+	RegistryImage []string `json:"registry_image"`
+
+	// TODO create separate method that pulls of these. don't create new domain object, just add methods, you can use different ticket structs in here if you want them ordered differently
+	// TODO whenever you rescan, include a comment that includes all host information gathered in the most recent scan
+	// TODO make new method to return the object that also includes the relevant container/host information (pointers)
+	ContainerNamespace []string `json:"container_namespaces"`
+
+	ExceptionAssignee string `json:"exception_assignee"`
 }
 
 // buildPayload parses the information from the Payload of the job history entry

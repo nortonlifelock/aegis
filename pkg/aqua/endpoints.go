@@ -8,4 +8,6 @@ const (
 	postCreateException = "/api/v2/risks/acknowledge"
 	getImageScanStatus  = "/scanner/registry/$REGISTRYNAME/image/$IMAGENAME/status"
 	getExceptions       = "/api/v2/risks/vulnerabilities?include_vpatch_info=true&show_negligible=true&hide_base_image=false&acknowledge_status=true"
+
+	getContainersFromNameSpace = "/api/v1/containers?groupby=containers&namespace=$NAMESPACE" // &status=running&page=1&pagesize=50
 )

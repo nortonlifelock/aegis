@@ -20,13 +20,11 @@ require (
 	github.com/google/uuid v1.1.1
 	github.com/gorilla/mux v1.7.4
 	github.com/gorilla/websocket v1.4.1
-	github.com/kr/pretty v0.1.0 // indirect
 	github.com/nortonlifelock/scaffold v1.0.1-0.20200128220520-41da8a42d6d5
 	github.com/pkg/errors v0.9.1
 	github.com/rs/cors v1.7.0
 	github.com/trivago/tgo v1.0.7
 	golang.org/x/crypto v0.0.0-20200128174031-69ecbb4d6d5d
-	gopkg.in/check.v1 v1.0.0-20180628173108-788fd7840127 // indirect
 	gopkg.in/korylprince/go-ad-auth.v2 v2.2.0
 	gopkg.in/ldap.v3 v3.1.0
 )

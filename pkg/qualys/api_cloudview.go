@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"strings"
+	"time"
 )
 
 type EvaluationResult struct {
@@ -117,7 +118,7 @@ func (session *Session) GetCloudAccountEvaluations(accountID string) (evaluation
 				}
 			}
 		} else {
-			err = fmt.Errorf("error while determining cloud account type for evaluation gathering [%s|%s]", accountID, possibleCloudAccountType)
+			err = fmt.Errorf("error while determining cloud account type for evaluation gathering [%s|%s] - %s", accountID, possibleCloudAccountType, err.Error())
 			break
 		}
 	}
@@ -176,7 +177,7 @@ func (session *Session) GetCloudEvaluationFindings(accountID string, content Acc
 		evaluationResult := &EvaluationResult{}
 
 		var req *http.Request
-		req, err = http.NewRequest(http.MethodGet, session.Config.Address()+fmt.Sprintf("/cloudview-api/rest/v1/%s/evaluations/%s/resources/%s?pageNo=%d&sortOrder=asc", cloudAccountType, accountID, content.ControlID, page), nil)
+		req, err = http.NewRequest(http.MethodGet, session.Config.Address()+fmt.Sprintf("/cloudview-api/rest/v1/%s/evaluations/%s/resources/%s?pageNo=%d&pageSize=10000&sortOrder=asc", cloudAccountType, accountID, content.ControlID, page), nil) // TODO qualys sorting does not seem to be working
 		if err == nil {
 			err = session.makeRequest(false, req, func(resp *http.Response) (err error) {
 				var body []byte
@@ -267,13 +268,18 @@ func (f *cloudViewFinding) ScanID() int {
 }
 
 func (f *cloudViewFinding) Summary() string {
-	return fmt.Sprintf("Aegis (%s)", strings.Replace(f.accountContent.ControlName, "\n", "", -1))
+	return fmt.Sprintf("Aegis (%s-%s-%s)", f.accountID, f.DeviceID(), f.VulnerabilityTitle())
 }
 func (f *cloudViewFinding) VulnerabilityTitle() string {
-	return f.accountContent.ControlName
+	return strings.Replace(f.accountContent.ControlName, "\n", "", -1)
 }
 func (f *cloudViewFinding) Priority() string {
 	return strings.Title(strings.ToLower(f.accountContent.Criticality))
+}
+
+func (f *cloudViewFinding) LastFound() time.Time {
+	val, _ := time.Parse("2006-01-02T15:04:05+0000", f.evaluationContent.EvaluatedOn)
+	return val
 }
 
 // String extracts relevant information from the finding

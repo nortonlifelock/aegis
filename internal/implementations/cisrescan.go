@@ -539,13 +539,18 @@ func (job *CISRescanJob) calculateSLAForCISTicket(severity string) (due time.Tim
 
 type staleTicket struct {
 	domain.Ticket
-	engine integrations.TicketingEngine
+	engine    integrations.TicketingEngine
+	lastFound *time.Time
 }
 
 // LastChecked overrides the domain.Ticket method
 func (t *staleTicket) LastChecked() *time.Time {
 	val := time.Now()
 	return &val
+}
+
+func (t *staleTicket) AlertDate() *time.Time {
+	return t.lastFound
 }
 
 // Status opens the stale ticket if it's in resolved-remediated
@@ -572,6 +577,7 @@ func updateTicketsWithStaleFindings(lstream log.Logger, engine integrations.Tick
 				&staleTicket{
 					pair.ticket,
 					engine,
+					pair.finding.AlertDate(),
 				},
 				updatingComment,
 			)
@@ -640,12 +646,15 @@ func mapTicketsByDeviceIDVulnID(tickets []domain.Ticket, getKey func(ticket doma
 // fanInChannel is useful because we want to reuse the ticket information, so we store it in a slice
 func fanInChannel(ctx context.Context, in <-chan domain.Ticket, errChan <-chan error) (out []domain.Ticket, err error) {
 	out = make([]domain.Ticket, 0)
+	var ok bool
 	for {
 		select {
 		case <-ctx.Done():
 			return nil, fmt.Errorf("context closed")
-		case err = <-errChan:
-			return nil, err
+		case err, ok = <-errChan:
+			if ok && err != nil {
+				return nil, err
+			}
 		case ticket, ok := <-in:
 			if ok {
 				out = append(out, ticket)
@@ -683,7 +692,12 @@ type FindingWrapper struct {
 
 // AlertDate returns the AlertDate of the ticket
 func (wrapper *FindingWrapper) AlertDate() (param *time.Time) {
-	return
+	val := wrapper.Finding.LastFound()
+	if !val.IsZero() {
+		return &val
+	} else {
+		return nil
+	}
 }
 
 // AssignedTo returns the AssignedTo of the ticket

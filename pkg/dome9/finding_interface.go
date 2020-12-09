@@ -3,6 +3,7 @@ package dome9
 import (
 	"fmt"
 	"strings"
+	"time"
 )
 
 // Description returns the Description parameter of the ticket
@@ -33,6 +34,10 @@ func (finding *Finding) Priority() (param string) {
 // ScanID returns the ScanID parameter of the ticket
 func (finding *Finding) ScanID() (param int) {
 	return finding.assessmentID
+}
+
+func (finding *Finding) LastFound() (param time.Time) {
+	return time.Time{}
 }
 
 // Summary returns the Summary parameter of the ticket
