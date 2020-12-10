@@ -41,6 +41,7 @@ type CISRescanJob struct {
 type CISRescanPayload struct {
 	RuleID          string   `json:"rule_id"`
 	CloudAccountIDs []string `json:"cloud_accounts"`
+	SkipVulns       []string `json:"skip_vulnerabilities"`
 }
 
 func (job *CISRescanJob) buildPayload(pjson string) (err error) {
@@ -179,6 +180,32 @@ func (job *CISRescanJob) processRuleOnCloud(scanner integrations.CISScanner, eng
 					return fmt.Sprintf("%s;%s", ticket.DeviceID(), ticket.VulnerabilityID())
 				},
 				func(ticket domain.Ticket) bool {
+					for _, vuln := range job.Payload.SkipVulns {
+						if ticket.VulnerabilityID() == vuln {
+
+							if len(ticket.DeviceID()) > 0 && len(ticket.VulnerabilityID()) > 0 {
+								_, _, err = job.db.SaveIgnore(
+									job.insource.SourceID(),
+									job.config.OrganizationID(),
+									domain.Exception,
+									ticket.VulnerabilityID(),
+									ticket.DeviceID(),
+									time.Now().Add(time.Hour*24*30), // every sync gives the due date 30 days
+									fmt.Sprintf("JobID %s", job.id),
+									true,
+									sord(ticket.ServicePorts()),
+								)
+								if err != nil {
+									job.lstream.Send(log.Errorf(err, "error while creating ignore for [%s|%s]", ticket.DeviceID(), ticket.VulnerabilityID()))
+								}
+							}
+
+							job.lstream.Send(log.Infof("skipping vulnerability [%s] on [%s] as it was marked skip in the payload",
+								ticket.VulnerabilityID(), ticket.DeviceID()))
+							return false
+						}
+					}
+
 					return strings.ToLower(sord(ticket.Priority())) != "low"
 				},
 			)
@@ -430,6 +457,8 @@ func createTicketsForUnticketedFindings(db domain.DatabaseConnection, lstream lo
 				if err != nil {
 					lstream.Send(log.Errorf(err, "error while loading ignore entry [%s|%s]", finding.DeviceID(), finding.VulnerabilityID()))
 				}
+
+				// TODO global ignore check
 
 				if ignore == nil {
 
