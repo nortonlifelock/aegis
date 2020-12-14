@@ -166,13 +166,22 @@ func (job *CISRescanJob) processRuleOnCloud(scanner integrations.CISScanner, eng
 
 		var fannedInTickets []domain.Ticket
 		if fannedInTickets, err = fanInChannel(job.ctx, tickets, errChan); err == nil {
+
+			var ticketsForPolicy = make([]domain.Ticket, 0)
+			for index := range fannedInTickets {
+				// we store the policy (BundleID) in the VendorReferences field
+				if sord(fannedInTickets[index].VendorReferences()) == job.Payload.RuleID {
+					ticketsForPolicy = append(ticketsForPolicy, fannedInTickets[index])
+				}
+			}
+
 			processFindingsAndTickets(
 				job.lstream,
 				job.db,
 				job.config.OrganizationID(),
 				job.insource.SourceID(),
 				engine,
-				fannedInTickets,
+				ticketsForPolicy,
 				findingsAsTickets,
 				fmt.Sprintf("finding was NOT by %s in assessment [%d]", job.insource.Source(), assessmentID),
 				fmt.Sprintf("finding still detected by %s in assessment [%d]", job.insource.Source(), assessmentID),
@@ -940,7 +949,8 @@ func (wrapper *FindingWrapper) UpdatedDate() (param *time.Time) {
 
 // VendorReferences returns the VendorReferences of the ticket
 func (wrapper *FindingWrapper) VendorReferences() (param *string) {
-	return
+	val := wrapper.Finding.BundleID()
+	return &val
 }
 
 // VulnerabilityID returns the VulnerabilityID of the ticket

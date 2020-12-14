@@ -56,7 +56,7 @@ func (job *TicketSyncJob) updateTicketsInDB(tics <-chan domain.Ticket) {
 	go func() {
 		orgID := job.config.OrganizationID()
 		wg := &sync.WaitGroup{}
-		permit := getPermitThread(100)
+		permit := getPermitThread(200)
 
 		for {
 			select {
