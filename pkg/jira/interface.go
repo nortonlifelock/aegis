@@ -578,7 +578,7 @@ const assigneeNotFound = -1
 const assigneeInField = 0
 const assigneeInTransition = 1
 
-func (connector *ConnectorJira) findAssigneeLocationAndSeeIfResDateIsRequired(ticketID string, payload TransitionPayload) (assigneeLocation int, resolutionDateRequired bool, err error) {
+func (connector *ConnectorJira) findAssigneeLocationAndSeeIfResDateIsRequired(ticketID string, payload TransitionPayload) (assigneeLocation int, resolutionDateRequired bool, exceptionDateRequired bool, err error) {
 	assigneeLocation = assigneeNotFound
 
 	var req *http.Request
@@ -609,6 +609,9 @@ func (connector *ConnectorJira) findAssigneeLocationAndSeeIfResDateIsRequired(ti
 								resolutionDateRequired = len(obj.Transitions[index].Fields[resolutionDate].Name) > 0
 								// On some transitions required is returned false here, when it is actually required for a transition
 								// maybe if the field is present in this map at all, it's required?
+
+								var exceptionDate = connector.GetFieldMap(backendResolutionDate).getCreateID()
+								exceptionDateRequired = len(obj.Transitions[index].Fields[exceptionDate].Name) > 0
 								break
 							}
 						}
@@ -621,7 +624,7 @@ func (connector *ConnectorJira) findAssigneeLocationAndSeeIfResDateIsRequired(ti
 		err = fmt.Errorf("error while querying JIRA - %s", err.Error())
 	}
 
-	return assigneeLocation, resolutionDateRequired, err
+	return assigneeLocation, resolutionDateRequired, exceptionDateRequired, err
 }
 
 // Transition changes the status of the ticket in JIRA (corresponding to the ticket parameter) to the parameter status

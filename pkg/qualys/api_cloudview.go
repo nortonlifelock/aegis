@@ -207,6 +207,7 @@ func (session *Session) GetCloudEvaluationFindings(accountID string, content Acc
 					evaluationContent: finding,
 					accountContent:    content,
 					accountID:         accountID,
+					policy:            policyName,
 				})
 			}
 		}
@@ -241,6 +242,7 @@ type cloudViewFinding struct {
 	evaluationContent EvaluationResultContent
 	accountContent    AccountEvaluationContent
 	accountID         string
+	policy            string
 }
 
 // ID corresponds to a vulnerability ID
@@ -297,5 +299,5 @@ func (f *cloudViewFinding) String() string {
 
 // not relevant to cloud view
 func (f *cloudViewFinding) BundleID() string {
-	return ""
+	return f.policy
 }

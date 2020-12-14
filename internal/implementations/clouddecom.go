@@ -320,14 +320,29 @@ func (job *CloudDecommissionJob) closeTicketsForDecommissionedAssets(tickets <-c
 							}
 						}(tic)
 					} else {
-						// if we're not going to reopen the ticket, we comment on it to show that the ticket was covered in a decommission job but found alive
-						_, _, err := ticketingEngine.UpdateTicket(tic, fmt.Sprintf("IP address [%s] still found in %s asset inventory", sord(tic.IPAddress()), job.insources[0].Source()))
-						if err != nil {
-							job.lstream.Send(log.Errorf(err, "error while commenting on %s", tic.Title()))
+						var shouldUpdateTicket bool
+						if len(job.Payload.OnlyCheckIPs) == 0 {
+							// if we're not checking for specific IPs, comment on all the tickets
+							shouldUpdateTicket = true
+						} else {
+							// if we're only checking for specific IPs, only comment on tickets with one of those specific IPs
+							for _, checkIP := range job.Payload.OnlyCheckIPs {
+								if checkIP == sord(tic.IPAddress()) && len(checkIP) > 0 {
+									shouldUpdateTicket = true
+								}
+							}
 						}
 
-						job.lstream.Send(log.Infof("Ticket [%s] had it's ip [%s] found in the cloud inventory",
-							tic.Title(), sord(tic.IPAddress())))
+						if shouldUpdateTicket {
+							// if we're not going to reopen the ticket, we comment on it to show that the ticket was covered in a decommission job but found alive
+							_, _, err := ticketingEngine.UpdateTicket(tic, fmt.Sprintf("IP address [%s] still found in %s asset inventory", sord(tic.IPAddress()), job.insources[0].Source()))
+							if err != nil {
+								job.lstream.Send(log.Errorf(err, "error while commenting on %s", tic.Title()))
+							}
+
+							job.lstream.Send(log.Infof("Ticket [%s] had it's ip [%s] found in the cloud inventory",
+								tic.Title(), sord(tic.IPAddress())))
+						}
 					}
 				} else {
 					return
