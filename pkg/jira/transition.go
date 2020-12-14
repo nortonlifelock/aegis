@@ -127,6 +127,10 @@ func executeTransition(transition workflowTransition, assignTo string, connector
 		}
 
 		if exceptionExpirationRequired && !ticket.ExceptionExpiration().IsZero() {
+			if tpayload.fields == nil {
+				tpayload.fields = &FieldStruct{}
+			}
+
 			tpayload.fields.ExceptionExpirationDate = ticket.ExceptionExpiration().Format("2006-01-02T15:04:05.000+0000")
 		}
 

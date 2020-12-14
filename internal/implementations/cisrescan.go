@@ -39,7 +39,7 @@ type CISRescanJob struct {
 // The RuleID points towards a bundle for Dome9, or a policy name for Cloud View, which holds a series of rules
 // The cloud account IDs points to the cloud account (e.g. AWS/Azure) that we which to test the rules against
 type CISRescanPayload struct {
-	RuleID          string   `json:"rule_id"`
+	RuleIDs         []string `json:"rule_ids"`
 	CloudAccountIDs []string `json:"cloud_accounts"`
 	SkipVulns       []string `json:"skip_vulnerabilities"`
 }
@@ -73,12 +73,16 @@ func (job *CISRescanJob) Process(ctx context.Context, id string, appconfig domai
 					if scanner, err = integrations.GetCISScanner(job.ctx, job.insource.Source(), job.db, job.insource, job.appconfig, job.lstream); err == nil {
 
 						if job.catRules, err = job.db.GetCategoryRules(job.config.OrganizationID(), job.insource.SourceID()); err == nil {
-							for _, cloudID := range job.Payload.CloudAccountIDs {
-								err = job.processRuleOnCloud(scanner, engine, job.Payload.RuleID, cloudID)
-								if err != nil {
-									job.lstream.Send(log.Errorf(err, "error while processing rule ID [%s] for cloud account [%s]", job.Payload.RuleID, cloudID))
+
+							for _, ruleID := range job.Payload.RuleIDs {
+								for _, cloudID := range job.Payload.CloudAccountIDs {
+									err = job.processRuleOnCloud(scanner, engine, ruleID, cloudID)
+									if err != nil {
+										job.lstream.Send(log.Errorf(err, "error while processing rule ID [%s] for cloud account [%s]", ruleID, cloudID))
+									}
 								}
 							}
+
 						} else {
 							err = fmt.Errorf("error while loading category rules [%s]", err.Error())
 						}
@@ -170,7 +174,7 @@ func (job *CISRescanJob) processRuleOnCloud(scanner integrations.CISScanner, eng
 			var ticketsForPolicy = make([]domain.Ticket, 0)
 			for index := range fannedInTickets {
 				// we store the policy (BundleID) in the VendorReferences field
-				if sord(fannedInTickets[index].VendorReferences()) == job.Payload.RuleID {
+				if sord(fannedInTickets[index].VendorReferences()) == ruleID {
 					ticketsForPolicy = append(ticketsForPolicy, fannedInTickets[index])
 				}
 			}
