@@ -236,7 +236,7 @@ func createTicketSourceConfig(reader *bufio.Reader, aesClient crypto.Client, db 
 			"Assignment Group":       "Assignment Group",
 			"Resolution Date":        "Resolution Date",
 			"Operating System":       "Operating System",
-			"Vulnerablility":         "Vulnerablility",
+			"Vulnerability":          "Vulnerability",
 			"cvss_score":             "cvss_score",
 			"VulnerabilityID":        "VulnerabilityID",
 			"GroupID":                "GroupID",
