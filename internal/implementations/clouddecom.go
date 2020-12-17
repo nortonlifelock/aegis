@@ -328,7 +328,11 @@ func (job *CloudDecommissionJob) closeTicketsForDecommissionedAssets(tickets <-c
 							// if we're only checking for specific IPs, only comment on tickets with one of those specific IPs
 							for _, checkIP := range job.Payload.OnlyCheckIPs {
 								if checkIP == sord(tic.IPAddress()) && len(checkIP) > 0 {
-									shouldUpdateTicket = true
+									if sord(tic.Status()) == ticketingEngine.GetStatusMap(domain.StatusResolvedRemediated) ||
+										sord(tic.Status()) == ticketingEngine.GetStatusMap(domain.StatusResolvedDecom) ||
+										sord(tic.Status()) == ticketingEngine.GetStatusMap(domain.StatusApprovedException) {
+										shouldUpdateTicket = true
+									}
 								}
 							}
 						}

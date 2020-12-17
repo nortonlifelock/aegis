@@ -46,7 +46,7 @@ const (
 	StatusResolvedException = "Resolved-Exception"
 
 	// StatusClosedException is the status of a ticket which does not need to have the vulnerability remediated
-	StatusClosedException = "Closed-Exception"
+	StatusApprovedException = "Closed-Exception"
 
 	// StatusResolvedDecom is the status of a ticket for a vulnerability on a device that is no longer active but not confirmed by a scanner
 	StatusResolvedDecom = "Resolved-Decommissioned"

@@ -134,7 +134,7 @@ func processExceptionOrFalsePositive(db domain.DatabaseConnection, engine integr
 	var vulnID = ticket.VulnerabilityID()
 	var ignoreSaved bool
 
-	if sord(ticket.Status()) == engine.GetStatusMap(domain.StatusClosedException) {
+	if sord(ticket.Status()) == engine.GetStatusMap(domain.StatusApprovedException) {
 		if len(ticket.CERF()) > 0 && ticket.CERF() != "Empty" {
 			if ticket.ExceptionExpiration().After(time.Now()) {
 

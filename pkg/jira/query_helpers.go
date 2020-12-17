@@ -56,7 +56,7 @@ func (connector *ConnectorJira) getTicketsByClosedStatus(orgCode string, methodO
 		and().
 		beginGroup().
 		beginGroup().
-		equals(connector.GetFieldMap(backendStatus), connector.GetStatusMap(domain.StatusClosedException)).
+		equals(connector.GetFieldMap(backendStatus), connector.GetStatusMap(domain.StatusApprovedException)).
 		and().
 		notEmpty(connector.GetFieldMap(backendCERF)).
 		endGroup().
@@ -200,7 +200,7 @@ func (connector *ConnectorJira) getTicketsForRescan(cerfs []domain.CERF, groupID
 			switch algorithm {
 			case domain.RescanExceptions:
 				var status = make(map[string]bool)
-				status[connector.GetStatusMap(domain.StatusClosedException)] = true
+				status[connector.GetStatusMap(domain.StatusApprovedException)] = true
 
 				issues, errChan = connector.getTicketsForExceptionRescan(cerfs, methodOfDiscovery, orgCode, status)
 				break
@@ -535,7 +535,7 @@ func (connector *ConnectorJira) getDeviceTicketsQueries(issues []domain.Ticket) 
 		var statuses = []string{
 			connector.GetStatusMap(domain.StatusOpen), connector.GetStatusMap(domain.StatusReopened), connector.GetStatusMap(domain.StatusInProgress),
 			connector.GetStatusMap(domain.StatusResolvedRemediated), connector.GetStatusMap(domain.StatusResolvedFalsePositive), connector.GetStatusMap(domain.StatusResolvedDecom), connector.GetStatusMap(domain.StatusResolvedException),
-			connector.GetStatusMap(domain.StatusClosedException), connector.GetStatusMap(domain.StatusClosedFalsePositive),
+			connector.GetStatusMap(domain.StatusApprovedException), connector.GetStatusMap(domain.StatusClosedFalsePositive),
 		}
 
 		//This map is created to not process the same device_ID again if exist in another issue

@@ -770,7 +770,7 @@ func (connector *ConnectorJira) GetOpenTicketsByGroupID(methodOfDiscovery string
 	statuses[connector.GetStatusMap(domain.StatusResolvedException)] = true
 	statuses[connector.GetStatusMap(domain.StatusResolvedFalsePositive)] = true
 	statuses[connector.GetStatusMap(domain.StatusScanError)] = true
-	statuses[connector.GetStatusMap(domain.StatusClosedException)] = true
+	statuses[connector.GetStatusMap(domain.StatusApprovedException)] = true
 
 	tickets, errChan = connector.getOpenTicketsByGroupID(statuses, methodOfDiscovery, orgCode, groupID)
 	return tickets, errChan
