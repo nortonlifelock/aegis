@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/nortonlifelock/aegis/pkg/domain"
+	"github.com/nortonlifelock/aegis/pkg/log"
 	"io/ioutil"
 	"net/http"
 	"strings"
@@ -202,7 +203,7 @@ func (session *Session) GetCloudEvaluationFindings(accountID string, content Acc
 		)
 
 		for _, finding := range evaluationResult.Content {
-			if finding.Result != fixedFinding && !evidenceHasError(finding) && accountContentHasPolicy(policyName, content) {
+			if finding.Result != fixedFinding && !evidenceHasError(finding) && accountContentHasPolicy(policyName, content) && findingIsFresh(finding, session.lstream) {
 				findings = append(findings, &cloudViewFinding{
 					evaluationContent: finding,
 					accountContent:    content,
@@ -214,6 +215,27 @@ func (session *Session) GetCloudEvaluationFindings(accountID string, content Acc
 	}
 
 	return findings, err
+}
+
+// Sometimes the locations of the findings can be deleted (e.g. VM taken down) but the findings persist in CloudView
+// Because evaluations should occur every couple hours, we consider a finding "stale" if it hasn't been found in 24 hrs
+func findingIsFresh(finding EvaluationResultContent, lstream log.Logger) (fresh bool) {
+	fresh = true
+	const timeFormat = "2006-01-02T15:04:05-0700"
+	val, err := time.Parse(timeFormat, finding.EvaluatedOn)
+	if err == nil {
+		if !val.IsZero() {
+			if time.Since(val) > time.Hour*24 {
+				fresh = false
+			}
+		} else {
+			lstream.Send(log.Errorf(err, "empty evaluation date found for [%s|%s]", finding.ResourceID, finding.AccountID))
+		}
+	} else {
+		lstream.Send(log.Errorf(err, "error parsing evaluation date found for [%s|%s]", finding.ResourceID, finding.AccountID))
+	}
+
+	return fresh
 }
 
 func accountContentHasPolicy(policyName string, content AccountEvaluationContent) (hasPolicy bool) {
