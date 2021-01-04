@@ -76,6 +76,7 @@ func (job *CISRescanJob) Process(ctx context.Context, id string, appconfig domai
 
 							for _, ruleID := range job.Payload.RuleIDs {
 								for _, cloudID := range job.Payload.CloudAccountIDs {
+									job.lstream.Send(log.Infof("Processing [%s] on [%s]", ruleID, cloudID))
 									err = job.processRuleOnCloud(scanner, engine, ruleID, cloudID)
 									if err != nil {
 										job.lstream.Send(log.Errorf(err, "error while processing rule ID [%s] for cloud account [%s]", ruleID, cloudID))
@@ -163,9 +164,18 @@ func (job *CISRescanJob) processRuleOnCloud(scanner integrations.CISScanner, eng
 			}
 		}
 
+		var closingComment, reopenComment string
 		var assessmentID int
 		if len(findings) > 0 {
 			assessmentID = findings[0].ScanID()
+		}
+
+		if assessmentID > 0 {
+			closingComment = fmt.Sprintf("finding was NOT by %s in assessment [%d]", job.insource.Source(), assessmentID)
+			reopenComment = fmt.Sprintf("finding still detected by %s in assessment [%d]", job.insource.Source(), assessmentID)
+		} else {
+			closingComment = fmt.Sprintf("finding was NOT by %s", job.insource.Source())
+			reopenComment = fmt.Sprintf("finding still detected by %s", job.insource.Source())
 		}
 
 		var fannedInTickets []domain.Ticket
@@ -187,8 +197,8 @@ func (job *CISRescanJob) processRuleOnCloud(scanner integrations.CISScanner, eng
 				engine,
 				ticketsForPolicy,
 				findingsAsTickets,
-				fmt.Sprintf("finding was NOT by %s in assessment [%d]", job.insource.Source(), assessmentID),
-				fmt.Sprintf("finding still detected by %s in assessment [%d]", job.insource.Source(), assessmentID),
+				closingComment,
+				reopenComment,
 				func(ticket domain.Ticket) string {
 					return fmt.Sprintf("%s;%s", ticket.DeviceID(), ticket.VulnerabilityID())
 				},
