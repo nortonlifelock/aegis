@@ -170,12 +170,6 @@ func getFieldMaps(w http.ResponseWriter, r *http.Request) {
 							var backendFieldsAndCustomFields backendFieldsAndCustomFields
 							backendFieldsAndCustomFields.CustomFields = customFields
 							backendFieldsAndCustomFields.BackendFields = jira.MappableFields
-
-							// TODO CERFEXPIRATION is not returned from the API because it is not a part of the Aegis project
-							// TODO we grab the expiration date from the CERF project and use it to populate the field
-							const backendCERFExpiration = "Actual Expiration Date"
-							backendFieldsAndCustomFields.CustomFields = append(backendFieldsAndCustomFields.CustomFields, backendCERFExpiration)
-
 							trans.status = http.StatusOK
 							trans.obj = backendFieldsAndCustomFields
 
@@ -399,10 +393,12 @@ func setCountStatusLabelForStatus(connector *jira.ConnectorJira, status string, 
 	var err error
 	var queryData domain.QueryData
 	if queryData, err = Ms.GetTicketCountByStatus(status, orgID); err == nil {
-		labelLock.Lock()
-		*statusLabels = append(*statusLabels, fmt.Sprintf("%s - (%d)", status, queryData.Length()))
-		*countLabels = append(*countLabels, queryData.Length())
-		labelLock.Unlock()
+		if queryData.Length() > 0 {
+			labelLock.Lock()
+			*statusLabels = append(*statusLabels, fmt.Sprintf("%s - (%d)", status, queryData.Length()))
+			*countLabels = append(*countLabels, queryData.Length())
+			labelLock.Unlock()
+		}
 	} else {
 		fmt.Println(err.Error())
 	}

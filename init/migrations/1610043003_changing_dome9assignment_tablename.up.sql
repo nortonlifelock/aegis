@@ -1,0 +1,1 @@
+RENAME TABLE Dome9Assignment TO CISAssignmentRules;

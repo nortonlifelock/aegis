@@ -19,5 +19,5 @@ SELECT
     D.RuleRegex,
     D.RuleHash,
     D.AssignmentGroup
-FROM Dome9Assignment D
+FROM CISAssignmentRules D
 WHERE D.OrganizationID = _OrganizationID;

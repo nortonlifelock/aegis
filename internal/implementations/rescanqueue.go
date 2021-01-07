@@ -442,7 +442,9 @@ func (job *RescanQueueJob) agentTicketIsReadyForRescan(ticket domain.Ticket) (re
 			}
 		}
 	} else {
-		job.lstream.Send(log.Errorf(err, "error while loading tracking method for [%s]", ticket.Title()))
+		if err != nil {
+			job.lstream.Send(log.Errorf(err, "error while loading tracking method for [%s]", ticket.Title()))
+		}
 	}
 
 	return readyForRescan
