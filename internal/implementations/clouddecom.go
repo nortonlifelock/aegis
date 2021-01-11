@@ -300,9 +300,9 @@ func (job *CloudDecommissionJob) closeTicketsForDecommissionedAssets(tickets <-c
 								}
 							}
 						}(tic)
-					} else if sord(tic.Status()) == ticketingEngine.GetStatusMap(domain.StatusResolvedDecom) {
-						// this block hits if we have a ticket that was marked as resolved-decommissioned, but was
-						// found in the cloud asset inventory
+					} else if sord(tic.Status()) == ticketingEngine.GetStatusMap(domain.StatusResolvedDecom) || sord(tic.Status()) == ticketingEngine.GetStatusMap(domain.StatusResolvedRemediated) {
+						// this block hits if we have a ticket that was marked as resolved-decommissioned/remediated, but was
+						// found in the cloud asset inventory. these tickets should be reopened
 
 						wg.Add(1)
 						go func(tic domain.Ticket) {
@@ -320,6 +320,8 @@ func (job *CloudDecommissionJob) closeTicketsForDecommissionedAssets(tickets <-c
 							}
 						}(tic)
 					} else {
+						// these tickets shouldn't be reopened or closed, but we comment that the devices were found if they were resolved
+
 						var shouldUpdateTicket bool
 						if len(job.Payload.OnlyCheckIPs) == 0 {
 							// if we're not checking for specific IPs, comment on all the tickets

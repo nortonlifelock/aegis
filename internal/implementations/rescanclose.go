@@ -707,26 +707,18 @@ func (job *ScanCloseJob) markDeviceAsDecommissionedInDatabase(ticket domain.Tick
 	// we use a sync map to ensure we only decommission a device a single time. if loaded has a value of false, then this is the first time the device was found
 	if _, loaded := job.decommedDevices.LoadOrStore(ticket.DeviceID(), true); !loaded {
 		job.lstream.Send(log.Infof("Marking device for ticket [%s] as decommissioned in the database", ticket.Title()))
-		if _, _, err = job.db.DeleteIgnoreForDevice(
+		if _, _, err = job.db.SaveIgnore(
 			job.insource.SourceID(),
+			job.config.OrganizationID(),
+			domain.DecommAsset,
+			"", // empty on purpose
 			ticket.DeviceID(),
-			job.config.OrganizationID()); err == nil {
+			time.Now(),
+			"",
+			true,
+			""); err != nil {
 
-			if _, _, err = job.db.SaveIgnore(
-				job.insource.SourceID(),
-				job.config.OrganizationID(),
-				domain.DecommAsset,
-				"", // empty on purpose
-				ticket.DeviceID(),
-				time.Now(),
-				"",
-				true,
-				""); err != nil {
-
-				job.lstream.Send(log.Errorf(err, "Error while updating exception with asset Id  %s: %s", ticket.DeviceID(), err.Error()))
-			}
-		} else {
-			job.lstream.Send(log.Errorf(err, "error while deleting old entries in the ignore table for the device associated with the ticket [%s]", ticket.Title()))
+			job.lstream.Send(log.Errorf(err, "Error while updating exception with asset Id  %s: %s", ticket.DeviceID(), err.Error()))
 		}
 	}
 
