@@ -27,4 +27,4 @@ WHERE
       T.Status != 'Closed-NA' and
       D.DeviceID IN (select AssetID from Device where IP = _IP) and
       D.VulnerabilityID = (select ID from VulnerabilityInfo where SourceVulnID = _VulnID)
-order by Created desc;
+order by T.Created desc;
