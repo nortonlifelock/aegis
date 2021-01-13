@@ -75,6 +75,7 @@ type MockSQLDriver struct {
 	FuncGetDetectionInfo                              func(_DeviceID string, _VulnerabilityID string, _Port int, _Protocol string) (domain.DetectionInfo, error)
 	FuncGetDetectionInfoAfter                         func(_After time.Time, _OrgID string) ([]domain.DetectionInfo, error)
 	FuncGetDetectionInfoByID                          func(_ID string, _OrgID string) (domain.DetectionInfo, error)
+	FuncGetDetectionInfoByIPVulnID                    func(_IP string, _VulnID string) ([]domain.DetectionInfo, error)
 	FuncGetDetectionInfoBySourceVulnID                func(_SourceDeviceID string, _SourceVulnerabilityID string, _Port int, _Protocol string) (domain.DetectionInfo, error)
 	FuncGetDetectionInfoForDeviceID                   func(inDeviceID string, _OrgID string, ticketInactiveKernels bool) ([]domain.DetectionInfo, error)
 	FuncGetDetectionInfoForGroupAfter                 func(_LastUpdatedAfter time.Time, _LastFoundAfter time.Time, _OrgID string, inGroupID string, ticketInactiveKernels bool) ([]domain.DetectionInfo, error)
@@ -99,6 +100,7 @@ type MockSQLDriver struct {
 	FuncGetExceptionsDueNext30Days                    func() ([]domain.CERF, error)
 	FuncGetExceptionsLength                           func(_offset int, _limit int, _orgID string, _sortField string, _sortOrder string, _Title string, _IP string, _Hostname string, _VulnID string, _Approval string, _DueDate string, _AssignmentGroup string, _OS string, _OSRegex string, _TypeID int) (domain.QueryData, error)
 	FuncGetGlobalExceptions                           func(_OrgID string) ([]domain.Ignore, error)
+	FuncGetIgnoreByIPVulnID                           func(_IP string, _VulnID string) ([]domain.Ignore, error)
 	FuncGetJobByID                                    func(_ID int) (domain.JobRegistration, error)
 	FuncGetJobConfig                                  func(_ID string) (domain.JobConfig, error)
 	FuncGetJobConfigAudit                             func(inJobConfigID string, inOrgID string) ([]domain.JobConfigAudit, error)
@@ -151,6 +153,7 @@ type MockSQLDriver struct {
 	FuncGetTicketByDetectionID                        func(inDetectionID string, _OrgID string) (domain.TicketSummary, error)
 	FuncGetTicketByDeviceIDVulnID                     func(inDeviceID string, inVulnID string, inPort int, inProtocol string, inOrgID string) (domain.TicketSummary, error)
 	FuncGetTicketByIPGroupIDVulnID                    func(inIP string, inGroupID string, inVulnID string, inPort int, inProtocol string, inOrgID string) (domain.TicketSummary, error)
+	FuncGetTicketByIPVulnID                           func(_IP string, _VulnID string) ([]domain.TicketSummary, error)
 	FuncGetTicketByTitle                              func(_Title string, _OrgID string) (domain.TicketSummary, error)
 	FuncGetTicketCountByStatus                        func(inStatus string, inOrgID string) (domain.QueryData, error)
 	FuncGetTicketCreatedAfter                         func(_UpperCVSS float32, _LowerCVSS float32, _CreatedAfter time.Time, _OrgID string) ([]domain.TicketSummary, error)
@@ -666,6 +669,14 @@ func (myMockSQLDriver *MockSQLDriver) GetDetectionInfoByID(_ID string, _OrgID st
 	}
 }
 
+func (myMockSQLDriver *MockSQLDriver) GetDetectionInfoByIPVulnID(_IP string, _VulnID string) ([]domain.DetectionInfo, error) {
+	if myMockSQLDriver.FuncGetDetectionInfoByIPVulnID != nil {
+		return myMockSQLDriver.FuncGetDetectionInfoByIPVulnID(_IP, _VulnID)
+	} else {
+		panic("method not implemented") // mock SQL drivers should only be used in testing
+	}
+}
+
 func (myMockSQLDriver *MockSQLDriver) GetDetectionInfoBySourceVulnID(_SourceDeviceID string, _SourceVulnerabilityID string, _Port int, _Protocol string) (domain.DetectionInfo, error) {
 	if myMockSQLDriver.FuncGetDetectionInfoBySourceVulnID != nil {
 		return myMockSQLDriver.FuncGetDetectionInfoBySourceVulnID(_SourceDeviceID, _SourceVulnerabilityID, _Port, _Protocol)
@@ -853,6 +864,14 @@ func (myMockSQLDriver *MockSQLDriver) GetExceptionsLength(_offset int, _limit in
 func (myMockSQLDriver *MockSQLDriver) GetGlobalExceptions(_OrgID string) ([]domain.Ignore, error) {
 	if myMockSQLDriver.FuncGetGlobalExceptions != nil {
 		return myMockSQLDriver.FuncGetGlobalExceptions(_OrgID)
+	} else {
+		panic("method not implemented") // mock SQL drivers should only be used in testing
+	}
+}
+
+func (myMockSQLDriver *MockSQLDriver) GetIgnoreByIPVulnID(_IP string, _VulnID string) ([]domain.Ignore, error) {
+	if myMockSQLDriver.FuncGetIgnoreByIPVulnID != nil {
+		return myMockSQLDriver.FuncGetIgnoreByIPVulnID(_IP, _VulnID)
 	} else {
 		panic("method not implemented") // mock SQL drivers should only be used in testing
 	}
@@ -1269,6 +1288,14 @@ func (myMockSQLDriver *MockSQLDriver) GetTicketByDeviceIDVulnID(inDeviceID strin
 func (myMockSQLDriver *MockSQLDriver) GetTicketByIPGroupIDVulnID(inIP string, inGroupID string, inVulnID string, inPort int, inProtocol string, inOrgID string) (domain.TicketSummary, error) {
 	if myMockSQLDriver.FuncGetTicketByIPGroupIDVulnID != nil {
 		return myMockSQLDriver.FuncGetTicketByIPGroupIDVulnID(inIP, inGroupID, inVulnID, inPort, inProtocol, inOrgID)
+	} else {
+		panic("method not implemented") // mock SQL drivers should only be used in testing
+	}
+}
+
+func (myMockSQLDriver *MockSQLDriver) GetTicketByIPVulnID(_IP string, _VulnID string) ([]domain.TicketSummary, error) {
+	if myMockSQLDriver.FuncGetTicketByIPVulnID != nil {
+		return myMockSQLDriver.FuncGetTicketByIPVulnID(_IP, _VulnID)
 	} else {
 		panic("method not implemented") // mock SQL drivers should only be used in testing
 	}

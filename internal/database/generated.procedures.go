@@ -2537,6 +2537,92 @@ func (conn *dbconn) GetDetectionInfoByID(_ID string, _OrgID string) (domain.Dete
 	return retDetectionInfo, err
 }
 
+// GetDetectionInfoByIPVulnID executes the stored procedure GetDetectionInfoByIPVulnID against the database and returns the read results
+func (conn *dbconn) GetDetectionInfoByIPVulnID(_IP string, _VulnID string) ([]domain.DetectionInfo, error) {
+	var err error
+	var retDetectionInfo = make([]domain.DetectionInfo, 0)
+
+	conn.Read(&connection.Procedure{
+		Proc:       "GetDetectionInfoByIPVulnID",
+		Parameters: []interface{}{_IP, _VulnID},
+		Callback: func(results interface{}, dberr error) {
+			err = dberr
+
+			if err == nil {
+
+				err = conn.getRows(results,
+					func(rows *sql.Rows) (err error) {
+						if err = rows.Err(); err == nil {
+
+							var myID string
+							var myOrganizationID string
+							var mySourceID string
+							var myDeviceID string
+							var myVulnerabilityID string
+							var myIgnoreID *string
+							var myAlertDate time.Time
+							var myLastFound *time.Time
+							var myLastUpdated *time.Time
+							var myProof string
+							var myPort int
+							var myProtocol string
+							var myActiveKernel *int
+							var myDetectionStatusID int
+							var myTimesSeen int
+							var myUpdated time.Time
+
+							if err = rows.Scan(
+
+								&myID,
+								&myOrganizationID,
+								&mySourceID,
+								&myDeviceID,
+								&myVulnerabilityID,
+								&myIgnoreID,
+								&myAlertDate,
+								&myLastFound,
+								&myLastUpdated,
+								&myProof,
+								&myPort,
+								&myProtocol,
+								&myActiveKernel,
+								&myDetectionStatusID,
+								&myTimesSeen,
+								&myUpdated,
+							); err == nil {
+
+								newDetectionInfo := &dal.DetectionInfo{
+									IDvar:                myID,
+									OrganizationIDvar:    myOrganizationID,
+									SourceIDvar:          mySourceID,
+									DeviceIDvar:          myDeviceID,
+									VulnerabilityIDvar:   myVulnerabilityID,
+									IgnoreIDvar:          myIgnoreID,
+									AlertDatevar:         myAlertDate,
+									LastFoundvar:         myLastFound,
+									LastUpdatedvar:       myLastUpdated,
+									Proofvar:             myProof,
+									Portvar:              myPort,
+									Protocolvar:          myProtocol,
+									ActiveKernelvar:      myActiveKernel,
+									DetectionStatusIDvar: myDetectionStatusID,
+									TimesSeenvar:         myTimesSeen,
+									Updatedvar:           myUpdated,
+								}
+
+								retDetectionInfo = append(retDetectionInfo, newDetectionInfo)
+							}
+						}
+
+						return err
+					})
+			}
+		},
+	})
+
+	return retDetectionInfo, err
+}
+
 // GetDetectionInfoBySourceVulnID executes the stored procedure GetDetectionInfoBySourceVulnID against the database and returns the read results
 func (conn *dbconn) GetDetectionInfoBySourceVulnID(_SourceDeviceID string, _SourceVulnerabilityID string, _Port int, _Protocol string) (domain.DetectionInfo, error) {
 	var err error
@@ -4055,6 +4141,86 @@ func (conn *dbconn) GetGlobalExceptions(_OrgID string) ([]domain.Ignore, error) 
 									OSRegexvar:         myOSRegex,
 									HostnameRegexvar:   myHostnameRegex,
 									DueDatevar:         myDueDate,
+								}
+
+								retIgnore = append(retIgnore, newIgnore)
+							}
+						}
+
+						return err
+					})
+			}
+		},
+	})
+
+	return retIgnore, err
+}
+
+// GetIgnoreByIPVulnID executes the stored procedure GetIgnoreByIPVulnID against the database and returns the read results
+func (conn *dbconn) GetIgnoreByIPVulnID(_IP string, _VulnID string) ([]domain.Ignore, error) {
+	var err error
+	var retIgnore = make([]domain.Ignore, 0)
+
+	conn.Read(&connection.Procedure{
+		Proc:       "GetIgnoreByIPVulnID",
+		Parameters: []interface{}{_IP, _VulnID},
+		Callback: func(results interface{}, dberr error) {
+			err = dberr
+
+			if err == nil {
+
+				err = conn.getRows(results,
+					func(rows *sql.Rows) (err error) {
+						if err = rows.Err(); err == nil {
+
+							var myID string
+							var mySourceID string
+							var myOrganizationID string
+							var myTypeID int
+							var myVulnerabilityID string
+							var myDeviceID string
+							var myDueDate *time.Time
+							var myApproval string
+							var myActive []uint8
+							var myPort string
+							var myCreatedBy *string
+							var myUpdatedBy *string
+							var myDBCreatedDate time.Time
+							var myDBUpdatedDate *time.Time
+
+							if err = rows.Scan(
+
+								&myID,
+								&mySourceID,
+								&myOrganizationID,
+								&myTypeID,
+								&myVulnerabilityID,
+								&myDeviceID,
+								&myDueDate,
+								&myApproval,
+								&myActive,
+								&myPort,
+								&myCreatedBy,
+								&myUpdatedBy,
+								&myDBCreatedDate,
+								&myDBUpdatedDate,
+							); err == nil {
+
+								newIgnore := &dal.Ignore{
+									IDvar:              myID,
+									SourceIDvar:        mySourceID,
+									OrganizationIDvar:  myOrganizationID,
+									TypeIDvar:          myTypeID,
+									VulnerabilityIDvar: myVulnerabilityID,
+									DeviceIDvar:        myDeviceID,
+									DueDatevar:         myDueDate,
+									Approvalvar:        myApproval,
+									Activevar:          myActive[0] > 0 && myActive[0] != 48, // converts uint8 to bool (48 is ASCII code for 0, which is reserved for false)
+									Portvar:            myPort,
+									CreatedByvar:       myCreatedBy,
+									UpdatedByvar:       myUpdatedBy,
+									DBCreatedDatevar:   myDBCreatedDate,
+									DBUpdatedDatevar:   myDBUpdatedDate,
 								}
 
 								retIgnore = append(retIgnore, newIgnore)
@@ -7264,6 +7430,65 @@ func (conn *dbconn) GetTicketByIPGroupIDVulnID(inIP string, inGroupID string, in
 								}
 
 								retTicketSummary = newTicketSummary
+							}
+						}
+
+						return err
+					})
+			}
+		},
+	})
+
+	return retTicketSummary, err
+}
+
+// GetTicketByIPVulnID executes the stored procedure GetTicketByIPVulnID against the database and returns the read results
+func (conn *dbconn) GetTicketByIPVulnID(_IP string, _VulnID string) ([]domain.TicketSummary, error) {
+	var err error
+	var retTicketSummary = make([]domain.TicketSummary, 0)
+
+	conn.Read(&connection.Procedure{
+		Proc:       "GetTicketByIPVulnID",
+		Parameters: []interface{}{_IP, _VulnID},
+		Callback: func(results interface{}, dberr error) {
+			err = dberr
+
+			if err == nil {
+
+				err = conn.getRows(results,
+					func(rows *sql.Rows) (err error) {
+						if err = rows.Err(); err == nil {
+
+							var myTitle string
+							var myStatus string
+							var myDetectionID string
+							var myOrganizationID string
+							var myUpdatedDate *time.Time
+							var myResolutionDate *time.Time
+							var myDueDate time.Time
+
+							if err = rows.Scan(
+
+								&myTitle,
+								&myStatus,
+								&myDetectionID,
+								&myOrganizationID,
+								&myUpdatedDate,
+								&myResolutionDate,
+								&myDueDate,
+							); err == nil {
+
+								newTicketSummary := &dal.TicketSummary{
+									Titlevar:          myTitle,
+									Statusvar:         myStatus,
+									DetectionIDvar:    myDetectionID,
+									OrganizationIDvar: myOrganizationID,
+									UpdatedDatevar:    myUpdatedDate,
+									ResolutionDatevar: myResolutionDate,
+									DueDatevar:        myDueDate,
+								}
+
+								retTicketSummary = append(retTicketSummary, newTicketSummary)
 							}
 						}
 
