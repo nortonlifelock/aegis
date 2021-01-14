@@ -503,7 +503,7 @@ func createTicketsForUnticketedFindings(db domain.DatabaseConnection, lstream lo
 }
 
 // the assignment groups mapping information is stored in the database. The following fields show the hierarchy of the prioritization for finding an assignment group
-// CloudAccountID->BundleID->RuleRegex->RuleHash
+// CloudAccountID->BundleID->RuleRegex->RuleID
 // The only required field is the cloud account ID. The rest of the fields may be nil. If the other fields are non-nil, and their values don't match that of the finding, the match is not considered
 func (job *CISRescanJob) getAssignmentGroupForFinding(assignmentInformation []domain.CISAssignments, finding domain.Finding) (assignmentGroup string) {
 	if assignmentInformation != nil {
@@ -550,8 +550,8 @@ func (job *CISRescanJob) getAssignmentGroupForFinding(assignmentInformation []do
 			}
 
 			// a specific rule hash implies a greater match than a regex in the rule name
-			if len(sord(info.RuleHash())) > 0 {
-				if sord(info.RuleHash()) == finding.ID() {
+			if len(sord(info.RuleID())) > 0 {
+				if sord(info.RuleID()) == finding.ID() {
 					depthOfMatch = 4
 				} else {
 					match = false
@@ -680,19 +680,19 @@ func closeTicketsWithMissingFindings(lstream log.Logger, engine integrations.Tic
 	wg.Wait()
 }
 
-func mapTicketsByDeviceIDVulnID(tickets []domain.Ticket, getKey func(ticket domain.Ticket) string) (entityIDToRuleHashToTicket map[string][]domain.Ticket) {
-	entityIDToRuleHashToTicket = make(map[string][]domain.Ticket)
+func mapTicketsByDeviceIDVulnID(tickets []domain.Ticket, getKey func(ticket domain.Ticket) string) (entityIDToRuleIDToTicket map[string][]domain.Ticket) {
+	entityIDToRuleIDToTicket = make(map[string][]domain.Ticket)
 
 	for _, ticket := range tickets {
 		key := getKey(ticket)
-		if entityIDToRuleHashToTicket[key] == nil {
-			entityIDToRuleHashToTicket[key] = make([]domain.Ticket, 0)
+		if entityIDToRuleIDToTicket[key] == nil {
+			entityIDToRuleIDToTicket[key] = make([]domain.Ticket, 0)
 		}
 
-		entityIDToRuleHashToTicket[key] = append(entityIDToRuleHashToTicket[key], ticket)
+		entityIDToRuleIDToTicket[key] = append(entityIDToRuleIDToTicket[key], ticket)
 	}
 
-	return entityIDToRuleHashToTicket
+	return entityIDToRuleIDToTicket
 }
 
 // fanInChannel is useful because we want to reuse the ticket information, so we store it in a slice

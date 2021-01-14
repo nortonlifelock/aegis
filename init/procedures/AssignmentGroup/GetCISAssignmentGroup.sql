@@ -4,7 +4,7 @@
     CloudAccountID    VARCHAR(100) NULL
     BundleID          VARCHAR(100) NULL
     RuleRegex         VARCHAR(200) NULL
-    RuleHash          VARCHAR(100) NULL
+    RuleID            VARCHAR(100) NULL
     AssignmentGroup   VARCHAR(100) NOT NULL
 */
 
@@ -17,7 +17,7 @@ SELECT
     D.CloudAccountID,
     D.BundleID,
     D.RuleRegex,
-    D.RuleHash,
+    D.RuleID,
     D.AssignmentGroup
 FROM CISAssignmentRules D
 WHERE D.OrganizationID = _OrganizationID;

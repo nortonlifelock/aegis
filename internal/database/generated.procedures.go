@@ -2061,7 +2061,7 @@ func (conn *dbconn) GetCISAssignments(_OrganizationID string) ([]domain.CISAssig
 							var myCloudAccountID *string
 							var myBundleID *string
 							var myRuleRegex *string
-							var myRuleHash *string
+							var myRuleID *string
 							var myAssignmentGroup string
 
 							if err = rows.Scan(
@@ -2070,7 +2070,7 @@ func (conn *dbconn) GetCISAssignments(_OrganizationID string) ([]domain.CISAssig
 								&myCloudAccountID,
 								&myBundleID,
 								&myRuleRegex,
-								&myRuleHash,
+								&myRuleID,
 								&myAssignmentGroup,
 							); err == nil {
 
@@ -2079,7 +2079,7 @@ func (conn *dbconn) GetCISAssignments(_OrganizationID string) ([]domain.CISAssig
 									CloudAccountIDvar:  myCloudAccountID,
 									BundleIDvar:        myBundleID,
 									RuleRegexvar:       myRuleRegex,
-									RuleHashvar:        myRuleHash,
+									RuleIDvar:          myRuleID,
 									AssignmentGroupvar: myAssignmentGroup,
 								}
 
