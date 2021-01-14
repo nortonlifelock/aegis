@@ -334,7 +334,7 @@ func getCountOfJiraTicketsInStatus(w http.ResponseWriter, r *http.Request) {
 					needsCacheUpdate = true
 				} else if pieChartCache[trans.permission.OrgID()].Contents == nil {
 					needsCacheUpdate = true
-				} else if time.Since(pieChartCache[trans.permission.OrgID()].Updated) > time.Hour {
+				} else if time.Since(pieChartCache[trans.permission.OrgID()].Updated) > time.Minute {
 					needsCacheUpdate = true
 				}
 				pieChartLock.Unlock()
