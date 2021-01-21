@@ -4,8 +4,10 @@
     CloudAccountID    VARCHAR(100) NULL
     BundleID          VARCHAR(100) NULL
     RuleRegex         VARCHAR(200) NULL
-    RuleHash          VARCHAR(100) NULL
+    RuleID            VARCHAR(100) NULL
+    DeviceIDRegex     VARCHAR(100) NULL
     AssignmentGroup   VARCHAR(100) NOT NULL
+    Priority          INT          NOT NULL
 */
 
 DROP PROCEDURE IF EXISTS `GetCISAssignments`;
@@ -17,7 +19,9 @@ SELECT
     D.CloudAccountID,
     D.BundleID,
     D.RuleRegex,
-    D.RuleHash,
-    D.AssignmentGroup
-FROM Dome9Assignment D
-WHERE D.OrganizationID = _OrganizationID;
+    D.RuleID,
+    D.DeviceIDRegex,
+    D.AssignmentGroup,
+    D.Priority
+FROM CISAssignmentRules D
+WHERE D.OrganizationID = _OrganizationID order by D.Priority desc;

@@ -24,4 +24,4 @@ SELECT
 FROM Ticket T
          JOIN Detection D on T.DetectionID = D.ID
          JOIN Device Dev ON Dev.AssetID = D.DeviceID
-WHERE Dev.Ip = inIP AND Dev.GroupID = inGroupID AND D.VulnerabilityID = inVulnID AND (inPort = '' OR D.Port = inPort) and (inProtocol = '' OR D.Protocol = inProtocol) AND T.OrganizationID = inOrgID AND T.Status IN ('Open', 'In-Progress', 'Reopened', 'Resolved-Remediated', 'Resolved-FalsePositive', 'Resolved-Decommissioned', 'Resolved-Exception');
+WHERE Dev.Ip = inIP AND Dev.GroupID = inGroupID AND D.VulnerabilityID = inVulnID AND (inPort = '' OR D.Port = inPort) and (inProtocol = '' OR D.Protocol = inProtocol) AND T.OrganizationID = inOrgID AND T.Status IN ('Open', 'In-Progress', 'Reopened', 'Resolved-Remediated', 'Resolved-FalsePositive', 'Resolved-Decommissioned', 'Resolved-Exception', 'Approved-Exception');

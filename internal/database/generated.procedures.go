@@ -2061,8 +2061,10 @@ func (conn *dbconn) GetCISAssignments(_OrganizationID string) ([]domain.CISAssig
 							var myCloudAccountID *string
 							var myBundleID *string
 							var myRuleRegex *string
-							var myRuleHash *string
+							var myRuleID *string
+							var myDeviceIDRegex *string
 							var myAssignmentGroup string
+							var myPriority int
 
 							if err = rows.Scan(
 
@@ -2070,8 +2072,10 @@ func (conn *dbconn) GetCISAssignments(_OrganizationID string) ([]domain.CISAssig
 								&myCloudAccountID,
 								&myBundleID,
 								&myRuleRegex,
-								&myRuleHash,
+								&myRuleID,
+								&myDeviceIDRegex,
 								&myAssignmentGroup,
+								&myPriority,
 							); err == nil {
 
 								newCISAssignments := &dal.CISAssignments{
@@ -2079,8 +2083,10 @@ func (conn *dbconn) GetCISAssignments(_OrganizationID string) ([]domain.CISAssig
 									CloudAccountIDvar:  myCloudAccountID,
 									BundleIDvar:        myBundleID,
 									RuleRegexvar:       myRuleRegex,
-									RuleHashvar:        myRuleHash,
+									RuleIDvar:          myRuleID,
+									DeviceIDRegexvar:   myDeviceIDRegex,
 									AssignmentGroupvar: myAssignmentGroup,
+									Priorityvar:        myPriority,
 								}
 
 								retCISAssignments = append(retCISAssignments, newCISAssignments)

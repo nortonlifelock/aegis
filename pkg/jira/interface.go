@@ -758,7 +758,7 @@ func (connector *ConnectorJira) GetTicketsByDeviceIDVulnID(methodOfDiscovery str
 }
 
 // GetOpenTicketsByGroupID returns tickets with an open status for an organization/method of discovery within a specified group
-// For CIS tickets the entity ID is stored in the deviceID field, the ruleHash is stored in the vulnerabilityID field
+// For CIS tickets the entity ID is stored in the deviceID field, the ruleID is stored in the vulnerabilityID field
 // and the cloudAccountID is stored in the group ID
 func (connector *ConnectorJira) GetOpenTicketsByGroupID(methodOfDiscovery string, orgCode string, groupID string) (tickets <-chan domain.Ticket, errChan <-chan error) {
 	statuses := make(map[string]bool)

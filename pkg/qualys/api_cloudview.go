@@ -108,6 +108,9 @@ func (session *Session) GetCloudAccountEvaluations(accountID string) (evaluation
 	// from looking at the API documentation, I don't see a way to find the cloud account type by using the cloud account ID alone
 	// so we just check all three and use one if it's present
 	for _, possibleCloudAccountType := range possibleAccountTypes {
+		if len(cloudAccountType) > 0 {
+			break
+		}
 		var possibleEvals []AccountEvaluationContent
 
 		if possibleEvals, err = session.GetCloudAccountEvaluationsWithCloudAccountType(accountID, possibleCloudAccountType); err == nil {

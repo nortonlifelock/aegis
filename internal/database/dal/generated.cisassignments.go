@@ -19,8 +19,10 @@ type CISAssignments struct {
 	AssignmentGroupvar string
 	BundleIDvar        *string
 	CloudAccountIDvar  *string
+	DeviceIDRegexvar   *string
 	OrganizationIDvar  string
-	RuleHashvar        *string
+	Priorityvar        int
+	RuleIDvar          *string
 	RuleRegexvar       *string
 }
 
@@ -34,8 +36,10 @@ func (myCISAssignments CISAssignments) MarshalJSON() ([]byte, error) {
 		"AssignmentGroup": myCISAssignments.AssignmentGroupvar,
 		"BundleID":        myCISAssignments.BundleIDvar,
 		"CloudAccountID":  myCISAssignments.CloudAccountIDvar,
+		"DeviceIDRegex":   myCISAssignments.DeviceIDRegexvar,
 		"OrganizationID":  myCISAssignments.OrganizationIDvar,
-		"RuleHash":        myCISAssignments.RuleHashvar,
+		"Priority":        myCISAssignments.Priorityvar,
+		"RuleID":          myCISAssignments.RuleIDvar,
 		"RuleRegex":       myCISAssignments.RuleRegexvar,
 	})
 }
@@ -55,14 +59,24 @@ func (myCISAssignments *CISAssignments) CloudAccountID() (param *string) {
 	return myCISAssignments.CloudAccountIDvar
 }
 
+// DeviceIDRegex returns the DeviceIDRegex parameter from the CISAssignments struct
+func (myCISAssignments *CISAssignments) DeviceIDRegex() (param *string) {
+	return myCISAssignments.DeviceIDRegexvar
+}
+
 // OrganizationID returns the OrganizationID parameter from the CISAssignments struct
 func (myCISAssignments *CISAssignments) OrganizationID() (param string) {
 	return myCISAssignments.OrganizationIDvar
 }
 
-// RuleHash returns the RuleHash parameter from the CISAssignments struct
-func (myCISAssignments *CISAssignments) RuleHash() (param *string) {
-	return myCISAssignments.RuleHashvar
+// Priority returns the Priority parameter from the CISAssignments struct
+func (myCISAssignments *CISAssignments) Priority() (param int) {
+	return myCISAssignments.Priorityvar
+}
+
+// RuleID returns the RuleID parameter from the CISAssignments struct
+func (myCISAssignments *CISAssignments) RuleID() (param *string) {
+	return myCISAssignments.RuleIDvar
 }
 
 // RuleRegex returns the RuleRegex parameter from the CISAssignments struct
@@ -85,14 +99,19 @@ func (myCISAssignments *CISAssignments) SetCloudAccountID(val string) {
 	myCISAssignments.CloudAccountIDvar = &val
 }
 
+// SetDeviceIDRegex sets the DeviceIDRegex parameter from the CISAssignments struct
+func (myCISAssignments *CISAssignments) SetDeviceIDRegex(val string) {
+	myCISAssignments.DeviceIDRegexvar = &val
+}
+
 // SetOrganizationID sets the OrganizationID parameter from the CISAssignments struct
 func (myCISAssignments *CISAssignments) SetOrganizationID(val string) {
 	myCISAssignments.OrganizationIDvar = val
 }
 
-// SetRuleHash sets the RuleHash parameter from the CISAssignments struct
-func (myCISAssignments *CISAssignments) SetRuleHash(val string) {
-	myCISAssignments.RuleHashvar = &val
+// SetRuleID sets the RuleID parameter from the CISAssignments struct
+func (myCISAssignments *CISAssignments) SetRuleID(val string) {
+	myCISAssignments.RuleIDvar = &val
 }
 
 // SetRuleRegex sets the RuleRegex parameter from the CISAssignments struct

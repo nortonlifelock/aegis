@@ -6,6 +6,8 @@ type CISAssignments interface {
 	BundleID() (param *string)
 	CloudAccountID() (param *string)
 	OrganizationID() (param string)
-	RuleHash() (param *string)
+	RuleID() (param *string)
+	DeviceIDRegex() (param *string)
 	RuleRegex() (param *string)
+	Priority() (param int)
 }

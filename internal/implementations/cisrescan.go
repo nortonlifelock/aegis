@@ -39,7 +39,7 @@ type CISRescanJob struct {
 // The RuleID points towards a bundle for Dome9, or a policy name for Cloud View, which holds a series of rules
 // The cloud account IDs points to the cloud account (e.g. AWS/Azure) that we which to test the rules against
 type CISRescanPayload struct {
-	RuleIDs         []string `json:"rule_ids"`
+	PolicyIDs       []string `json:"rule_ids"` // TODO change json
 	CloudAccountIDs []string `json:"cloud_accounts"`
 	SkipVulns       []string `json:"skip_vulnerabilities"`
 }
@@ -74,11 +74,12 @@ func (job *CISRescanJob) Process(ctx context.Context, id string, appconfig domai
 
 						if job.catRules, err = job.db.GetCategoryRules(job.config.OrganizationID(), job.insource.SourceID()); err == nil {
 
-							for _, ruleID := range job.Payload.RuleIDs {
+							for _, policyID := range job.Payload.PolicyIDs {
 								for _, cloudID := range job.Payload.CloudAccountIDs {
-									err = job.processRuleOnCloud(scanner, engine, ruleID, cloudID)
+									job.lstream.Send(log.Infof("Processing [%s] on [%s]", policyID, cloudID))
+									err = job.processRuleOnCloud(scanner, engine, policyID, cloudID)
 									if err != nil {
-										job.lstream.Send(log.Errorf(err, "error while processing rule ID [%s] for cloud account [%s]", ruleID, cloudID))
+										job.lstream.Send(log.Errorf(err, "error while processing policy ID [%s] for cloud account [%s]", policyID, cloudID))
 									}
 								}
 							}
@@ -133,10 +134,10 @@ type findingTicketPair struct {
 	ticket  domain.Ticket
 }
 
-func (job *CISRescanJob) processRuleOnCloud(scanner integrations.CISScanner, engine integrations.TicketingEngine, ruleID string, cloudAccountID string) (err error) {
+func (job *CISRescanJob) processRuleOnCloud(scanner integrations.CISScanner, engine integrations.TicketingEngine, policyID string, cloudAccountID string) (err error) {
 
 	var findings []domain.Finding
-	findings, err = scanner.RescanBundle(ruleID, cloudAccountID)
+	findings, err = scanner.RescanBundle(policyID, cloudAccountID)
 	if err == nil {
 
 		var tickets <-chan domain.Ticket
@@ -147,6 +148,11 @@ func (job *CISRescanJob) processRuleOnCloud(scanner integrations.CISScanner, eng
 			job.lstream.Send(log.Errorf(err, "error while loading assignment group information"))
 		}
 
+		precompiledAssignmentRules, err := precompileAssignmentRegex(assignmentInformation)
+		if err != nil {
+			job.lstream.Send(log.Errorf(err, "error while compiling assignment regexes"))
+		}
+
 		var findingsAsTickets = make([]domain.Ticket, 0)
 		for index := range findings {
 			finding := findings[index]
@@ -154,7 +160,7 @@ func (job *CISRescanJob) processRuleOnCloud(scanner integrations.CISScanner, eng
 			findingTic := &FindingWrapper{
 				finding,
 				job,
-				job.getAssignmentGroupForFinding(assignmentInformation, finding),
+				job.getAssignmentGroupForFinding(precompiledAssignmentRules, finding, policyID),
 				getCategoryBasedOnRule(job.catRules, finding.VulnerabilityTitle(), "", ""),
 			}
 
@@ -163,9 +169,18 @@ func (job *CISRescanJob) processRuleOnCloud(scanner integrations.CISScanner, eng
 			}
 		}
 
+		var closingComment, reopenComment string
 		var assessmentID int
 		if len(findings) > 0 {
 			assessmentID = findings[0].ScanID()
+		}
+
+		if assessmentID > 0 {
+			closingComment = fmt.Sprintf("finding was NOT by %s in assessment [%d]", job.insource.Source(), assessmentID)
+			reopenComment = fmt.Sprintf("finding still detected by %s in assessment [%d]", job.insource.Source(), assessmentID)
+		} else {
+			closingComment = fmt.Sprintf("finding was NOT by %s", job.insource.Source())
+			reopenComment = fmt.Sprintf("finding still detected by %s", job.insource.Source())
 		}
 
 		var fannedInTickets []domain.Ticket
@@ -174,7 +189,7 @@ func (job *CISRescanJob) processRuleOnCloud(scanner integrations.CISScanner, eng
 			var ticketsForPolicy = make([]domain.Ticket, 0)
 			for index := range fannedInTickets {
 				// we store the policy (BundleID) in the VendorReferences field
-				if sord(fannedInTickets[index].VendorReferences()) == ruleID {
+				if sord(fannedInTickets[index].VendorReferences()) == policyID {
 					ticketsForPolicy = append(ticketsForPolicy, fannedInTickets[index])
 				}
 			}
@@ -187,8 +202,8 @@ func (job *CISRescanJob) processRuleOnCloud(scanner integrations.CISScanner, eng
 				engine,
 				ticketsForPolicy,
 				findingsAsTickets,
-				fmt.Sprintf("finding was NOT by %s in assessment [%d]", job.insource.Source(), assessmentID),
-				fmt.Sprintf("finding still detected by %s in assessment [%d]", job.insource.Source(), assessmentID),
+				closingComment,
+				reopenComment,
 				func(ticket domain.Ticket) string {
 					return fmt.Sprintf("%s;%s", ticket.DeviceID(), ticket.VulnerabilityID())
 				},
@@ -228,6 +243,39 @@ func (job *CISRescanJob) processRuleOnCloud(scanner integrations.CISScanner, eng
 	}
 
 	return err
+}
+
+type cisAssignmentRule struct {
+	rule          domain.CISAssignments
+	deviceIDRegex *regexp.Regexp
+	ruleRegex     *regexp.Regexp
+}
+
+func precompileAssignmentRegex(rules []domain.CISAssignments) (cisRules []cisAssignmentRule, err error) {
+	cisRules = make([]cisAssignmentRule, 0)
+
+	for index := range rules {
+		rule := rules[index]
+		compiledRule := cisAssignmentRule{rule: rule}
+
+		if len(sord(rule.DeviceIDRegex())) > 0 {
+			compiledRule.deviceIDRegex, err = regexp.Compile(sord(rule.DeviceIDRegex()))
+		}
+
+		if err == nil {
+			if len(sord(rule.RuleRegex())) > 0 {
+				compiledRule.ruleRegex, err = regexp.Compile(sord(rule.RuleRegex()))
+			}
+		}
+
+		if err == nil {
+			cisRules = append(cisRules, compiledRule)
+		} else {
+			break
+		}
+	}
+
+	return cisRules, err
 }
 
 func processFindingsAndTickets(lstream log.Logger, db domain.DatabaseConnection, orgID string, sourceID string, engine integrations.TicketingEngine, tickets []domain.Ticket, findings []domain.Ticket, closingComment, updatingComment string, getKey func(ticket domain.Ticket) string, shouldCreateTicket func(ticket domain.Ticket) bool) (findingsWithoutTickets []domain.Ticket, ticketsWithoutFindings []domain.Ticket, ticketsWithFindings []findingTicketPair) {
@@ -492,68 +540,53 @@ func createTicketsForUnticketedFindings(db domain.DatabaseConnection, lstream lo
 	wg.Wait()
 }
 
-// the assignment groups mapping information is stored in the database. The following fields show the hierarchy of the prioritization for finding an assignment group
-// CloudAccountID->BundleID->RuleRegex->RuleHash
-// The only required field is the cloud account ID. The rest of the fields may be nil. If the other fields are non-nil, and their values don't match that of the finding, the match is not considered
-func (job *CISRescanJob) getAssignmentGroupForFinding(assignmentInformation []domain.CISAssignments, finding domain.Finding) (assignmentGroup string) {
-	if assignmentInformation != nil {
+// the assignment groups mapping information is stored in the database in the CISAssignmentRulesTable
+// a higher value priority is a higher priority rule, if two applicable rules have the same priority, the first one found will be used
+func (job *CISRescanJob) getAssignmentGroupForFinding(precompiledAssignmentRules []cisAssignmentRule, finding domain.Finding, policyID string) (assignmentGroup string) {
+	if precompiledAssignmentRules != nil && len(precompiledAssignmentRules) > 0 {
 
-		// currentDepth tracks how much of a match the current assignment group match is. a higher depth means a greater match
-		var currentDepth = -1
+		var highestApplicablePriority = -1
 
-		for _, info := range assignmentInformation {
+		for _, info := range precompiledAssignmentRules {
 
 			// match contains a value of true as long as none of the specifications are violated
 			// if a specification is violated, the assignmentInformation is not taken into account
 			var match = true
-			var depthOfMatch = 0
 
-			if len(sord(info.CloudAccountID())) > 0 {
-				if sord(info.CloudAccountID()) == finding.AccountID() {
-					// matching on the cloud account id alone has a match value of 1
-					depthOfMatch = 1
-				} else {
+			if len(sord(info.rule.CloudAccountID())) > 0 {
+				if sord(info.rule.CloudAccountID()) != finding.AccountID() {
 					match = false
 				}
 			}
 
-			// a bundle id match implies a greater match than the cloud account
-			if len(sord(info.BundleID())) > 0 {
-				if sord(info.BundleID()) == finding.BundleID() {
-					depthOfMatch = 2
-				} else {
+			if len(sord(info.rule.BundleID())) > 0 {
+				if sord(info.rule.BundleID()) != policyID {
 					match = false
 				}
 			}
 
-			// the rule name matching a regex implies a greater match than a bundle id
-			if len(sord(info.RuleRegex())) > 0 {
-				if valid, err := regexp.Match(sord(info.RuleRegex()), []byte(finding.VulnerabilityTitle())); err == nil {
-					if valid {
-						depthOfMatch = 3
-					} else {
-						match = false
-					}
-				} else {
-					job.lstream.Send(log.Errorf(err, "error while compiling regex [%v]", *info.RuleRegex()))
+			if info.ruleRegex != nil {
+				if valid := info.ruleRegex.MatchString(finding.VulnerabilityTitle()); !valid {
+					match = false
 				}
 			}
 
-			// a specific rule hash implies a greater match than a regex in the rule name
-			if len(sord(info.RuleHash())) > 0 {
-				if sord(info.RuleHash()) == finding.ID() {
-					depthOfMatch = 4
-				} else {
+			if len(sord(info.rule.RuleID())) > 0 {
+				if sord(info.rule.RuleID()) != finding.ID() {
+					match = false
+				}
+			}
+
+			if info.deviceIDRegex != nil {
+				if valid := info.deviceIDRegex.MatchString(finding.DeviceID()); !valid {
 					match = false
 				}
 			}
 
 			if match {
-
-				// the current iteration contained the most closely specified assignment group information
-				if depthOfMatch > currentDepth {
-					currentDepth = depthOfMatch
-					assignmentGroup = info.AssignmentGroup()
+				if info.rule.Priority() > highestApplicablePriority {
+					highestApplicablePriority = info.rule.Priority()
+					assignmentGroup = info.rule.AssignmentGroup()
 				}
 			}
 		}
@@ -670,19 +703,19 @@ func closeTicketsWithMissingFindings(lstream log.Logger, engine integrations.Tic
 	wg.Wait()
 }
 
-func mapTicketsByDeviceIDVulnID(tickets []domain.Ticket, getKey func(ticket domain.Ticket) string) (entityIDToRuleHashToTicket map[string][]domain.Ticket) {
-	entityIDToRuleHashToTicket = make(map[string][]domain.Ticket)
+func mapTicketsByDeviceIDVulnID(tickets []domain.Ticket, getKey func(ticket domain.Ticket) string) (entityIDToRuleIDToTicket map[string][]domain.Ticket) {
+	entityIDToRuleIDToTicket = make(map[string][]domain.Ticket)
 
 	for _, ticket := range tickets {
 		key := getKey(ticket)
-		if entityIDToRuleHashToTicket[key] == nil {
-			entityIDToRuleHashToTicket[key] = make([]domain.Ticket, 0)
+		if entityIDToRuleIDToTicket[key] == nil {
+			entityIDToRuleIDToTicket[key] = make([]domain.Ticket, 0)
 		}
 
-		entityIDToRuleHashToTicket[key] = append(entityIDToRuleHashToTicket[key], ticket)
+		entityIDToRuleIDToTicket[key] = append(entityIDToRuleIDToTicket[key], ticket)
 	}
 
-	return entityIDToRuleHashToTicket
+	return entityIDToRuleIDToTicket
 }
 
 // fanInChannel is useful because we want to reuse the ticket information, so we store it in a slice

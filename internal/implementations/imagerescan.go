@@ -427,19 +427,19 @@ func (i *ImageFinding) TrackingMethod() (param *string) {
 	return nil
 }
 
-func mapImageFindingsByDeviceIDVulnID(findings []domain.ImageFinding) (entityIDToRuleHashToFinding map[string]domain.ImageFinding) {
+func mapImageFindingsByDeviceIDVulnID(findings []domain.ImageFinding) (entityIDToRuleIDToFinding map[string]domain.ImageFinding) {
 	// DeviceID = Image name
 	// VulnID = CVE
 
-	entityIDToRuleHashToFinding = make(map[string]domain.ImageFinding)
+	entityIDToRuleIDToFinding = make(map[string]domain.ImageFinding)
 	for _, finding := range findings {
 		if len(finding.ImageName()) > 0 {
 			// leading 0 in the last element is to match up with the [port protocol] format in the ServicePorts
 			// since no value for port is relevant to an image finding, a 0 is left here
 			key := fmt.Sprintf("%s;%s;0 %s", finding.ImageName(), finding.VulnerabilityID(), finding.VulnerabilityLocation())
-			entityIDToRuleHashToFinding[key] = finding
+			entityIDToRuleIDToFinding[key] = finding
 		}
 	}
 
-	return entityIDToRuleHashToFinding
+	return entityIDToRuleIDToFinding
 }
