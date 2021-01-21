@@ -19,7 +19,9 @@ type CISAssignments struct {
 	AssignmentGroupvar string
 	BundleIDvar        *string
 	CloudAccountIDvar  *string
+	DeviceIDRegexvar   *string
 	OrganizationIDvar  string
+	Priorityvar        int
 	RuleIDvar          *string
 	RuleRegexvar       *string
 }
@@ -34,7 +36,9 @@ func (myCISAssignments CISAssignments) MarshalJSON() ([]byte, error) {
 		"AssignmentGroup": myCISAssignments.AssignmentGroupvar,
 		"BundleID":        myCISAssignments.BundleIDvar,
 		"CloudAccountID":  myCISAssignments.CloudAccountIDvar,
+		"DeviceIDRegex":   myCISAssignments.DeviceIDRegexvar,
 		"OrganizationID":  myCISAssignments.OrganizationIDvar,
+		"Priority":        myCISAssignments.Priorityvar,
 		"RuleID":          myCISAssignments.RuleIDvar,
 		"RuleRegex":       myCISAssignments.RuleRegexvar,
 	})
@@ -55,9 +59,19 @@ func (myCISAssignments *CISAssignments) CloudAccountID() (param *string) {
 	return myCISAssignments.CloudAccountIDvar
 }
 
+// DeviceIDRegex returns the DeviceIDRegex parameter from the CISAssignments struct
+func (myCISAssignments *CISAssignments) DeviceIDRegex() (param *string) {
+	return myCISAssignments.DeviceIDRegexvar
+}
+
 // OrganizationID returns the OrganizationID parameter from the CISAssignments struct
 func (myCISAssignments *CISAssignments) OrganizationID() (param string) {
 	return myCISAssignments.OrganizationIDvar
+}
+
+// Priority returns the Priority parameter from the CISAssignments struct
+func (myCISAssignments *CISAssignments) Priority() (param int) {
+	return myCISAssignments.Priorityvar
 }
 
 // RuleID returns the RuleID parameter from the CISAssignments struct
@@ -83,6 +97,11 @@ func (myCISAssignments *CISAssignments) SetBundleID(val string) {
 // SetCloudAccountID sets the CloudAccountID parameter from the CISAssignments struct
 func (myCISAssignments *CISAssignments) SetCloudAccountID(val string) {
 	myCISAssignments.CloudAccountIDvar = &val
+}
+
+// SetDeviceIDRegex sets the DeviceIDRegex parameter from the CISAssignments struct
+func (myCISAssignments *CISAssignments) SetDeviceIDRegex(val string) {
+	myCISAssignments.DeviceIDRegexvar = &val
 }
 
 // SetOrganizationID sets the OrganizationID parameter from the CISAssignments struct
