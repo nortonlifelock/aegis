@@ -513,6 +513,20 @@ func (job *ScanCloseJob) modifyJiraTicketAccordingToVulnerabilityStatus(engine i
 	}
 }
 
+func (job *ScanCloseJob) commentOnTicketBeingSentToCloudDecom(engine integrations.TicketingEngine, ticket domain.Ticket, scan domain.ScanSummary, deadHostIPToProofMap map[string]string) {
+	var proof string
+	if len(deadHostIPToProofMap[*ticket.IPAddress()]) > 0 && len(*ticket.IPAddress()) > 0 {
+		proof = fmt.Sprintf("Scan [%s] reported the IP as dead, sending IP to cloud decommission job for verification\n\n[%s]", sord(scan.SourceKey()), deadHostIPToProofMap[*ticket.IPAddress()])
+	} else {
+		proof = fmt.Sprintf("Scan [%s] reported the IP as dead, sending IP to cloud decommission job for verification", sord(scan.SourceKey()))
+	}
+
+	_, _, err := engine.UpdateTicket(ticket, proof)
+	if err != nil {
+		job.lstream.Send(log.Errorf(err, "error while commenting on ticket"))
+	}
+}
+
 func (job *ScanCloseJob) processTicketForPassiveOrExceptionRescan(deadHostIPToProofMap map[string]string, ticket domain.Ticket, detection domain.Detection, engine integrations.TicketingEngine, status string, inactiveKernel bool, scan domain.ScanSummary, ipsForCloudDecommissionScan chan<- string) {
 	var err error
 	if (len(deadHostIPToProofMap[*ticket.IPAddress()]) > 0 && len(*ticket.IPAddress()) > 0) || (detection != nil && detection.Status() == domain.DeadHost) {
@@ -520,6 +534,7 @@ func (job *ScanCloseJob) processTicketForPassiveOrExceptionRescan(deadHostIPToPr
 		if !statusIsAClosedStatus(engine, sord(ticket.Status())) {
 			if _, _, canCreate := canCreateCloudDecommJob(job.db, job.lstream, job.config.OrganizationID(), job.Payload.Group); canCreate {
 				ipsForCloudDecommissionScan <- sord(ticket.IPAddress())
+				job.commentOnTicketBeingSentToCloudDecom(engine, ticket, scan, deadHostIPToProofMap)
 			} else {
 				job.lstream.Send(log.Infof("the device for %s seems to be dead, but this is not a decommission scan", ticket.Title()))
 				err = engine.Transition(ticket, engine.GetStatusMap(domain.StatusResolvedDecom), fmt.Sprintf("The device could not be detected though a vulnerability rescan. It has been moved to a resolved decommission status and will be rescanned with another option profile to confirm\nPROOF:\n%s", deadHostIPToProofMap[sord(ticket.IPAddress())]), sord(ticket.AssignedTo()))
@@ -597,6 +612,7 @@ func (job *ScanCloseJob) closeTicketAccordingToDeviceType(ticket domain.Ticket, 
 				return
 			case ipsForCloudDecommissionScan <- sord(ticket.IPAddress()):
 				job.lstream.Send(log.Infof("Queueing %s for a cloud decommission scan", ticket.Title()))
+				job.commentOnTicketBeingSentToCloudDecom(engine, ticket, scan, deadHostIPToProofMap)
 			}
 		} else {
 			job.lstream.Send(log.Errorf(nil, "empty IP on ticket %s", ticket.Title()))
@@ -619,6 +635,7 @@ func (job *ScanCloseJob) processTicketForScheduledScan(ticket domain.Ticket, det
 				return
 			case ipsForCloudDecommissionScan <- sord(ticket.IPAddress()):
 				job.lstream.Send(log.Infof("Queueing %s for a cloud decommission job", ticket.Title()))
+				job.commentOnTicketBeingSentToCloudDecom(engine, ticket, scan, deadHostIPToProofMap)
 			}
 		} else {
 			job.lstream.Send(log.Errorf(err, "empty IP on ticket %s", ticket.Title()))
@@ -657,6 +674,7 @@ func (job *ScanCloseJob) processTicketForNormalRescan(deadHostIPToProofMap map[s
 		if !statusIsAClosedStatus(engine, sord(ticket.Status())) {
 			if _, _, canCreate := canCreateCloudDecommJob(job.db, job.lstream, job.config.OrganizationID(), job.Payload.Group); canCreate {
 				ipsForCloudDecommissionScan <- sord(ticket.IPAddress())
+				job.commentOnTicketBeingSentToCloudDecom(engine, ticket, scan, deadHostIPToProofMap)
 			} else {
 				job.lstream.Send(log.Infof("the device for %s seems to be dead, but this is not a decommission scan", ticket.Title()))
 				err = engine.Transition(ticket, engine.GetStatusMap(domain.StatusResolvedDecom), fmt.Sprintf("The device could not be detected though a vulnerability rescan. It has been moved to a resolved decommission status and will be rescanned with another option profile to confirm\nPROOF:\n%s", deadHostIPToProofMap[sord(ticket.IPAddress())]), sord(ticket.AssignedTo()))
