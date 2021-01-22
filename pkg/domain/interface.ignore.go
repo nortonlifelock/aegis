@@ -11,7 +11,7 @@ type Ignore interface {
 	VulnerabilityID() (param string)
 	OSRegex() (param *string)
 	HostnameRegex() (param *string)
-
+	DeviceIDRegex() (param *string)
 	Approval() (param string)
 	Active() (param bool)
 	Port() (param string)
