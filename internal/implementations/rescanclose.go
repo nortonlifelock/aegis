@@ -494,7 +494,7 @@ func (job *ScanCloseJob) modifyJiraTicketAccordingToVulnerabilityStatus(engine i
 		case domain.RescanDecommission:
 			job.processTicketForDecommRescan(deadHostIPToProofMap, ticket, detection, engine, scan, status, deviceWithoutDetectionsLikelyDead, deviceReportedAsDeadLikelyDead, ipsForCloudDecommissionScan, trackingMethod)
 		case domain.RescanScheduled:
-			job.processTicketForScheduledScan(ticket, detection, engine, status, inactiveKernel, scan, deviceWithoutDetectionsLikelyDead, ipsForCloudDecommissionScan)
+			job.processTicketForScheduledScan(deadHostIPToProofMap, ticket, detection, engine, status, inactiveKernel, scan, deviceWithoutDetectionsLikelyDead, ipsForCloudDecommissionScan)
 		case domain.RescanExceptions, domain.RescanPassive:
 			job.processTicketForPassiveOrExceptionRescan(deadHostIPToProofMap, ticket, detection, engine, status, inactiveKernel, scan, ipsForCloudDecommissionScan)
 		default:
@@ -622,7 +622,7 @@ func (job *ScanCloseJob) closeTicketAccordingToDeviceType(ticket domain.Ticket, 
 	return err
 }
 
-func (job *ScanCloseJob) processTicketForScheduledScan(ticket domain.Ticket, detection domain.Detection, engine integrations.TicketingEngine, status string, inactiveKernel bool, scan domain.ScanSummary, deviceWithoutDetectionsLikelyDead bool, ipsForCloudDecommissionScan chan<- string) {
+func (job *ScanCloseJob) processTicketForScheduledScan(deadHostIPToProofMap map[string]string, ticket domain.Ticket, detection domain.Detection, engine integrations.TicketingEngine, status string, inactiveKernel bool, scan domain.ScanSummary, deviceWithoutDetectionsLikelyDead bool, ipsForCloudDecommissionScan chan<- string) {
 	var err error
 
 	if deviceWithoutDetectionsLikelyDead {
