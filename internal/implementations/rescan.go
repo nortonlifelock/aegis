@@ -117,7 +117,7 @@ func (job *RescanJob) createAndMonitorScan(matches []domain.Match, tickets []dom
 		var scans <-chan domain.Scan
 		if job.Payload.Type == domain.RescanDecommission {
 			if _, _, canCreate := canCreateCloudDecommJob(job.db, job.lstream, job.config.OrganizationID(), job.Payload.Group); canCreate {
-				createCloudDecommissionJob(job.id, job.db, job.lstream, job.config.OrganizationID(), job.Payload.Group, getIPsFromMatches(matches))
+				createCloudDecommissionJob(job.id, job.db, job.lstream, job.config.OrganizationID(), job.Payload.Group, getIPsFromMatches(matches), getTitlesFromTickets(tickets))
 				out := make(chan domain.Scan)
 				close(out)
 				scans = out
@@ -295,10 +295,38 @@ func (m matchTicket) InstanceID() string {
 	return m.instanceID
 }
 
+func getTitlesFromTickets(tickets []domain.Ticket) (titles []string) {
+	titles = make([]string, 0)
+
+	for index := range tickets {
+		titles = append(titles, tickets[index].Title())
+	}
+
+	return titles
+}
+
 func getIPsFromMatches(matches []domain.Match) (ips []string) {
 	ips = make([]string, 0)
+	seen := make(map[string]bool)
 	for _, match := range matches {
-		ips = append(ips, match.IP())
+		if !seen[match.IP()] {
+			seen[match.IP()] = true
+			ips = append(ips, match.IP())
+		}
+	}
+	return ips
+}
+
+func getIPsFromTickets(matches []domain.Ticket) (ips []string) {
+	ips = make([]string, 0)
+	seen := make(map[string]bool)
+	for _, match := range matches {
+		if len(sord(match.IPAddress())) > 0 {
+			if !seen[sord(match.IPAddress())] {
+				seen[sord(match.IPAddress())] = true
+				ips = append(ips, sord(match.IPAddress()))
+			}
+		}
 	}
 	return ips
 }
