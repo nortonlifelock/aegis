@@ -736,7 +736,7 @@ func loadGlobalExceptions(db domain.DatabaseConnection, orgID string, sourceID s
 				}
 			}
 
-			if osRegex != nil || hostnameRegex != nil {
+			if osRegex != nil || hostnameRegex != nil || deviceIDRegex != nil {
 				globals = append(globals, compiledException{
 					exception:     globalException,
 					osRegex:       osRegex,

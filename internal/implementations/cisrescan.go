@@ -546,6 +546,10 @@ func createTicketsForUnticketedFindings(db domain.DatabaseConnection, lstream lo
 							}
 						}
 
+						if len(globalException.exception.VulnerabilityID()) > 0 && globalException.exception.VulnerabilityID() != finding.VulnerabilityID() {
+							match = false
+						}
+
 						if match {
 							ignore = globalException.exception
 							break
