@@ -190,6 +190,8 @@ func handleAssigneeLocationAndResolutionDateInFields(resolutionDateRequired bool
 	if resolutionDateRequired {
 		if !tord(Ticket.ResolutionDate()).IsZero() {
 			payload.Unknowns[connector.GetFieldMap(backendResolutionDate).getCreateID()] = tord(Ticket.ResolutionDate())
+		} else {
+			payload.Unknowns[connector.GetFieldMap(backendResolutionDate).getCreateID()] = time.Now()
 		}
 	}
 

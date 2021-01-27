@@ -102,6 +102,8 @@ func (connector *ConnectorJira) getOpenTicketsByGroupID(statuses map[string]bool
 
 					q.endGroup()
 
+					q.orderByAscend(connector.GetStatusMap(backendCreated))
+
 					issues, errChan = connector.getSearchResults(q)
 				} else {
 					out := make(chan error, 1)
