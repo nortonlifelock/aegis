@@ -681,14 +681,35 @@ type compiledException struct {
 	exception     domain.Ignore
 	osRegex       *regexp.Regexp
 	hostnameRegex *regexp.Regexp
+	deviceIDRegex *regexp.Regexp
 }
 
 func (job *AssetSyncJob) preloadIgnores() (globals []compiledException, deviceIDToVulnIDToException map[string]map[string]domain.Ignore, err error) {
-	globals = make([]compiledException, 0)
 	deviceIDToVulnIDToException = make(map[string]map[string]domain.Ignore)
+	globals, err = loadGlobalExceptions(job.db, job.config.OrganizationID(), job.insources.SourceID())
 
+	if err == nil {
+		var specificExceptions []domain.Ignore
+		if specificExceptions, err = job.db.GetExceptionsByOrg(job.config.OrganizationID()); err == nil {
+			for _, exception := range specificExceptions {
+				if len(exception.DeviceID()) > 0 && len(exception.VulnerabilityID()) > 0 {
+					if deviceIDToVulnIDToException[exception.DeviceID()] == nil {
+						deviceIDToVulnIDToException[exception.DeviceID()] = make(map[string]domain.Ignore)
+					}
+
+					deviceIDToVulnIDToException[exception.DeviceID()][fmt.Sprintf("%s;%s", exception.VulnerabilityID(), exception.Port())] = exception
+				}
+			}
+		}
+	}
+
+	return globals, deviceIDToVulnIDToException, err
+}
+
+func loadGlobalExceptions(db domain.DatabaseConnection, orgID string, sourceID string) (globals []compiledException, err error) {
+	globals = make([]compiledException, 0)
 	var globalExceptions []domain.Ignore
-	if globalExceptions, err = job.db.GetGlobalExceptions(job.config.OrganizationID()); err == nil {
+	if globalExceptions, err = db.GetGlobalExceptions(orgID, sourceID); err == nil {
 		for _, globalException := range globalExceptions {
 
 			var osRegex *regexp.Regexp
@@ -707,11 +728,20 @@ func (job *AssetSyncJob) preloadIgnores() (globals []compiledException, deviceID
 				}
 			}
 
-			if osRegex != nil || hostnameRegex != nil {
+			var deviceIDRegex *regexp.Regexp
+			if len(sord(globalException.DeviceIDRegex())) > 0 {
+				if deviceIDRegex, err = regexp.Compile(sord(globalException.DeviceIDRegex())); err != nil {
+					err = fmt.Errorf("error while compiling regex for global ignore entry [%s]", globalException.ID())
+					break
+				}
+			}
+
+			if osRegex != nil || hostnameRegex != nil || deviceIDRegex != nil {
 				globals = append(globals, compiledException{
 					exception:     globalException,
 					osRegex:       osRegex,
 					hostnameRegex: hostnameRegex,
+					deviceIDRegex: deviceIDRegex,
 				})
 			} else {
 				err = fmt.Errorf("neither os regex nor hostname regex compiled for global ignore entry [%s]", globalException.ID())
@@ -721,23 +751,7 @@ func (job *AssetSyncJob) preloadIgnores() (globals []compiledException, deviceID
 	} else {
 		err = fmt.Errorf("error while loading global exceptions - %s", err.Error())
 	}
-
-	if err == nil {
-		var specificExceptions []domain.Ignore
-		if specificExceptions, err = job.db.GetExceptionsByOrg(job.config.OrganizationID()); err == nil {
-			for _, exception := range specificExceptions {
-				if len(exception.DeviceID()) > 0 && len(exception.VulnerabilityID()) > 0 {
-					if deviceIDToVulnIDToException[exception.DeviceID()] == nil {
-						deviceIDToVulnIDToException[exception.DeviceID()] = make(map[string]domain.Ignore)
-					}
-
-					deviceIDToVulnIDToException[exception.DeviceID()][fmt.Sprintf("%s;%s", exception.VulnerabilityID(), exception.Port())] = exception
-				}
-			}
-		}
-	}
-
-	return globals, deviceIDToVulnIDToException, err
+	return globals, err
 }
 
 func stringInSlice(vals []string, lookFor string) (inSlice bool) {

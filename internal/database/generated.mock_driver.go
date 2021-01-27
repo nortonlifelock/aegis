@@ -99,7 +99,7 @@ type MockSQLDriver struct {
 	FuncGetExceptionsByOrg                            func(_OrgID string) ([]domain.Ignore, error)
 	FuncGetExceptionsDueNext30Days                    func() ([]domain.CERF, error)
 	FuncGetExceptionsLength                           func(_offset int, _limit int, _orgID string, _sortField string, _sortOrder string, _Title string, _IP string, _Hostname string, _VulnID string, _Approval string, _DueDate string, _AssignmentGroup string, _OS string, _OSRegex string, _TypeID int) (domain.QueryData, error)
-	FuncGetGlobalExceptions                           func(_OrgID string) ([]domain.Ignore, error)
+	FuncGetGlobalExceptions                           func(_OrgID string, _SourceID string) ([]domain.Ignore, error)
 	FuncGetIgnoreByIPVulnID                           func(_IP string, _VulnID string) ([]domain.Ignore, error)
 	FuncGetJobByID                                    func(_ID int) (domain.JobRegistration, error)
 	FuncGetJobConfig                                  func(_ID string) (domain.JobConfig, error)
@@ -861,9 +861,9 @@ func (myMockSQLDriver *MockSQLDriver) GetExceptionsLength(_offset int, _limit in
 	}
 }
 
-func (myMockSQLDriver *MockSQLDriver) GetGlobalExceptions(_OrgID string) ([]domain.Ignore, error) {
+func (myMockSQLDriver *MockSQLDriver) GetGlobalExceptions(_OrgID string, _SourceID string) ([]domain.Ignore, error) {
 	if myMockSQLDriver.FuncGetGlobalExceptions != nil {
-		return myMockSQLDriver.FuncGetGlobalExceptions(_OrgID)
+		return myMockSQLDriver.FuncGetGlobalExceptions(_OrgID, _SourceID)
 	} else {
 		panic("method not implemented") // mock SQL drivers should only be used in testing
 	}
