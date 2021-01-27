@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/Azure/azure-sdk-for-go/profiles/latest/compute/mgmt/compute"
 	"github.com/Azure/azure-sdk-for-go/profiles/latest/network/mgmt/network"
 	"github.com/Azure/azure-sdk-for-go/profiles/latest/resources/mgmt/subscriptions"
 	network2 "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2019-09-01/network"
@@ -20,6 +21,7 @@ import (
 // ConnectionAzure holds the authorization information and URL for Azure. tagNames acts as a cache holding the unique list of tag names, as
 // the API call to gather them all is expensive
 type ConnectionAzure struct {
+	ctx             context.Context
 	authorizer      autorest.Authorizer
 	url             string
 	subscriptionIDs []string
@@ -52,7 +54,7 @@ const (
 var azureAuthLock sync.Mutex
 
 // CreateConnection establishes a connection to Azure and collects a list of subscriptions that the auth information has access to
-func CreateConnection(authInfo, url string, lstream logger) (connection *ConnectionAzure, err error) {
+func CreateConnection(ctx context.Context, authInfo, url string, lstream logger) (connection *ConnectionAzure, err error) {
 	azureAuthLock.Lock()
 
 	defer func() {
@@ -77,6 +79,7 @@ func CreateConnection(authInfo, url string, lstream logger) (connection *Connect
 			var authorizer autorest.Authorizer
 			if authorizer, err = auth.NewAuthorizerFromEnvironment(); err == nil {
 				connection = &ConnectionAzure{
+					ctx:        ctx,
 					authorizer: authorizer,
 					url:        url, // e.g. https://management.azure.com
 					lstream:    lstream,
@@ -253,7 +256,7 @@ func (connection *ConnectionAzure) getIPTagsForVirtualMachines(subID string, loc
 			cip := &cloudIP{
 				ip:         ip,
 				subID:      subID,
-				state:      "",
+				state:      vmTags[ip][awsclient.State],
 				mac:        vmTags[ip][mac],
 				instanceID: vmTags[ip][awsclient.InstanceID],
 			}
@@ -296,13 +299,12 @@ func (connection *ConnectionAzure) getSubscriptionIDs() (subscriptionIDs []strin
 	subscriptionIDs = make([]string, 0)
 
 	var resultPage subscriptions.ListResultPage
-	resultPage, err = subscriptionClient.List(context.Background())
+	resultPage, err = subscriptionClient.List(connection.ctx)
 	if err == nil {
 		subscriptionContracts := resultPage.Values()
 
 		for _, subscription := range subscriptionContracts {
 			if subscription.ID != nil {
-				//fmt.Println(*subscription.ID, *subscription.DisplayName)
 				fields := strings.Split(*subscription.ID, "/")
 				if len(fields) == 3 {
 					subscriptionIDs = append(subscriptionIDs, fields[2])
@@ -322,49 +324,154 @@ func (connection *ConnectionAzure) getSubscriptionIDs() (subscriptionIDs []strin
 	return subscriptionIDs, err
 }
 
+func (connection *ConnectionAzure) getNCIDToState(subscriptionID string) (ncidToState map[string]string, err error) {
+	ncidToState = make(map[string]string)
+
+	var vmIDtoNICid map[string]string
+	vmIDtoNICid, err = connection.getVMtoNCIDMap(subscriptionID)
+
+	if err == nil {
+		var result compute.VirtualMachineListResultPage
+		var vms []compute.VirtualMachine
+		vmClient := compute.NewVirtualMachinesClient(subscriptionID)
+		vmClient.Authorizer = connection.authorizer
+
+		result, err = vmClient.ListAll(connection.ctx, "true")
+		var notDone = true
+		for notDone {
+			if err == nil {
+				vms = result.Values()
+				for _, vm := range vms {
+					if vm.InstanceView != nil {
+						if vm.InstanceView.Statuses != nil {
+							for _, status := range *vm.InstanceView.Statuses {
+								if strings.Contains(*status.Code, "PowerState") {
+									ncidToState[vmIDtoNICid[*vm.ID]] = *status.DisplayStatus
+								}
+							}
+						}
+					}
+				}
+
+				notDone = result.NotDone()
+				if notDone {
+					err = result.NextWithContext(connection.ctx)
+					if err != nil {
+						break
+					}
+				}
+			} else {
+				break
+			}
+		}
+	} else {
+		err = fmt.Errorf("error while loading vm information for [%s] - %s", subscriptionID, err.Error())
+	}
+
+	return ncidToState, err
+}
+
+func (connection *ConnectionAzure) getVMtoNCIDMap(subscriptionID string) (vmIDtoNICid map[string]string, err error) {
+	vmIDtoNICid = make(map[string]string)
+	var result compute.VirtualMachineListResultPage
+	var vms []compute.VirtualMachine
+	vmClient := compute.NewVirtualMachinesClient(subscriptionID)
+	vmClient.Authorizer = connection.authorizer
+
+	result, err = vmClient.ListAll(connection.ctx, "false")
+	var notDone = true
+	for notDone {
+		if err == nil {
+			vms = result.Values()
+			for _, vm := range vms {
+				for _, nic := range *vm.VirtualMachineProperties.NetworkProfile.NetworkInterfaces {
+					vmIDtoNICid[*vm.ID] = *nic.ID
+				}
+			}
+
+			notDone = result.NotDone()
+			if notDone {
+				err = result.NextWithContext(connection.ctx)
+				if err != nil {
+					break
+				}
+			}
+
+		} else {
+			break
+		}
+	}
+
+	return vmIDtoNICid, err
+}
+
 func (connection *ConnectionAzure) virtualMachineNetworkInterfaceTags(subscriptionID string) (ipToKeyToValue map[string]map[string]string, err error) {
 	ipToKeyToValue = make(map[string]map[string]string)
+	var ncidToState map[string]string
+	ncidToState, err = connection.getNCIDToState(subscriptionID)
 
-	interfacesClient := network.NewInterfacesClient(subscriptionID)
-	interfacesClient.Authorizer = connection.authorizer
-	resultPage, err := interfacesClient.ListAll(context.Background())
 	if err == nil {
-		interfaces := resultPage.Values()
+		interfacesClient := network.NewInterfacesClient(subscriptionID)
+		interfacesClient.Authorizer = connection.authorizer
+		var resultPage network.InterfaceListResultPage
 
-		for _, networkInterface := range interfaces {
-			if networkInterface.InterfacePropertiesFormat != nil {
-				if networkInterface.IPConfigurations != nil {
-					for _, ipConfig := range *networkInterface.IPConfigurations {
-						if ipConfig.InterfaceIPConfigurationPropertiesFormat != nil {
-							if ipConfig.InterfaceIPConfigurationPropertiesFormat.PrivateIPAddress != nil {
-								ip := *ipConfig.InterfaceIPConfigurationPropertiesFormat.PrivateIPAddress
-								if ipToKeyToValue[ip] == nil {
-									ipToKeyToValue[ip] = make(map[string]string)
-								}
+		if resultPage, err = interfacesClient.ListAll(connection.ctx); err == nil {
+			var notDone = true
+			for notDone {
+				interfaces := resultPage.Values()
 
-								if networkInterface.Name != nil {
-									instanceID := *networkInterface.Name
-									// TODO should we share the const?
-									ipToKeyToValue[ip][awsclient.InstanceID] = instanceID
-								}
+				for _, networkInterface := range interfaces {
+					if networkInterface.InterfacePropertiesFormat != nil {
+						if networkInterface.IPConfigurations != nil {
+							for _, ipConfig := range *networkInterface.IPConfigurations {
+								if ipConfig.InterfaceIPConfigurationPropertiesFormat != nil {
+									if ipConfig.InterfaceIPConfigurationPropertiesFormat.PrivateIPAddress != nil {
+										ip := *ipConfig.InterfaceIPConfigurationPropertiesFormat.PrivateIPAddress
 
-								if networkInterface.MacAddress != nil {
-									ipToKeyToValue[ip][mac] = *networkInterface.MacAddress
-								}
+										if ipToKeyToValue[ip] == nil {
+											ipToKeyToValue[ip] = make(map[string]string)
+										}
 
-								for key, value := range networkInterface.Tags {
-									if value != nil {
-										ipToKeyToValue[ip][key] = *value
+										if networkInterface.Name != nil {
+											instanceID := *networkInterface.Name
+											// TODO should separate const, move to domain if it needs to be shared
+											ipToKeyToValue[ip][awsclient.InstanceID] = instanceID
+										}
+
+										if len(ncidToState[*networkInterface.ID]) > 0 {
+											ipToKeyToValue[ip][awsclient.State] = ncidToState[*networkInterface.ID]
+										} else {
+											ipToKeyToValue[ip][awsclient.State] = domain.DeviceUnknown
+										}
+
+										if networkInterface.MacAddress != nil {
+											ipToKeyToValue[ip][mac] = *networkInterface.MacAddress
+										}
+
+										for key, value := range networkInterface.Tags {
+											if value != nil {
+												ipToKeyToValue[ip][key] = *value
+											}
+										}
 									}
 								}
 							}
 						}
 					}
 				}
+
+				notDone = resultPage.NotDone()
+				if notDone {
+					err = resultPage.NextWithContext(connection.ctx)
+					if err != nil {
+						break
+					}
+				}
 			}
+
+		} else {
+			err = fmt.Errorf("error while grabbing network interface information - %s", err.Error())
 		}
-	} else {
-		err = fmt.Errorf("error while grabbing network interface information - %s", err.Error())
 	}
 
 	return ipToKeyToValue, err
@@ -376,7 +483,7 @@ func (connection *ConnectionAzure) applicationGatewayTags(subscriptionID string)
 	appGatewayClient := network.NewApplicationGatewaysClient(subscriptionID)
 	appGatewayClient.Authorizer = connection.authorizer
 	var applicationGatewayListResultPage network.ApplicationGatewayListResultPage
-	applicationGatewayListResultPage, err = appGatewayClient.ListAll(context.Background())
+	applicationGatewayListResultPage, err = appGatewayClient.ListAll(connection.ctx)
 
 	if err == nil {
 		gateways := applicationGatewayListResultPage.Values()
@@ -460,7 +567,7 @@ func (connection *ConnectionAzure) loadBalancerTags(subscriptionID string) (ipTo
 	loadBalancerClient := network.NewLoadBalancersClient(subscriptionID)
 	loadBalancerClient.Authorizer = connection.authorizer
 
-	loadBalancerInfo, err := loadBalancerClient.ListAll(context.Background())
+	loadBalancerInfo, err := loadBalancerClient.ListAll(connection.ctx)
 	if err == nil {
 
 		loadBalancerInfoValues := loadBalancerInfo.Values()
@@ -477,7 +584,7 @@ func (connection *ConnectionAzure) loadBalancerTags(subscriptionID string) (ipTo
 				if len(fields) == 9 {
 
 					var ipConfig network.LoadBalancerFrontendIPConfigurationListResultPage
-					ipConfig, err = loadBalancerIPClient.List(context.Background(), fields[4], fields[8])
+					ipConfig, err = loadBalancerIPClient.List(connection.ctx, fields[4], fields[8])
 					if err == nil {
 						ipsInfo := ipConfig.Values()
 
@@ -535,9 +642,23 @@ func (c *cloudIP) Region() string {
 	return c.subID
 }
 
-// TODO
 func (c *cloudIP) State() string {
-	return domain.DeviceRunning
+	if len(c.state) > 0 {
+		switch c.state {
+		case "VM running":
+			return domain.DeviceRunning
+		case "VM deallocated":
+			return domain.DeviceDeallocated
+		case "VM stopped":
+			return domain.DeviceStopped
+		case domain.DeviceUnknown:
+			return domain.DeviceUnknown
+		default:
+			return c.state
+		}
+	} else {
+		return domain.DeviceUnknown
+	}
 }
 
 // TODO mac not populated

@@ -60,7 +60,7 @@ func (job *CloudDecommissionJob) Process(ctx context.Context, id string, appconf
 
 			for _, insource := range job.insources {
 				var connection integrations.CloudServiceConnection
-				if connection, err = integrations.GetCloudServiceConnection(job.db, insource.Source(), insource, job.appconfig, job.lstream); err == nil {
+				if connection, err = integrations.GetCloudServiceConnection(job.ctx, job.db, insource.Source(), insource, job.appconfig, job.lstream); err == nil {
 					cloudConnections = append(cloudConnections, connection)
 				} else {
 					job.lstream.Send(log.Error("error while establishing connection", err))
@@ -120,7 +120,7 @@ func (job *CloudDecommissionJob) decommissionCloudAssets(cloudConnections []inte
 			}
 
 			if err == nil {
-				deviceIDToDecommissionedDevice, deviceIDToState := job.findDecommissionedDevices(historyOfDevices, allIPs)
+				deviceIDToDecommissionedDevice, deviceSourceIDToState := job.findDecommissionedDevices(historyOfDevices, allIPs)
 				job.markDevicesAsDecommissionedInDatabase(deviceIDToDecommissionedDevice)
 
 				var orgInfo domain.Organization
@@ -136,7 +136,7 @@ func (job *CloudDecommissionJob) decommissionCloudAssets(cloudConnections []inte
 							var errs <-chan error
 
 							tickets, errs = job.getTicketsForDecommCheck(assetGroups, sourceIDToSource, ticketingEngine, orgInfo)
-							job.closeTicketsForDecommissionedAssets(tickets, errs, deviceIDToDecommissionedDevice, deviceIDToState, ticketingEngine, sourceIDToSource)
+							job.closeTicketsForDecommissionedAssets(tickets, errs, deviceIDToDecommissionedDevice, deviceSourceIDToState, ticketingEngine, sourceIDToSource)
 							job.findIncorrectlyDecommissionedAssets(deviceIDToDecommissionedDevice)
 						} else {
 							job.lstream.Send(log.Errorf(err, "error while loading sources from database"))
@@ -146,6 +146,17 @@ func (job *CloudDecommissionJob) decommissionCloudAssets(cloudConnections []inte
 					}
 				} else {
 					job.lstream.Send(log.Errorf(err, "error while loading organization info for [%v]", job.config.OrganizationID()))
+				}
+
+				for _, ip := range allIPs {
+					for _, device := range historyOfDevices {
+						if device.IP() == ip.IP() {
+							_, _, err = job.db.UpdateStateOfDevice(device.ID(), ip.State(), job.config.OrganizationID())
+							if err != nil {
+								err = fmt.Errorf("error while updating state information for device [%s] - %s", device.ID(), err.Error())
+							}
+						}
+					}
 				}
 			} else {
 				job.lstream.Send(log.Errorf(err, "error while grabbing history of devices"))
@@ -261,7 +272,7 @@ func (job *CloudDecommissionJob) findIncorrectlyDecommissionedAssets(deviceIDToD
 	}
 }
 
-func (job *CloudDecommissionJob) closeTicketsForDecommissionedAssets(tickets <-chan domain.Ticket, errs <-chan error, deviceIDToDecommDevice map[string]domain.Device, deviceIDToState map[string]string, ticketingEngine integrations.TicketingEngine, sourceIDToSource map[string]domain.Source) {
+func (job *CloudDecommissionJob) closeTicketsForDecommissionedAssets(tickets <-chan domain.Ticket, errs <-chan error, deviceIDToDecommDevice map[string]domain.Device, deviceSourceIDToState map[string]string, ticketingEngine integrations.TicketingEngine, sourceIDToSource map[string]domain.Source) {
 	var deviceAlreadyDecommedInDB sync.Map
 
 	wg := &sync.WaitGroup{}
@@ -337,8 +348,8 @@ func (job *CloudDecommissionJob) closeTicketsForDecommissionedAssets(tickets <-c
 
 							if reopen {
 								var comment = fmt.Sprintf("Ticket moved to %s due to the disparity between scanner and cloud asset inventory", ticketingEngine.GetStatusMap(domain.StatusScanError))
-								if len(deviceIDToState[tic.DeviceID()]) > 0 {
-									comment = fmt.Sprintf("%s. Current state of asset is [%s]", comment, deviceIDToState[tic.DeviceID()])
+								if len(deviceSourceIDToState[tic.DeviceID()]) > 0 {
+									comment = fmt.Sprintf("%s. Current state of asset is [%s]", comment, deviceSourceIDToState[tic.DeviceID()])
 								}
 
 								if err := ticketingEngine.Transition(
@@ -455,7 +466,7 @@ func (job *CloudDecommissionJob) findDecommissionedDevices(historyOfDevices []do
 	// find which devices we had stored in the databases that are not in the inventory of the cloud services (and are assumed to be decommissioned)
 	// as well as devices that were reported by the cloud service as decommissioned
 	var deviceIDToDecommDevice = make(map[string]domain.Device, 0)
-	var deviceIDToState = make(map[string]string, 0)
+	var deviceSourceIDToState = make(map[string]string, 0)
 	for _, device := range historyOfDevices {
 
 		// the asset sync job (meaning a vulnerability scanner) has also found the device
@@ -465,7 +476,7 @@ func (job *CloudDecommissionJob) findDecommissionedDevices(historyOfDevices []do
 				deviceIDToDecommDevice[sord(device.SourceID())] = device
 			} else {
 				var matchedCloudDevice = cloudInstanceIDToDevice[sord(device.InstanceID())]
-				deviceIDToState[sord(device.SourceID())] = matchedCloudDevice.State()
+				deviceSourceIDToState[sord(device.SourceID())] = matchedCloudDevice.State()
 
 				// the cloud service reported the device as decommissioned
 				if matchedCloudDevice.State() == domain.DeviceDecommed {
@@ -477,7 +488,7 @@ func (job *CloudDecommissionJob) findDecommissionedDevices(historyOfDevices []do
 		}
 	}
 
-	return deviceIDToDecommDevice, deviceIDToState
+	return deviceIDToDecommDevice, deviceSourceIDToState
 }
 
 func (job *CloudDecommissionJob) getSourceMap() (sourceIDToSource map[string]domain.Source, err error) {

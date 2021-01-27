@@ -96,6 +96,12 @@ const (
 
 	// DeviceDecommed denotes that the device no longer exists
 	DeviceDecommed = "decommissioned"
+
+	// DeviceUnknown denotes that the device has been deallocated in the cloud
+	DeviceDeallocated = "deallocated"
+
+	// DeviceUnknown denotes that the state of the device is not known
+	DeviceUnknown = "unknown"
 )
 
 // Ignore Types

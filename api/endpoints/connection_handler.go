@@ -75,7 +75,7 @@ func getCloudConnection(source string, orgID string) (cloudConnection integratio
 		if err == nil {
 			if sourceConfig != nil && len(sourceConfig) > 0 {
 
-				cloudConnection, err = integrations.GetCloudServiceConnection(Ms, source, sourceConfig[0], AppConfig, logger{})
+				cloudConnection, err = integrations.GetCloudServiceConnection(context.Background(), Ms, source, sourceConfig[0], AppConfig, logger{})
 				if err == nil {
 					// TODO what do we do if the connection closes? how do we check if the connection is still valid?
 					cloudConnectionMap[source][orgID] = cloudConnection

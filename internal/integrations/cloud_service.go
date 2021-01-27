@@ -1,6 +1,7 @@
 package integrations
 
 import (
+	"context"
 	"fmt"
 	"github.com/nortonlifelock/aegis/pkg/aws"
 	"github.com/nortonlifelock/aegis/pkg/azure"
@@ -30,7 +31,7 @@ type config interface {
 }
 
 // GetCloudServiceConnection returns a struct that implements the CloudServiceConnection interface
-func GetCloudServiceConnection(ms domain.DatabaseConnection, cloudServiceID string, config domain.SourceConfig, appconfig config, lstream logger) (connection CloudServiceConnection, err error) {
+func GetCloudServiceConnection(ctx context.Context, ms domain.DatabaseConnection, cloudServiceID string, config domain.SourceConfig, appconfig config, lstream logger) (connection CloudServiceConnection, err error) {
 	var decryptedConfig domain.SourceConfig
 	decryptedConfig, err = crypto.DecryptSourceConfig(ms, config, appconfig)
 
@@ -42,7 +43,7 @@ func GetCloudServiceConnection(ms domain.DatabaseConnection, cloudServiceID stri
 				connection, err = awsclient.CreateConnection(decryptedConfig.AuthInfo(), sord(config.Payload()))
 				break
 			case Azure:
-				connection, err = azure.CreateConnection(decryptedConfig.AuthInfo(), decryptedConfig.Address(), lstream)
+				connection, err = azure.CreateConnection(ctx, decryptedConfig.AuthInfo(), decryptedConfig.Address(), lstream)
 				break
 			default:
 				err = fmt.Errorf("unrecognized cloud service [%s]", cloudServiceID)
