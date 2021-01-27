@@ -23,6 +23,7 @@ type Ignore struct {
 	DBCreatedDatevar   time.Time
 	DBUpdatedDatevar   *time.Time
 	DeviceIDvar        string
+	DeviceIDRegexvar   *string
 	DueDatevar         *time.Time
 	HostnameRegexvar   *string
 	IDvar              string
@@ -48,6 +49,7 @@ func (myIgnore Ignore) MarshalJSON() ([]byte, error) {
 		"DBCreatedDate":   myIgnore.DBCreatedDatevar,
 		"DBUpdatedDate":   myIgnore.DBUpdatedDatevar,
 		"DeviceID":        myIgnore.DeviceIDvar,
+		"DeviceIDRegex":   myIgnore.DeviceIDRegexvar,
 		"DueDate":         myIgnore.DueDatevar,
 		"HostnameRegex":   myIgnore.HostnameRegexvar,
 		"ID":              myIgnore.IDvar,
@@ -89,6 +91,11 @@ func (myIgnore *Ignore) DBUpdatedDate() (param *time.Time) {
 // DeviceID returns the DeviceID parameter from the Ignore struct
 func (myIgnore *Ignore) DeviceID() (param string) {
 	return myIgnore.DeviceIDvar
+}
+
+// DeviceIDRegex returns the DeviceIDRegex parameter from the Ignore struct
+func (myIgnore *Ignore) DeviceIDRegex() (param *string) {
+	return myIgnore.DeviceIDRegexvar
 }
 
 // DueDate returns the DueDate parameter from the Ignore struct
@@ -154,6 +161,11 @@ func (myIgnore *Ignore) SetCreatedBy(val string) {
 // SetDeviceID sets the DeviceID parameter from the Ignore struct
 func (myIgnore *Ignore) SetDeviceID(val string) {
 	myIgnore.DeviceIDvar = val
+}
+
+// SetDeviceIDRegex sets the DeviceIDRegex parameter from the Ignore struct
+func (myIgnore *Ignore) SetDeviceIDRegex(val string) {
+	myIgnore.DeviceIDRegexvar = &val
 }
 
 // SetHostnameRegex sets the HostnameRegex parameter from the Ignore struct

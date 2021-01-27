@@ -4107,13 +4107,13 @@ func (conn *dbconn) GetExceptionsLength(_offset int, _limit int, _orgID string, 
 }
 
 // GetGlobalExceptions executes the stored procedure GetGlobalExceptions against the database and returns the read results
-func (conn *dbconn) GetGlobalExceptions(_OrgID string) ([]domain.Ignore, error) {
+func (conn *dbconn) GetGlobalExceptions(_OrgID string, _SourceID string) ([]domain.Ignore, error) {
 	var err error
 	var retIgnore = make([]domain.Ignore, 0)
 
 	conn.Read(&connection.Procedure{
 		Proc:       "GetGlobalExceptions",
-		Parameters: []interface{}{_OrgID},
+		Parameters: []interface{}{_OrgID, _SourceID},
 		Callback: func(results interface{}, dberr error) {
 			err = dberr
 
@@ -4128,6 +4128,7 @@ func (conn *dbconn) GetGlobalExceptions(_OrgID string) ([]domain.Ignore, error) 
 							var myVulnerabilityID string
 							var myOSRegex *string
 							var myHostnameRegex *string
+							var myDeviceIDRegex *string
 							var myDueDate *time.Time
 
 							if err = rows.Scan(
@@ -4137,6 +4138,7 @@ func (conn *dbconn) GetGlobalExceptions(_OrgID string) ([]domain.Ignore, error) 
 								&myVulnerabilityID,
 								&myOSRegex,
 								&myHostnameRegex,
+								&myDeviceIDRegex,
 								&myDueDate,
 							); err == nil {
 
@@ -4146,6 +4148,7 @@ func (conn *dbconn) GetGlobalExceptions(_OrgID string) ([]domain.Ignore, error) 
 									VulnerabilityIDvar: myVulnerabilityID,
 									OSRegexvar:         myOSRegex,
 									HostnameRegexvar:   myHostnameRegex,
+									DeviceIDRegexvar:   myDeviceIDRegex,
 									DueDatevar:         myDueDate,
 								}
 

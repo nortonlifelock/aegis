@@ -313,6 +313,11 @@ func processFindingsAndTickets(lstream log.Logger, db domain.DatabaseConnection,
 		}
 	}
 
+	globals, err := loadGlobalExceptions(db, orgID, sourceID)
+	if err != nil {
+		lstream.Send(log.Errorf(err, "error while loading global exceptions"))
+	}
+
 	updateTicketsAccordingToFindings(
 		lstream,
 		db,
@@ -322,6 +327,7 @@ func processFindingsAndTickets(lstream log.Logger, db domain.DatabaseConnection,
 		findingsWithoutTickets,
 		ticketsWithFindings,
 		ticketsWithoutFindings,
+		globals,
 		closingComment,
 		updatingComment,
 		shouldCreateTicket,
@@ -484,13 +490,13 @@ func createAndGetVulnInfoForFinding(lstream log.Logger, db domain.DatabaseConnec
 	return vulnInfo, err
 }
 
-func updateTicketsAccordingToFindings(lstream log.Logger, db domain.DatabaseConnection, orgID string, sourceID string, engine integrations.TicketingEngine, findingsWithoutTickets []domain.Ticket, ticketsWithFindings []findingTicketPair, ticketsWithoutFindings []domain.Ticket, closingComment, updatingComment string, shouldCreateTicket func(ticket domain.Ticket) bool) {
+func updateTicketsAccordingToFindings(lstream log.Logger, db domain.DatabaseConnection, orgID string, sourceID string, engine integrations.TicketingEngine, findingsWithoutTickets []domain.Ticket, ticketsWithFindings []findingTicketPair, ticketsWithoutFindings []domain.Ticket, globals []compiledException, closingComment, updatingComment string, shouldCreateTicket func(ticket domain.Ticket) bool) {
 	wg := &sync.WaitGroup{}
 	wg.Add(3)
 	go func() {
 		defer handleRoutinePanic(lstream)
 		defer wg.Done()
-		createTicketsForUnticketedFindings(db, lstream, orgID, sourceID, engine, findingsWithoutTickets, shouldCreateTicket)
+		createTicketsForUnticketedFindings(db, lstream, orgID, sourceID, engine, findingsWithoutTickets, globals, shouldCreateTicket)
 	}()
 	go func() {
 		defer handleRoutinePanic(lstream)
@@ -505,7 +511,7 @@ func updateTicketsAccordingToFindings(lstream log.Logger, db domain.DatabaseConn
 	wg.Wait()
 }
 
-func createTicketsForUnticketedFindings(db domain.DatabaseConnection, lstream log.Logger, orgID string, sourceID string, engine integrations.TicketingEngine, findings []domain.Ticket, shouldCreateTicket func(ticket domain.Ticket) bool) {
+func createTicketsForUnticketedFindings(db domain.DatabaseConnection, lstream log.Logger, orgID string, sourceID string, engine integrations.TicketingEngine, findings []domain.Ticket, globals []compiledException, shouldCreateTicket func(ticket domain.Ticket) bool) {
 	wg := &sync.WaitGroup{}
 	for index := range findings {
 		if shouldCreateTicket(findings[index]) {
@@ -519,7 +525,37 @@ func createTicketsForUnticketedFindings(db domain.DatabaseConnection, lstream lo
 					lstream.Send(log.Errorf(err, "error while loading ignore entry [%s|%s]", finding.DeviceID(), finding.VulnerabilityID()))
 				}
 
-				// TODO global ignore check
+				if ignore == nil {
+					for _, globalException := range globals {
+						var match = true
+						if globalException.hostnameRegex != nil {
+							if !globalException.hostnameRegex.MatchString(sord(finding.HostName())) {
+								match = false
+							}
+						}
+
+						if globalException.osRegex != nil {
+							if !globalException.osRegex.MatchString(sord(finding.OperatingSystem())) {
+								match = false
+							}
+						}
+
+						if globalException.deviceIDRegex != nil {
+							if !globalException.deviceIDRegex.MatchString(finding.DeviceID()) {
+								match = false
+							}
+						}
+
+						if len(globalException.exception.VulnerabilityID()) > 0 && globalException.exception.VulnerabilityID() != finding.VulnerabilityID() {
+							match = false
+						}
+
+						if match {
+							ignore = globalException.exception
+							break
+						}
+					}
+				}
 
 				if ignore == nil {
 
