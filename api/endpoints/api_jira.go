@@ -55,9 +55,10 @@ type statusRegistry struct {
 	resolvedDecommissioned string
 	resolvedException      string
 	closedRemediated       string
-	closedFalsePositive    string
+	approvedFalsePositive  string
 	closedDecommission     string
-	closedException        string
+	approvedException      string
+	scanError              string
 }
 
 func newStatusRegistry() statusRegistry {
@@ -70,9 +71,10 @@ func newStatusRegistry() statusRegistry {
 		"resolved-decommissioned",
 		"resolved-exception",
 		"closed-remediated",
-		"closed-false-positive",
+		"approved-false-positive",
 		"closed-decommission",
-		"closed-exception",
+		"approved-exception",
+		"scan-error",
 	}
 }
 

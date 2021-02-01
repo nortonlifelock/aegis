@@ -781,9 +781,47 @@ func (connector *ConnectorJira) GetOpenTicketsByGroupID(methodOfDiscovery string
 func (connector *ConnectorJira) GetStatusMap(in string) string {
 	var retVal = connector.statusMap[strings.ToLower(in)]
 	if len(retVal) == 0 {
-		message := fmt.Sprintf("[NO MAPPING FOUND FOR %s IN JIRA PAYLOAD]", in)
-		connector.lstream.Send(log.Error("JIRA payload missing key elements", errors.New(message)))
-		retVal = message
+		switch in {
+		case strings.ToLower("assignee"):
+			retVal = in // default JIRA field does not require mapping
+		case strings.ToLower("category"):
+			retVal = in // default JIRA field does not require mapping
+		case strings.ToLower("comment"):
+			retVal = in // default JIRA field does not require mapping
+		case strings.ToLower("created"):
+			retVal = in // default JIRA field does not require mapping
+		case strings.ToLower("creator"):
+			retVal = in // default JIRA field does not require mapping
+		case strings.ToLower("description"):
+			retVal = in // default JIRA field does not require mapping
+		case strings.ToLower("due"):
+			retVal = in // default JIRA field does not require mapping
+		case strings.ToLower("labels"):
+			retVal = in // default JIRA field does not require mapping
+		case strings.ToLower("last viewed"):
+			retVal = in // default JIRA field does not require mapping
+		case strings.ToLower("priority"):
+			retVal = in // default JIRA field does not require mapping
+		case strings.ToLower("project"):
+			retVal = in // default JIRA field does not require mapping
+		case strings.ToLower("reporter"):
+			retVal = in // default JIRA field does not require mapping
+		case strings.ToLower("resolution"):
+			retVal = in // default JIRA field does not require mapping
+		case strings.ToLower("resolved"):
+			retVal = in // default JIRA field does not require mapping
+		case strings.ToLower("status"):
+			retVal = in // default JIRA field does not require mapping
+		case strings.ToLower("summary"):
+			retVal = in // default JIRA field does not require mapping
+		case strings.ToLower("updated"):
+			retVal = in // default JIRA field does not require mapping
+		default:
+			message := fmt.Sprintf("[NO MAPPING FOUND FOR %s IN JIRA PAYLOAD]", in)
+			connector.lstream.Send(log.Warning("JIRA payload missing key elements", errors.New(message)))
+			retVal = message
+		}
+
 	}
 
 	return retVal
