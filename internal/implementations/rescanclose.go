@@ -533,6 +533,8 @@ func (job *ScanCloseJob) processTicketForPassiveOrExceptionRescan(deadHostIPToPr
 		if !statusIsAClosedStatus(engine, sord(ticket.Status())) {
 			if _, _, canCreate := canCreateCloudDecommJob(job.db, job.lstream, job.config.OrganizationID(), job.Payload.Group); canCreate {
 				ticketsForCloudDecommissionScan <- ticket
+
+				// we do not comment on these tickets on purpose, because passive scans can lead to comment spam
 				job.commentOnTicketBeingSentToCloudDecom(engine, ticket, scan, deadHostIPToProofMap)
 			} else {
 				job.lstream.Send(log.Infof("the device for %s seems to be dead, but this is not a decommission scan", ticket.Title()))

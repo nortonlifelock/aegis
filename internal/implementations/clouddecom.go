@@ -357,9 +357,9 @@ func (job *CloudDecommissionJob) closeTicketsForDecommissionedAssets(tickets <-c
 									ticketingEngine.GetStatusMap(domain.StatusScanError),
 									comment,
 									sord(tic.AssignedTo())); err == nil {
-									job.lstream.Send(log.Infof("%v reopened as it's IP [%v] was in the AWS inventory", tic.Title(), sord(tic.IPAddress())))
+									job.lstream.Send(log.Infof("%v moved to scan error as it's IP [%v] was in the AWS inventory", tic.Title(), sord(tic.IPAddress())))
 								} else {
-									job.lstream.Send(log.Errorf(err, "error while marking %v as reopened", tic.Title()))
+									job.lstream.Send(log.Errorf(err, "error while marking %v as %s", tic.Title(), ticketingEngine.GetStatusMap(domain.StatusScanError)))
 								}
 							}
 
