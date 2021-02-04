@@ -535,7 +535,7 @@ func (job *ScanCloseJob) processTicketForPassiveOrExceptionRescan(deadHostIPToPr
 				ticketsForCloudDecommissionScan <- ticket
 
 				// we do not comment on these tickets on purpose, because passive scans can lead to comment spam
-				job.commentOnTicketBeingSentToCloudDecom(engine, ticket, scan, deadHostIPToProofMap)
+				// job.commentOnTicketBeingSentToCloudDecom(engine, ticket, scan, deadHostIPToProofMap)
 			} else {
 				job.lstream.Send(log.Infof("the device for %s seems to be dead, but this is not a decommission scan", ticket.Title()))
 				err = engine.Transition(ticket, engine.GetStatusMap(domain.StatusResolvedDecom), fmt.Sprintf("The device could not be detected though a vulnerability rescan. It has been moved to a resolved decommission status and will be rescanned with another option profile to confirm\nPROOF:\n%s", deadHostIPToProofMap[sord(ticket.IPAddress())]), sord(ticket.AssignedTo()))
