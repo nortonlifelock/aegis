@@ -23,6 +23,12 @@ type RescanQueuePayload struct {
 	// The RSQ will wait the following minutes after a ticket is updated - meaning once [time.Now >= (ticket.Updated + AgentTicketRescanDelayWaitInMinutes)] a rescan
 	// will be ticketed off for the ticket
 	AgentTicketRescanDelayWaitInMinutes *time.Duration `json:"agent_ticket_rescan_delay_wait_in_minutes"`
+
+	// ExceptionScansInclude has a list of strings holding the name of exceptions that should be included in exception rescan
+	// Please note that this field is only relevant for when Type=domain.RescanExceptions
+	// RescanQueues automatically kickoff exception rescans for exceptions that expiring in the upcoming 30 days
+	// If you want to rescan a set of exceptions that are not expiring in the upcoming 30 days, you can include them here
+	ExceptionScansInclude []string `json:"include_exceptions"`
 }
 
 // RescanQueueJob implements the Job interface required to run the job
@@ -92,6 +98,7 @@ func (job *RescanQueueJob) Process(ctx context.Context, id string, appconfig dom
 				job.lstream.Send(log.Debug("Loading tickets for Rescan"))
 				var cerfs []domain.CERF
 				if cerfs, err = job.db.GetExceptionsDueNext30Days(); err == nil {
+					cerfs = job.addCustomExceptionsForExceptionRSQ(cerfs)
 					var errChan <-chan error
 					issues, errChan = eng.GetTicketsForRescan(cerfs, job.outsource.Source(), orgcode, job.Payload.Type)
 					job.lstream.Send(log.Debugf("[%v] Tickets Loaded for Rescan", len(issues)))
@@ -122,6 +129,18 @@ func (job *RescanQueueJob) Process(ctx context.Context, id string, appconfig dom
 	}
 
 	return err
+}
+
+func (job *RescanQueueJob) addCustomExceptionsForExceptionRSQ(cerfs []domain.CERF) []domain.CERF {
+	if job.Payload.Type == domain.RescanExceptions {
+		for index := range job.Payload.ExceptionScansInclude {
+			cerfs = append(cerfs, &PayloadProvidedException{
+				job.Payload.ExceptionScansInclude[index],
+			})
+		}
+	}
+
+	return cerfs
 }
 
 func (job *RescanQueueJob) getAssetGroups() (assetGroupBelongsToThisOrgAndScanner map[string]bool, err error) {
@@ -553,4 +572,12 @@ func (l *wrapLogger) Send(log log.Log) {
 	}
 
 	l.logger.Send(log)
+}
+
+type PayloadProvidedException struct {
+	exceptionName string
+}
+
+func (e *PayloadProvidedException) CERForm() string {
+	return e.exceptionName
 }
