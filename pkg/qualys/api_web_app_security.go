@@ -326,6 +326,7 @@ type WebAppFinding struct {
 			} `xml:"Result"`
 		} `xml:"list"`
 	} `xml:"resultList"`
+	Param             string `xml:"param"`
 	Severity          string `xml:"severity"`
 	URL               string `xml:"url"`
 	StatusVal         string `xml:"status"`

@@ -1,21 +1,36 @@
 package aqua
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"strings"
 )
 
-func (cli *APIClient) GetContainersForNamespace(namespace string) (containers []ContainerInfo, err error) {
+// namespace can be left empty to search for all running containers
+func (cli *APIClient) GetContainersForNamespace(ctx context.Context, namespace string) (containers []ContainerInfo, err error) {
 	containers = make([]ContainerInfo, 0)
 	page := 1
 
-	endpoint := strings.Replace(getContainersFromNameSpace, "$NAMESPACE", namespace, 1)
+	// TODO we are currently filtering out unregistered containers, do we want to continue to do this?
+	var endpoint string
+	if len(namespace) > 0 {
+		endpoint = fmt.Sprintf("%s&namespace=%s", getRunningContainers, namespace)
+	} else {
+		endpoint = getRunningContainers
+	}
+
 
 	endpoint = strings.Replace(endpoint, " ", "%20", -1)
 
 	for {
+		select {
+		case <-ctx.Done():
+			return nil, fmt.Errorf("context closed")
+		default:
+		}
+
 		var request *http.Request
 		if request, err = http.NewRequest(http.MethodGet, fmt.Sprintf("%s/%s&page=%d&pagesize=50", cli.baseURL, endpoint, page), nil); err == nil {
 			var body []byte

@@ -4,17 +4,20 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/nortonlifelock/aegis/pkg/domain"
 	"net/http"
 	"strings"
 )
 
-func (cli *APIClient) GetVulnerabilitiesForImage(ctx context.Context, image string, registry string) (vulns []domain.ImageFinding, err error) {
-	vulns = make([]domain.ImageFinding, 0)
+func (cli *APIClient) GetVulnerabilitiesForImage(ctx context.Context, image string, registry string) (vulns []*VulnerabilityResult, err error) {
+	vulns = make([]*VulnerabilityResult, 0)
 	page := 1
 
 	endpoint := strings.Replace(getVulnerabilities, "$IMAGENAME", image, 1)
-	endpoint = strings.Replace(endpoint, "$REGISTRYNAME", registry, 1)
+
+	if len(registry) > 0 {
+		endpoint = fmt.Sprintf("%s&registry_name=%s", endpoint, registry)
+	}
+
 
 	endpoint = strings.Replace(endpoint, " ", "%20", -1)
 

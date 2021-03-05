@@ -23,7 +23,12 @@ func (f *webAppFindingWrapper) ID() string {
 
 // VulnerabilityID returns the QID
 func (f *webAppFindingWrapper) VulnerabilityID() string {
-	return f.f.Qid
+	// TODO
+	var webPath string
+	if len(f.f.Param) > 0 && len(f.f.ResultList.List.Result.AccessPath.List.URL) > 0 {
+		webPath = f.f.ResultList.List.Result.AccessPath.List.URL[0]
+	}
+	return fmt.Sprintf("%s;%s;%s",f.f.Qid, f.f.Param, webPath)
 }
 
 func (f *webAppFindingWrapper) Status() string {

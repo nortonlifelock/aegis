@@ -32,7 +32,7 @@ var routes = []route{
 
 	{createSourceEndpoint, http.MethodPost, "/Source", createSourceConfig},
 	{updateSourceEndpoint, http.MethodPut, "/Source", updateSourceConfig},
-	{deleteSourceEndpoint, http.MethodDelete, "/Source", deleteSourceConfig},
+	{deleteSourceEndpoint, http.MethodPut, "/Source/delete", deleteSourceConfig},
 	{getAllSourceConfigsEndpoint, http.MethodGet, "/SourceConfigs", getAllSourceConfigs},
 	{getAllSourcesEndpoint, http.MethodGet, "/Sources", getAllSources},
 

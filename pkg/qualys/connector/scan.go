@@ -420,7 +420,7 @@ func (session *QsSession) prepareIPsAndAGMapping(matches []domain.Match) (groupI
 				}
 
 				if !found {
-					session.lstream.Send(log.Errorf(err, "could not find asset group with online engine for IP [%s]", ip))
+					session.lstream.Send(log.Errorf(err, "could not find asset group with online engine for IP [%s]. check that the asset group is in your Qualys SourceConfig Payload and that the asset group has an online engine", ip))
 				}
 			}
 

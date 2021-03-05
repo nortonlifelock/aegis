@@ -2,6 +2,7 @@ package aqua
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -21,7 +22,7 @@ func (cli *APIClient) getMostRecentImageTag(images []ImageResult) (mostRecentTag
 	return mostRecentTag
 }
 
-func (cli *APIClient) GetImagesForRepository(registry, repository string) (images []ImageResult, err error) {
+func (cli *APIClient) GetImagesForRepository(ctx context.Context, registry, repository string) (images []ImageResult, err error) {
 	images = make([]ImageResult, 0)
 	page := 1
 
@@ -31,6 +32,12 @@ func (cli *APIClient) GetImagesForRepository(registry, repository string) (image
 	endpoint = strings.Replace(endpoint, " ", "%20", -1)
 
 	for {
+		select {
+		case <-ctx.Done():
+			return
+		default:
+		}
+
 		var request *http.Request
 		if request, err = http.NewRequest(http.MethodGet, fmt.Sprintf("%s/%s&page=%d&pagesize=50", cli.baseURL, endpoint, page), nil); err == nil {
 			var body []byte
@@ -48,10 +55,12 @@ func (cli *APIClient) GetImagesForRepository(registry, repository string) (image
 					break
 				}
 			} else {
-				err = fmt.Errorf("error while gathering vulnerabilities - %s", err.Error())
+				err = fmt.Errorf("error while gathering images - %s", err.Error())
+				break
 			}
 		} else {
 			err = fmt.Errorf("error while making request - %s", err.Error())
+			break
 		}
 	}
 
