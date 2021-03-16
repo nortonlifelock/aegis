@@ -12,8 +12,9 @@ import (
 type webAppFindingWrapper struct {
 	f *qualys.WebAppFinding
 
-	session *QsSession
-	vuln    *vulnerabilityInfo
+	session       *QsSession
+	vuln          *vulnerabilityInfo
+	childFindings []*webAppFindingWrapper
 }
 
 // ID returns the Aegis DB value which is not available from Qualys API
@@ -150,6 +151,15 @@ func (f *webAppFindingWrapper) LastUpdated() *time.Time {
 	return &timeVal
 }
 
+func (f *webAppFindingWrapper) ChildDetections() []domain.Detection {
+	dets := make([]domain.Detection, 0)
+	for index := range f.childFindings {
+		dets = append(dets, f.childFindings[index])
+	}
+
+	return dets
+}
+
 func (f *webAppFindingWrapper) Device() (domain.Device, error) {
 	return &WebAppWrapper{
 		sourceID:  f.f.WebApp.ID,
@@ -166,4 +176,70 @@ func (f *webAppFindingWrapper) Vulnerability() (domain.Vulnerability, error) {
 		f.vuln = lazyLoadVulnerabilityInfo(qidInt, f.session)
 	}
 	return f.vuln, err
+}
+
+func (session *QsSession) getParentFindingsAndAttachChildren(findings []*qualys.WebAppFinding) (filteredFindings []*webAppFindingWrapper) {
+	keyToTicketGroups := make(map[string][]*qualys.WebAppFinding)
+	filteredFindings = make([]*webAppFindingWrapper, 0)
+
+	for index := range findings {
+		f := findings[index]
+
+		// here tickets with the same parameter applying to the same base URL can be considered "child" tickets
+		// as fixing one will fix them all
+		var webPath string
+		if len(f.Param) > 0 && len(f.ResultList.List.Result.AccessPath.List.URL) > 0 {
+			webPath = f.ResultList.List.Result.AccessPath.List.URL[0]
+			key := fmt.Sprintf("%s;%s;%s", f.Qid, f.Param, webPath)
+
+			if keyToTicketGroups[key] == nil {
+				keyToTicketGroups[key] = make([]*qualys.WebAppFinding, 0)
+			}
+
+			keyToTicketGroups[key] = append(keyToTicketGroups[key], f)
+		} else {
+			// there is no parameter, so this finding will have no children
+			filteredFindings = append(filteredFindings, &webAppFindingWrapper{
+				f:       f,
+				session: session,
+			})
+		}
+	}
+
+	for _, ticketGroup := range keyToTicketGroups {
+		switch len(ticketGroup) {
+		case 0:
+			// do nothing
+		case 1:
+			filteredFindings = append(filteredFindings, &webAppFindingWrapper{
+				f:       ticketGroup[0],
+				session: session,
+			})
+		default:
+			children := ticketGroup[1:]
+			childrenObj := make([]*webAppFindingWrapper, 0)
+
+			for index := range children {
+				child := children[index]
+				childrenObj = append(childrenObj, &webAppFindingWrapper{
+					f:       child,
+					session: session,
+				})
+			}
+
+			filteredFindings = append(filteredFindings, &webAppFindingWrapper{
+				f:       ticketGroup[0],
+				childFindings: childrenObj,
+				session: session,
+			})
+		}
+	}
+
+	return filteredFindings
+}
+
+// This returns the DB ID of the parent detection
+// The scanner does not need to know this ID
+func (f *webAppFindingWrapper) ParentDetectionID() string {
+	return ""
 }

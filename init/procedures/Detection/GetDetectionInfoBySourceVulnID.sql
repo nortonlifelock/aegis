@@ -16,6 +16,7 @@
   DetectionStatusID   INT           NOT
   TimesSeen           INT           NOT
   Updated             DATETIME      NOT
+  ParentDetectionID   VARCHAR(36)   NULL
 */
 
 DROP PROCEDURE IF EXISTS `GetDetectionInfoBySourceVulnID`;
@@ -38,7 +39,8 @@ SELECT
     D.ActiveKernel,
     D.DetectionStatusID,
     D.TimesSeen,
-    D.Updated
+    D.Updated,
+    D.ParentDetectionId
 FROM Detection D
          JOIN VulnerabilityInfo VI on D.VulnerabilityID = VI.ID
 WHERE D.DeviceID = _SourceDeviceID AND VI.SourceVulnId = _SourceVulnerabilityID AND D.Port = _Port AND D.Protocol = _Protocol;

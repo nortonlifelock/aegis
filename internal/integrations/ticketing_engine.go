@@ -27,6 +27,7 @@ type TicketingEngine interface {
 
 	AssignmentGroupExists(groupName string) (exists bool, err error)
 	GetStatusMap(backendStatus string) (equivalentTicketStatus string)
+	LinkIssues(ticketTitle, linkedTicketTitle string) (err error)
 }
 
 const (

@@ -24,6 +24,41 @@ import (
 // Unassigned holds the string value of the assignee of a ticket that has yet to be assigned
 const Unassigned = "Unassigned"
 
+func (connector *ConnectorJira) LinkIssues(ticketTitle, linkedTicketTitle string) (err error) {
+	body := &IssueLinkRequest{Update: &UpdateIssueLinks{Issuelinks: []Issuelinks{
+		{
+			Add: Add{
+				Type{
+					Name:    "Related",
+					//Inward:  "",
+					//Outward: "",
+				},
+				OutwardIssue{Key: linkedTicketTitle},
+			},
+		},
+	}}}
+
+	var req *http.Request
+	if req, err = connector.client.NewRequest(http.MethodPut, jcreateissue +ticketTitle, body); err == nil { // TODO rename const
+		var wg = sync.WaitGroup{}
+		wg.Add(1)
+
+		var response *http.Response
+		if response, err = connector.funnelClient.Do(req); err == nil {
+			if response != nil {
+				defer response.Body.Close()
+
+				//var body []byte
+				//if body, err = ioutil.ReadAll(response.Body); err == nil {
+				//	fmt.Println(string(body))
+				//}
+			}
+		}
+	}
+
+	return err
+}
+
 // GetTicket returns a domain object containing information of the JIRA ticket relating to the SourceKey
 func (connector *ConnectorJira) GetTicket(sourceKey string) (ticket domain.Ticket, err error) {
 	if len(sourceKey) > 0 {

@@ -24,7 +24,7 @@ type MockSQLDriver struct {
 	FuncCreateAssetWithIPInstanceID                   func(_State string, _IP string, _MAC string, _SourceID string, _InstanceID string, _Region string, _OrgID string, _OS string, _OsTypeID int) (id int, affectedRows int, err error)
 	FuncCreateCategory                                func(_Category string) (id int, affectedRows int, err error)
 	FuncCreateDBLog                                   func(_User string, _Command string, _Endpoint string) (id int, affectedRows int, err error)
-	FuncCreateDetection                               func(_OrgID string, _SourceID string, _DeviceID string, _VulnID string, _IgnoreID string, _AlertDate time.Time, _LastFound time.Time, _LastUpdated time.Time, _Proof string, _Port int, _Protocol string, _ActiveKernel int, _DetectionStatusID int, _TimesSeen int, _DefaultTime time.Time) (id int, affectedRows int, err error)
+	FuncCreateDetection                               func(_OrgID string, _SourceID string, _DeviceID string, _VulnID string, _IgnoreID string, _AlertDate time.Time, _LastFound time.Time, _LastUpdated time.Time, _Proof string, _Port int, _Protocol string, _ActiveKernel int, _DetectionStatusID int, _TimesSeen int, _DefaultTime time.Time, _ParentDetectionID string) (id int, affectedRows int, err error)
 	FuncCreateDevice                                  func(_AssetID string, _SourceID string, _Ip string, _Hostname string, inInstanceID string, _MAC string, _GroupID string, _OrgID string, _OS string, _OSTypeID int, inTrackingMethod string) (id int, affectedRows int, err error)
 	FuncCreateException                               func(inSourceID string, inOrganizationID string, inTypeID int, inVulnerabilityID string, inDeviceID string, inDueDate time.Time, inApproval string, inActive bool, inPort string, inCreatedBy string) (id int, affectedRows int, err error)
 	FuncCreateJobConfig                               func(_JobID int, _OrganizationID string, _PriorityOverride int, _Continuous bool, _WaitInSeconds int, _MaxInstances int, _AutoStart bool, _CreatedBy string, _DataInSourceID string, _DataOutSourceID string) (id int, affectedRows int, err error)
@@ -72,6 +72,7 @@ type MockSQLDriver struct {
 	FuncGetCancelledJobs                              func() ([]domain.JobHistory, error)
 	FuncGetCategoryByName                             func(_Name string) ([]domain.Category, error)
 	FuncGetCategoryRules                              func(_OrgID string, _SourceID string) ([]domain.CategoryRule, error)
+	FuncGetChildDetectionsForDetectionID              func(_ID string) ([]domain.DetectionInfo, error)
 	FuncGetDetectionInfo                              func(_DeviceID string, _VulnerabilityID string, _Port int, _Protocol string) (domain.DetectionInfo, error)
 	FuncGetDetectionInfoAfter                         func(_After time.Time, _OrgID string) ([]domain.DetectionInfo, error)
 	FuncGetDetectionInfoByID                          func(_ID string, _OrgID string) (domain.DetectionInfo, error)
@@ -261,9 +262,9 @@ func (myMockSQLDriver *MockSQLDriver) CreateDBLog(_User string, _Command string,
 	}
 }
 
-func (myMockSQLDriver *MockSQLDriver) CreateDetection(_OrgID string, _SourceID string, _DeviceID string, _VulnID string, _IgnoreID string, _AlertDate time.Time, _LastFound time.Time, _LastUpdated time.Time, _Proof string, _Port int, _Protocol string, _ActiveKernel int, _DetectionStatusID int, _TimesSeen int, _DefaultTime time.Time) (id int, affectedRows int, err error) {
+func (myMockSQLDriver *MockSQLDriver) CreateDetection(_OrgID string, _SourceID string, _DeviceID string, _VulnID string, _IgnoreID string, _AlertDate time.Time, _LastFound time.Time, _LastUpdated time.Time, _Proof string, _Port int, _Protocol string, _ActiveKernel int, _DetectionStatusID int, _TimesSeen int, _DefaultTime time.Time, _ParentDetectionID string) (id int, affectedRows int, err error) {
 	if myMockSQLDriver.FuncCreateDetection != nil {
-		return myMockSQLDriver.FuncCreateDetection(_OrgID, _SourceID, _DeviceID, _VulnID, _IgnoreID, _AlertDate, _LastFound, _LastUpdated, _Proof, _Port, _Protocol, _ActiveKernel, _DetectionStatusID, _TimesSeen, _DefaultTime)
+		return myMockSQLDriver.FuncCreateDetection(_OrgID, _SourceID, _DeviceID, _VulnID, _IgnoreID, _AlertDate, _LastFound, _LastUpdated, _Proof, _Port, _Protocol, _ActiveKernel, _DetectionStatusID, _TimesSeen, _DefaultTime, _ParentDetectionID)
 	} else {
 		panic("method not implemented") // mock SQL drivers should only be used in testing
 	}
@@ -640,6 +641,14 @@ func (myMockSQLDriver *MockSQLDriver) GetCategoryByName(_Name string) ([]domain.
 func (myMockSQLDriver *MockSQLDriver) GetCategoryRules(_OrgID string, _SourceID string) ([]domain.CategoryRule, error) {
 	if myMockSQLDriver.FuncGetCategoryRules != nil {
 		return myMockSQLDriver.FuncGetCategoryRules(_OrgID, _SourceID)
+	} else {
+		panic("method not implemented") // mock SQL drivers should only be used in testing
+	}
+}
+
+func (myMockSQLDriver *MockSQLDriver) GetChildDetectionsForDetectionID(_ID string) ([]domain.DetectionInfo, error) {
+	if myMockSQLDriver.FuncGetChildDetectionsForDetectionID != nil {
+		return myMockSQLDriver.FuncGetChildDetectionsForDetectionID(_ID)
 	} else {
 		panic("method not implemented") // mock SQL drivers should only be used in testing
 	}

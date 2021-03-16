@@ -16,6 +16,7 @@
   DetectionStatusID   INT           NOT
   TimesSeen           INT           NOT
   Updated             DATETIME      NOT
+  ParentDetectionID   VARCHAR(36)   NULL
 */
 
 DROP PROCEDURE IF EXISTS `GetDetectionInfoAfter`;
@@ -38,7 +39,8 @@ SELECT
     D.ActiveKernel,
     D.DetectionStatusID,
     D.TimesSeen,
-    D.Updated
+    D.Updated,
+    D.ParentDetectionId
 FROM Detection D
     JOIN DetectionStatus DS on D.DetectionStatusId = DS.Id
 WHERE D.OrganizationID = _OrgID AND D.IgnoreID IS NULL AND (D.Updated > _After OR D.Created > _After) AND DS.Status != 'fixed' ORDER BY D.Created;

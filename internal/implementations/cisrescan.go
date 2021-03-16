@@ -420,6 +420,7 @@ func findingDetectionCreation(lstream log.Logger, db domain.DatabaseConnection, 
 									vulnerableStatus.ID(),
 									0,
 									tord1970(nil),
+									"", // This field is populated recursively when child detections are present
 								)
 
 								if err != nil {
@@ -914,6 +915,10 @@ func (wrapper *FindingWrapper) Labels() (param *string) {
 
 // LastChecked returns the LastChecked of the ticket
 func (wrapper *FindingWrapper) LastChecked() (param *time.Time) {
+	return
+}
+
+func (wrapper *FindingWrapper) LinkedIssue() (param string) {
 	return
 }
 

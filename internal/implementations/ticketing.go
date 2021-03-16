@@ -325,6 +325,8 @@ func (job *TicketingJob) ticketAssetGroups(groupsToRunTicketingAgainst []string,
 						if err != nil {
 							job.lstream.Send(log.Criticalf(err, "Error while updating the last ticketed date to %s", startTime.String()))
 						}
+
+						job.linkChildTicketsOfRecentlyCreatedIssues(detections)
 					} else {
 						job.lstream.Send(log.Error("Error occurred while loading device vulnerability information", err))
 					}
@@ -339,6 +341,57 @@ func (job *TicketingJob) ticketAssetGroups(groupsToRunTicketingAgainst []string,
 		}
 	}
 	return err
+}
+
+func (job *TicketingJob) linkChildTicketsOfRecentlyCreatedIssues(detections []domain.Detection) {
+	detectionIDToDetection := make(map[string]domain.Detection)
+
+	for index := range detections {
+		detection := detections[index]
+		detectionIDToDetection[detection.ID()] = detection
+	}
+
+	var wg sync.WaitGroup
+
+	for index := range detections {
+		detection := detections[index]
+
+		if len(detection.ChildDetections()) > 0 {
+			parentTicket, err := job.db.GetTicketByDetectionID(detection.ID(), job.config.OrganizationID())
+			if err == nil {
+				if parentTicket != nil {
+					for _, childDetection := range detection.ChildDetections() {
+						childTicket, err := job.db.GetTicketByDetectionID(childDetection.ID(), job.config.OrganizationID())
+						if err == nil {
+							if childTicket != nil {
+								wg.Add(1)
+								go func(childTitle, parentTitle string) {
+									defer wg.Done()
+									err := job.ticketingEngine.LinkIssues(childTitle, parentTitle)
+									if err == nil {
+										job.lstream.Send(log.Infof("%s linked to %s", childTitle, parentTitle))
+									} else {
+										job.lstream.Send(log.Errorf(err, "error while linking %s to %s", childTitle, parentTitle))
+									}
+								}(childTicket.Title(), parentTicket.Title())
+
+							} else {
+								// child ticket was not created (e.g. could be an exception), not a problem
+							}
+						} else {
+							job.lstream.Send(log.Errorf(err, "error while loading child detection ticket [%s]", childDetection.ID()))
+						}
+					}
+				} else {
+					// TODO parent ticket wasn't created for whatever reason - does anything need to be done with the children?
+				}
+			} else {
+				job.lstream.Send(log.Errorf(err, "error while loading parent detection ticket [%s]", detection.ID()))
+			}
+		}
+	}
+
+	wg.Wait()
 }
 
 // processVulnerabilities creates a pipeline of channels. each method takes a channel as an input, and creates a channel as an output

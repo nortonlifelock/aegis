@@ -32,6 +32,7 @@ type Ticket interface {
 	LastChecked() (param *time.Time)
 	MacAddress() (param *string)
 	MethodOfDiscovery() (param *string)
+	LinkedIssue() (param string)
 	OSDetailed() (param *string)
 	OperatingSystem() (param *string)
 	OrgCode() (param *string)

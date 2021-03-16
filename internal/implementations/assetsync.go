@@ -201,14 +201,15 @@ func (job *AssetSyncJob) processGroup(vscanner integrations.Vscanner, groupIDs [
 
 						if asset, err := detections[0].Device(); err == nil {
 
-							decomIgnoreID, err := job.getDecommIgnoreEntryForAsset(deviceID, job.insources.ID(), detections)
+							decomIgnoreID, err := getDecommIgnoreEntryForAsset(job.db, job.lstream, job.config.OrganizationID(), deviceID, job.insources.ID(), detections)
 							if err != nil {
 								job.lstream.Send(log.Errorf(err, "error while loading decomm ignore entry"))
 							}
 
-							err = job.addDeviceInformationToDB(asset, strings.Join(groupIDs, ","))
+							var deviceInDB domain.Device
+							deviceInDB, err = addDeviceInformationToDB(job.db, job.lstream, job.insources.ID(), job.config.OrganizationID(), asset, strings.Join(groupIDs, ","))
 							if err == nil {
-								job.processAsset(asset, detections, decomIgnoreID)
+								job.processAsset(asset, deviceInDB, detections, decomIgnoreID, strings.Join(groupIDs, ","))
 							} else {
 								job.lstream.Send(log.Errorf(err, "error while adding asset information to the database"))
 							}
@@ -225,10 +226,10 @@ func (job *AssetSyncJob) processGroup(vscanner integrations.Vscanner, groupIDs [
 	}
 }
 
-func (job *AssetSyncJob) getDecommIgnoreEntryForAsset(deviceID string, scannerSourceID string, detections []domain.Detection) (decomIgnoreID string, err error) {
+func getDecommIgnoreEntryForAsset(db domain.DatabaseConnection, lstream log.Logger, orgID string, deviceID string, scannerSourceID string, detections []domain.Detection) (decomIgnoreID string, err error) {
 	if len(deviceID) > 0 {
 		var decommIgnoreEntry domain.Ignore
-		if decommIgnoreEntry, err = job.db.HasDecommissioned(deviceID, scannerSourceID, job.config.OrganizationID()); err == nil {
+		if decommIgnoreEntry, err = db.HasDecommissioned(deviceID, scannerSourceID, orgID); err == nil {
 			if decommIgnoreEntry != nil {
 				var allDetectionsFoundBeforeDecommDate = true
 				for _, detection := range detections {
@@ -238,11 +239,11 @@ func (job *AssetSyncJob) getDecommIgnoreEntryForAsset(deviceID string, scannerSo
 							allDetectionsFoundBeforeDecommDate = false
 
 							// we found a vulnerability after the device was marked as decommissioned in the database
-							job.lstream.Send(log.Warningf(nil, "Device [%s] has a vulnerability found after it's decommission date [%s after %s], deleting it's ignore entry in the database", deviceID, detectedDate.Format(time.RFC822Z), dueDate.Format(time.RFC822Z)))
+							lstream.Send(log.Warningf(nil, "Device [%s] has a vulnerability found after it's decommission date [%s after %s], deleting it's ignore entry in the database", deviceID, detectedDate.Format(time.RFC822Z), dueDate.Format(time.RFC822Z)))
 
-							_, _, err = job.db.DeleteDecomIgnoreForDevice(scannerSourceID, deviceID, job.config.OrganizationID())
+							_, _, err = db.DeleteDecomIgnoreForDevice(scannerSourceID, deviceID, orgID)
 							if err != nil {
-								job.lstream.Send(log.Errorf(err, "Error while deleting ignore entry to [%s]", deviceID))
+								lstream.Send(log.Errorf(err, "Error while deleting ignore entry to [%s]", deviceID))
 							}
 
 							break
@@ -263,67 +264,70 @@ func (job *AssetSyncJob) getDecommIgnoreEntryForAsset(deviceID string, scannerSo
 }
 
 // Only process the asset if it has not been processed by another group
-func (job *AssetSyncJob) processAsset(asset domain.Device, detections []domain.Detection, decomIgnoreID string) {
+func (job *AssetSyncJob) processAsset(asset domain.Device, deviceInDB domain.Device, detections []domain.Detection, decomIgnoreID string, groupID string) {
 	var err error
 
-	if len(sord(asset.SourceID())) > 0 {
-		var existingDeviceInDb domain.Device
-		if existingDeviceInDb, err = job.db.GetDeviceByAssetOrgID(sord(asset.SourceID()), job.config.OrganizationID()); err == nil && existingDeviceInDb != nil {
+	if detections != nil {
 
-			if detections != nil {
+		var wg sync.WaitGroup
+		for _, detection := range detections {
 
-				var wg sync.WaitGroup
-				for _, detection := range detections {
+			wg.Add(1)
+			go func(detection domain.Detection) {
+				defer wg.Done()
 
-					wg.Add(1)
-					go func(detection domain.Detection) {
-						defer wg.Done()
-
-						if detection != nil {
-							_ = job.processAssetDetections(existingDeviceInDb, sord(asset.SourceID()), detection, decomIgnoreID)
-						} else {
-							job.lstream.Send(log.Errorf(err, "nil detection found for [%s]", sord(asset.SourceID())))
-						}
-					}(detection)
+				if detection != nil {
+					_ = job.processAssetDetections(deviceInDB, sord(asset.SourceID()), detection, decomIgnoreID, groupID)
+				} else {
+					job.lstream.Send(log.Errorf(err, "nil detection found for [%s]", sord(asset.SourceID())))
 				}
-				wg.Wait()
-			} else {
-				job.lstream.Send(log.Errorf(err, "error while processing asset information in database"))
-			}
-		} else {
-			job.lstream.Send(log.Errorf(fmt.Errorf("could not find device in database for %s", sord(asset.SourceID())), "db error"))
+			}(detection)
 		}
+		wg.Wait()
 	} else {
-		job.lstream.Send(log.Errorf(nil, "empty asset ID gathered from scanner"))
+		job.lstream.Send(log.Errorf(err, "error while processing asset information in database"))
 	}
 }
 
 // This method creates/gathers the entry for the OS Type as well as updates/creates the asset information in the database
-func (job *AssetSyncJob) addDeviceInformationToDB(asset domain.Device, groupID string) (err error) {
+func addDeviceInformationToDB(db domain.DatabaseConnection, lstream log.Logger, sourceID string, orgID string, asset domain.Device, groupID string) (deviceInDB domain.Device, err error) {
 	var ostFromDb domain.OperatingSystemType
 	if len(asset.OS()) > 0 {
-		ostFromDb, err = grabAndCreateOsType(job.db, asset.OS())
+		ostFromDb, err = grabAndCreateOsType(db, asset.OS())
 	} else {
-		ostFromDb, err = grabAndCreateOsType(job.db, unknown)
+		ostFromDb, err = grabAndCreateOsType(db, unknown)
 	}
 
-	// this updates asset's OST to the same OST but w/ populated db id
-	if err == nil {
-		err = job.enterAssetInformationInDB(asset, ostFromDb.ID(), groupID)
-		if err != nil {
-			job.lstream.Send(log.Error("error while processing asset", err))
-		}
-	} else {
-		job.lstream.Send(log.Error("Couldn't gather database OS information", err))
+	if err != nil {
+		lstream.Send(log.Error("Couldn't gather database OS information", err))
+		return nil, err
 	}
 
-	return err
+	err = enterAssetInformationInDB(db, lstream, sourceID, orgID, asset, ostFromDb.ID(), groupID)
+	if err != nil {
+		lstream.Send(log.Error("error while processing asset", err))
+		return nil, err
+	}
+
+	if len(sord(asset.SourceID())) == 0 {
+		err = fmt.Errorf("empty asset ID gathered from scanner")
+		return nil, err
+	}
+
+	deviceInDB, err = db.GetDeviceByAssetOrgID(sord(asset.SourceID()), orgID)
+	if err != nil {
+		err = fmt.Errorf("error while getting device [%s] - %s", sord(asset.SourceID()), err.Error())
+	} else if deviceInDB == nil {
+		err = fmt.Errorf("could not find recently created device [%s]", sord(asset.SourceID()))
+	}
+
+	return deviceInDB, err
 }
 
 // this method checks the database to see if an asset under that ip/org and creates an entry if one doesn't exist.
 // if an entry exists but does not have an asset id set (which occurs when the CloudSync Job) finds the asset first,
 // this method then enters the asset id for that entry
-func (job *AssetSyncJob) enterAssetInformationInDB(asset domain.Device, osTypeID int, groupID string) (err error) {
+func enterAssetInformationInDB(db domain.DatabaseConnection, lstream log.Logger, sourceID string, orgID string, asset domain.Device, osTypeID int, groupID string) (err error) {
 	if asset != nil {
 
 		if len(sord(asset.SourceID())) > 0 {
@@ -332,12 +336,12 @@ func (job *AssetSyncJob) enterAssetInformationInDB(asset domain.Device, osTypeID
 
 			var deviceInDB domain.Device
 			// first try to find the device in the database using the source asset id
-			if deviceInDB, err = job.db.GetDeviceByAssetOrgID(sord(asset.SourceID()), job.config.OrganizationID()); err == nil {
+			if deviceInDB, err = db.GetDeviceByAssetOrgID(sord(asset.SourceID()), orgID); err == nil {
 				if deviceInDB == nil {
 
 					if len(sord(asset.InstanceID())) > 0 {
 						var devicesByInstanceID []domain.Device
-						devicesByInstanceID, err = job.db.GetDeviceByInstanceID(sord(asset.InstanceID()), job.config.OrganizationID())
+						devicesByInstanceID, err = db.GetDeviceByInstanceID(sord(asset.InstanceID()), orgID)
 						if len(devicesByInstanceID) > 0 {
 							deviceInDB = devicesByInstanceID[0]
 						}
@@ -345,7 +349,7 @@ func (job *AssetSyncJob) enterAssetInformationInDB(asset domain.Device, osTypeID
 
 					// second we try to find the device in the database using the IP
 					if err == nil && deviceInDB == nil && len(asset.IP()) > 0 {
-						deviceInDB, err = job.db.GetDeviceByScannerSourceID(ip, groupID, job.config.OrganizationID())
+						deviceInDB, err = db.GetDeviceByScannerSourceID(ip, groupID, orgID)
 					}
 				}
 
@@ -360,52 +364,52 @@ func (job *AssetSyncJob) enterAssetInformationInDB(asset domain.Device, osTypeID
 					}
 
 					if deviceInDB == nil || deviceIsAlsoBeingTrackedUnderDifferentAssetID {
-						_, _, err = job.db.CreateDevice(
+						_, _, err = db.CreateDevice(
 							sord(asset.SourceID()),
-							job.insources.SourceID(),
+							sourceID,
 							ip,
 							asset.HostName(),
 							sord(asset.InstanceID()),
 							asset.MAC(),
 							groupID,
-							job.config.OrganizationID(),
+							orgID,
 							asset.OS(),
 							osTypeID,
 							sord(asset.TrackingMethod()),
 						)
 						if err == nil {
-							job.lstream.Send(log.Infof("[+] Device [%v] created", sord(asset.SourceID())))
+							lstream.Send(log.Infof("[+] Device [%v] created", sord(asset.SourceID())))
 						} else {
 							err = fmt.Errorf(fmt.Sprintf("[-] Error while creating device [%s] - %s", sord(asset.SourceID()), err.Error()))
 						}
 					} else if deviceFoundByCloudSyncJobFirst || osNeedsUpdate || trackingMethodNeedsUpdate {
 						// this block of code is for when cloud sync job finds the asset before the ASJ does, as the CSJ doesn't set the asset id
 						// we also update the os type id because the ASJ will have a more accurate os return
-						_, _, err = job.db.UpdateAssetIDOsTypeIDOfDevice(
+						_, _, err = db.UpdateAssetIDOsTypeIDOfDevice(
 							deviceInDB.ID(),
 							sord(asset.SourceID()),
-							job.insources.SourceID(),
+							sourceID,
 							groupID,
 							asset.OS(),
 							asset.HostName(),
 							osTypeID,
 							sord(asset.TrackingMethod()),
-							job.config.OrganizationID(),
+							orgID,
 						)
 						if err == nil {
-							job.lstream.Send(log.Infof("Updated device info for asset [%v]", sord(asset.SourceID())))
+							lstream.Send(log.Infof("Updated device info for asset [%v]", sord(asset.SourceID())))
 						} else {
 							err = fmt.Errorf(fmt.Sprintf("could not update the asset id for device with ip [%s] - %s", ip, err.Error()))
 						}
 					} else {
-						job.lstream.Send(log.Debugf("DB entry for device [%v] exists, skipping...", sord(asset.SourceID())))
+						lstream.Send(log.Debugf("DB entry for device [%v] exists, skipping...", sord(asset.SourceID())))
 					}
 				} else {
-					job.lstream.Send(log.Errorf(err, "error while loading device from database"))
+					lstream.Send(log.Errorf(err, "error while loading device from database"))
 				}
 
 			} else {
-				job.lstream.Send(log.Errorf(err, "error while loading device from database"))
+				lstream.Send(log.Errorf(err, "error while loading device from database"))
 			}
 
 		} else {
@@ -422,7 +426,7 @@ func (job *AssetSyncJob) enterAssetInformationInDB(asset domain.Device, osTypeID
 // This method creates a detection entry in the database for the device/vulnerability combo
 // If the detection entry already exists, it increments the amount of times it has been seen by this job by one
 // This method is also responsible for gathering detections for the vulnerability
-func (job *AssetSyncJob) processAssetDetections(deviceInDb domain.Device, assetID string, detectionFromScanner domain.Detection, decomIgnoreID string) (err error) {
+func (job *AssetSyncJob) processAssetDetections(deviceInDb domain.Device, assetID string, detectionFromScanner domain.Detection, decomIgnoreID string, groupID string) (err error) {
 	// the result ID may be concatenated to the end of the vulnerability ID. we chop it off the result from the vulnerability ID with the following line
 	var vulnID string
 	var resultID string
@@ -458,6 +462,8 @@ func (job *AssetSyncJob) processAssetDetections(deviceInDb domain.Device, assetI
 				decomIgnoreID,
 				job.config.OrganizationID(),
 				job.insources.SourceID(),
+				groupID,
+				"", // this field is populated recursively when child detections are present
 				job.getExceptionID,
 			)
 		} else {
@@ -519,7 +525,7 @@ func (job *AssetSyncJob) getExceptionID(assetID string, deviceInDb domain.Device
 }
 
 // This method creates a detection entry if one does not exist, and updates the entry if one does
-func createOrUpdateDetection(db domain.DatabaseConnection, lstream log.Logger, detectionStatuses []domain.DetectionStatus, deviceInDb domain.Device, vulnInfo domain.VulnerabilityInfo, detectionFromScanner domain.Detection, assetID string, decomIgnoreID string, orgID string, sourceID string, getExceptionID func(string, domain.Device, string, domain.VulnerabilityInfo, domain.Detection) (string, bool)) {
+func createOrUpdateDetection(db domain.DatabaseConnection, lstream log.Logger, detectionStatuses []domain.DetectionStatus, deviceInDb domain.Device, vulnInfo domain.VulnerabilityInfo, detectionFromScanner domain.Detection, assetID string, decomIgnoreID string, orgID string, sourceID string, groupID string, parentDetectionID string, getExceptionID func(string, domain.Device, string, domain.VulnerabilityInfo, domain.Detection) (string, bool)) {
 	var err error
 
 	var detectionInDB domain.DetectionInfo
@@ -539,7 +545,7 @@ func createOrUpdateDetection(db domain.DatabaseConnection, lstream log.Logger, d
 			}
 
 			if detectionInDB == nil {
-				createDetection(db, lstream, orgID, sourceID, detectionFromScanner, exceptionID, deviceInDb, vulnInfo, assetID, detectionStatus.ID())
+				createDetection(db, lstream, orgID, sourceID, detectionFromScanner, exceptionID, deviceInDb, vulnInfo, assetID, detectionStatus.ID(), parentDetectionID)
 			} else {
 				if len(exceptionID) == 0 && dontUpdateExceptionID {
 					// we set the exceptionID to the value already in the database
@@ -589,10 +595,46 @@ func createOrUpdateDetection(db domain.DatabaseConnection, lstream log.Logger, d
 	} else {
 		lstream.Send(log.Debugf("Detection already exists for device/vuln [%v|%v]", assetID, vulnInfo.ID()))
 	}
+
+	processChildDetections(db, lstream, detectionStatuses, assetID, vulnInfo, detectionFromScanner, orgID, sourceID, groupID, getExceptionID)
+}
+
+func processChildDetections(db domain.DatabaseConnection, lstream log.Logger, detectionStatuses []domain.DetectionStatus, assetID string, vulnInfo domain.VulnerabilityInfo, detectionFromScanner domain.Detection, orgID string, sourceID string, groupID string, getExceptionID func(string, domain.Device, string, domain.VulnerabilityInfo, domain.Detection) (string, bool)) {
+	if len(detectionFromScanner.ChildDetections()) == 0 {
+		return
+	}
+
+	parentDetectionInDB, err := db.GetDetectionInfo(assetID, vulnInfo.ID(), detectionFromScanner.Port(), detectionFromScanner.Protocol())
+	if err != nil || parentDetectionInDB == nil {
+		lstream.Send(log.Errorf(err, "error while gathering parent detection"))
+		return
+	}
+
+	for _, childDetection := range detectionFromScanner.ChildDetections() {
+		device, err := childDetection.Device()
+		if err != nil {
+			lstream.Send(log.Errorf(err, "error while loading device entry from scanner for child detection [%s]"))
+			continue
+		}
+
+		assetID := sord(device.SourceID())
+		decomIgnoreID, err := getDecommIgnoreEntryForAsset(db, lstream, orgID, assetID, sourceID, []domain.Detection{childDetection})
+		if err != nil {
+			lstream.Send(log.Errorf(err, "error while loading decomm ignore entry"))
+		}
+
+		deviceInDB, err := addDeviceInformationToDB(db, lstream, sourceID, orgID, device, groupID)
+		if err != nil {
+			lstream.Send(log.Errorf(err, "error while loading device entry from db for child detection [%s]"))
+			continue
+		}
+
+		createOrUpdateDetection(db, lstream, detectionStatuses, deviceInDB, vulnInfo, childDetection, assetID, decomIgnoreID, orgID, sourceID, groupID, parentDetectionInDB.ID(), getExceptionID)
+	}
 }
 
 // This method creates the detection entry in the database
-func createDetection(db domain.DatabaseConnection, lstream log.Logger, orgID string, sourceID string, vuln domain.Detection, exceptionID string, deviceInDb domain.Device, vulnInfo domain.VulnerabilityInfo, assetID string, detectionStatusID int) {
+func createDetection(db domain.DatabaseConnection, lstream log.Logger, orgID string, sourceID string, vuln domain.Detection, exceptionID string, deviceInDb domain.Device, vulnInfo domain.VulnerabilityInfo, assetID string, detectionStatusID int, parentDetectionID string) {
 	var err error
 
 	var detected *time.Time
@@ -614,6 +656,7 @@ func createDetection(db domain.DatabaseConnection, lstream log.Logger, orgID str
 				detectionStatusID,
 				vuln.TimesSeen(),
 				tord1970(nil),
+				parentDetectionID,
 			)
 		} else {
 			err = fmt.Errorf("could not find the time of the detection")

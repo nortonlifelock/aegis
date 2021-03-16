@@ -41,6 +41,7 @@ type Ticket struct {
 	IPAddressvar           *string
 	Labelsvar              *string
 	LastCheckedvar         *time.Time
+	LinkedIssuevar         string
 	MacAddressvar          *string
 	MethodOfDiscoveryvar   *string
 	OSDetailedvar          *string
@@ -100,6 +101,7 @@ func (myTicket Ticket) MarshalJSON() ([]byte, error) {
 		"IPAddress":           myTicket.IPAddressvar,
 		"Labels":              myTicket.Labelsvar,
 		"LastChecked":         myTicket.LastCheckedvar,
+		"LinkedIssue":         myTicket.LinkedIssuevar,
 		"MacAddress":          myTicket.MacAddressvar,
 		"MethodOfDiscovery":   myTicket.MethodOfDiscoveryvar,
 		"OSDetailed":          myTicket.OSDetailedvar,
@@ -247,6 +249,11 @@ func (myTicket *Ticket) Labels() (param *string) {
 // LastChecked returns the LastChecked parameter from the Ticket struct
 func (myTicket *Ticket) LastChecked() (param *time.Time) {
 	return myTicket.LastCheckedvar
+}
+
+// LinkedIssue returns the LinkedIssue parameter from the Ticket struct
+func (myTicket *Ticket) LinkedIssue() (param string) {
+	return myTicket.LinkedIssuevar
 }
 
 // MacAddress returns the MacAddress parameter from the Ticket struct
@@ -442,6 +449,11 @@ func (myTicket *Ticket) SetIPAddress(val string) {
 // SetLabels sets the Labels parameter from the Ticket struct
 func (myTicket *Ticket) SetLabels(val string) {
 	myTicket.Labelsvar = &val
+}
+
+// SetLinkedIssue sets the LinkedIssue parameter from the Ticket struct
+func (myTicket *Ticket) SetLinkedIssue(val string) {
+	myTicket.LinkedIssuevar = val
 }
 
 // SetMacAddress sets the MacAddress parameter from the Ticket struct

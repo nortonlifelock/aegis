@@ -248,6 +248,8 @@ func (job *ScanCloseJob) updateDetectionInformationInDB(deviceIDToVulnIDToDetect
 								decommIgnoreID,
 								job.config.OrganizationID(),
 								job.insource.SourceID(),
+								job.Payload.Group,
+								"", // this field is populated recursively for detections with child detections
 								job.getExceptionID,
 							)
 						}(deviceID, device, vulnInfo, detection, decommIgnoreID)

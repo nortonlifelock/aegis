@@ -26,6 +26,7 @@ type DetectionInfo struct {
 	LastFoundvar         *time.Time
 	LastUpdatedvar       *time.Time
 	OrganizationIDvar    string
+	ParentDetectionIDvar *string
 	Portvar              int
 	Proofvar             string
 	Protocolvar          string
@@ -51,6 +52,7 @@ func (myDetectionInfo DetectionInfo) MarshalJSON() ([]byte, error) {
 		"LastFound":         myDetectionInfo.LastFoundvar,
 		"LastUpdated":       myDetectionInfo.LastUpdatedvar,
 		"OrganizationID":    myDetectionInfo.OrganizationIDvar,
+		"ParentDetectionID": myDetectionInfo.ParentDetectionIDvar,
 		"Port":              myDetectionInfo.Portvar,
 		"Proof":             myDetectionInfo.Proofvar,
 		"Protocol":          myDetectionInfo.Protocolvar,
@@ -106,6 +108,11 @@ func (myDetectionInfo *DetectionInfo) OrganizationID() (param string) {
 	return myDetectionInfo.OrganizationIDvar
 }
 
+// ParentDetectionID returns the ParentDetectionID parameter from the DetectionInfo struct
+func (myDetectionInfo *DetectionInfo) ParentDetectionID() (param *string) {
+	return myDetectionInfo.ParentDetectionIDvar
+}
+
 // Port returns the Port parameter from the DetectionInfo struct
 func (myDetectionInfo *DetectionInfo) Port() (param int) {
 	return myDetectionInfo.Portvar
@@ -159,6 +166,11 @@ func (myDetectionInfo *DetectionInfo) SetIgnoreID(val string) {
 // SetOrganizationID sets the OrganizationID parameter from the DetectionInfo struct
 func (myDetectionInfo *DetectionInfo) SetOrganizationID(val string) {
 	myDetectionInfo.OrganizationIDvar = val
+}
+
+// SetParentDetectionID sets the ParentDetectionID parameter from the DetectionInfo struct
+func (myDetectionInfo *DetectionInfo) SetParentDetectionID(val string) {
+	myDetectionInfo.ParentDetectionIDvar = &val
 }
 
 // SetProof sets the Proof parameter from the DetectionInfo struct

@@ -1,5 +1,5 @@
 /*
-  RETURN DetectionInfo SINGLE
+  RETURN DetectionInfo
   ID                  NVARCHAR(36)  NOT
   OrganizationID      NVARCHAR(36)  NOT
   SourceID            NVARCHAR(36)  NOT
@@ -19,9 +19,9 @@
   ParentDetectionID   VARCHAR(36)   NULL
 */
 
-DROP PROCEDURE IF EXISTS `GetDetectionInfo`;
+DROP PROCEDURE IF EXISTS `GetChildDetectionsForDetectionID`;
 
-CREATE PROCEDURE `GetDetectionInfo` (_DeviceID VARCHAR(360), _VulnerabilityID VARCHAR(36), _Port INT, _Protocol VARCHAR(360))
+CREATE PROCEDURE `GetChildDetectionsForDetectionID` (_ID VARCHAR(36))
     #BEGIN#
 SELECT
     D.ID,
@@ -42,4 +42,4 @@ SELECT
     D.Updated,
     D.ParentDetectionId
 FROM Detection D
-WHERE D.DeviceID = _DeviceID AND D.VulnerabilityID = _VulnerabilityID AND D.Port = _Port AND D.Protocol = _Protocol;
+WHERE D.ParentDetectionId = _ID;

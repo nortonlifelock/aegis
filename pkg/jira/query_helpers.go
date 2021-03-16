@@ -220,6 +220,13 @@ func (connector *ConnectorJira) getTicketsForRescan(cerfs []domain.CERF, groupID
 				status[connector.GetStatusMap(domain.StatusResolvedRemediated)] = true
 
 				issues, errChan = connector.getTicketsByStatusDueDateAscending(groupID, methodOfDiscovery, orgCode, status)
+
+				// child tickets are pulled in open/resolved statuses, so we include the open statuses here
+				status[connector.GetStatusMap(domain.StatusOpen)] = true
+				status[connector.GetStatusMap(domain.StatusInProgress)] = true
+				status[connector.GetStatusMap(domain.StatusReopened)] = true
+				// purposeful channel overwrite - the new channel will contain all the old tickets as well as the tickets of the children
+				issues, errChan = connector.getTicketsByParentTickets(methodOfDiscovery, orgCode, status, issues, errChan)
 				break
 			case domain.RescanDecommission:
 				var status = make(map[string]bool)
@@ -248,6 +255,125 @@ func (connector *ConnectorJira) getTicketsForRescan(cerfs []domain.CERF, groupID
 	}
 
 	return issues, errChan
+}
+
+func (connector *ConnectorJira) getTicketsByParentTickets(methodOfDiscovery string, orgCode string, statuses map[string]bool, issues <-chan domain.Ticket, errChan <-chan error) (outIssue <-chan domain.Ticket, outErr <-chan error) {
+	outI, outE := make(chan domain.Ticket), make(chan error)
+
+	go func() {
+		defer close(outI)
+		defer close(outE)
+
+		issueSlice, errSlice := pullValsOffChan(issues, errChan)
+		if len(errSlice) > 0 {
+			outE <- errSlice[0]
+			return
+		}
+
+		titles := make([]string, 0)
+		for _, issue := range issueSlice {
+			titles = append(titles, issue.Title())
+		}
+
+		linkedIssuesChan, linkedErrsChan := connector.gatherLinkedTickets(methodOfDiscovery, orgCode, statuses, titles)
+		linkedIssuesSlice, linkedErrsSlice := pullValsOffChan(linkedIssuesChan, linkedErrsChan)
+
+		if len(linkedErrsSlice) > 0 {
+			outE <- linkedErrsSlice[0]
+			return
+		}
+
+		for _, issue := range issueSlice {
+			outI <- issue
+		}
+
+		for _, issue := range linkedIssuesSlice {
+			outI <- issue
+		}
+	}()
+
+
+	return outI, outE
+}
+
+func (connector *ConnectorJira) gatherLinkedTickets(methodOfDiscovery string, orgCode string, statuses map[string]bool, titles []string) (issues <-chan domain.Ticket, errChan <-chan error) {
+	if len(statuses) > 0 && len(titles) > 0 {
+
+		q := connector.queryStart().
+			and().
+			equals(connector.GetFieldMap(backendMOD), methodOfDiscovery). // Must filter on MOD in order to ensure no overlap
+			and().
+			contains(connector.GetFieldMap(backendOrg), orgCode).
+			and()
+
+		q.beginGroup()
+
+		var index = 0
+		for status := range statuses {
+			q.equals(connector.GetFieldMap(backendStatus), status)
+
+			if index < (len(statuses) - 1) {
+				q.or()
+			}
+
+			index++
+		}
+
+		q.endGroup().and()
+
+		q.beginGroup()
+		for index, title := range titles {
+			q.linkedTo(title)
+
+			if index < (len(titles) - 1) {
+				q.or()
+			}
+		}
+		q.endGroup()
+
+		q.and().notIn("key", titles)
+
+		q.orderByAscend("due")
+		issues, errChan = connector.getSearchResults(q)
+	} else {
+		out := make(chan error, 1)
+		out <- errors.New("zero length status slice passed to getTicketsByStatusDueDateAscending")
+		close(out)
+		errChan = out
+	}
+
+	return issues, errChan
+}
+
+func pullValsOffChan(issues <-chan domain.Ticket, errChan <-chan error) ([]domain.Ticket, []error) {
+	issueSlice := make([]domain.Ticket, 0)
+	errSlice := make([]error, 0)
+
+	var issuesClosed, errsClosed bool
+	func() {
+		for {
+			select {
+			case issue, ok := <-issues:
+				if ok {
+					issueSlice = append(issueSlice, issue)
+				} else {
+					issuesClosed = true
+				}
+			case err, ok := <-errChan:
+				if ok {
+					errSlice = append(errSlice, err)
+				} else {
+					errsClosed = true
+				}
+			default:
+			}
+
+			if errsClosed && issuesClosed {
+				return
+			}
+		}
+	}()
+	return issueSlice, errSlice
 }
 
 func (connector *ConnectorJira) getTicketsByStatusDueDateAscending(groupID string, methodOfDiscovery string, orgCode string, statuses map[string]bool) (issues <-chan domain.Ticket, errChan <-chan error) {

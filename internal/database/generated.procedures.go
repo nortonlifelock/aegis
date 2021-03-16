@@ -160,11 +160,11 @@ func (conn *dbconn) CreateDBLog(_User string, _Command string, _Endpoint string)
 }
 
 // CreateDetection executes the stored procedure CreateDetection against the database
-func (conn *dbconn) CreateDetection(_OrgID string, _SourceID string, _DeviceID string, _VulnID string, _IgnoreID string, _AlertDate time.Time, _LastFound time.Time, _LastUpdated time.Time, _Proof string, _Port int, _Protocol string, _ActiveKernel int, _DetectionStatusID int, _TimesSeen int, _DefaultTime time.Time) (id int, affectedRows int, err error) {
+func (conn *dbconn) CreateDetection(_OrgID string, _SourceID string, _DeviceID string, _VulnID string, _IgnoreID string, _AlertDate time.Time, _LastFound time.Time, _LastUpdated time.Time, _Proof string, _Port int, _Protocol string, _ActiveKernel int, _DetectionStatusID int, _TimesSeen int, _DefaultTime time.Time, _ParentDetectionID string) (id int, affectedRows int, err error) {
 
 	conn.Exec(&connection.Procedure{
 		Proc:       "CreateDetection",
-		Parameters: []interface{}{_OrgID, _SourceID, _DeviceID, _VulnID, _IgnoreID, _AlertDate, _LastFound, _LastUpdated, _Proof, _Port, _Protocol, _ActiveKernel, _DetectionStatusID, _TimesSeen, _DefaultTime},
+		Parameters: []interface{}{_OrgID, _SourceID, _DeviceID, _VulnID, _IgnoreID, _AlertDate, _LastFound, _LastUpdated, _Proof, _Port, _Protocol, _ActiveKernel, _DetectionStatusID, _TimesSeen, _DefaultTime, _ParentDetectionID},
 		Callback: func(results interface{}, dberr error) {
 			err = dberr
 
@@ -1091,6 +1091,7 @@ func (conn *dbconn) GetAllDetectionInfo(_OrgID string) ([]domain.DetectionInfo, 
 							var myDetectionStatusID int
 							var myTimesSeen int
 							var myUpdated time.Time
+							var myParentDetectionID *string
 
 							if err = rows.Scan(
 
@@ -1110,6 +1111,7 @@ func (conn *dbconn) GetAllDetectionInfo(_OrgID string) ([]domain.DetectionInfo, 
 								&myDetectionStatusID,
 								&myTimesSeen,
 								&myUpdated,
+								&myParentDetectionID,
 							); err == nil {
 
 								newDetectionInfo := &dal.DetectionInfo{
@@ -1129,6 +1131,7 @@ func (conn *dbconn) GetAllDetectionInfo(_OrgID string) ([]domain.DetectionInfo, 
 									DetectionStatusIDvar: myDetectionStatusID,
 									TimesSeenvar:         myTimesSeen,
 									Updatedvar:           myUpdated,
+									ParentDetectionIDvar: myParentDetectionID,
 								}
 
 								retDetectionInfo = append(retDetectionInfo, newDetectionInfo)
@@ -2285,6 +2288,95 @@ func (conn *dbconn) GetCategoryRules(_OrgID string, _SourceID string) ([]domain.
 	return retCategoryRule, err
 }
 
+// GetChildDetectionsForDetectionID executes the stored procedure GetChildDetectionsForDetectionID against the database and returns the read results
+func (conn *dbconn) GetChildDetectionsForDetectionID(_ID string) ([]domain.DetectionInfo, error) {
+	var err error
+	var retDetectionInfo = make([]domain.DetectionInfo, 0)
+
+	conn.Read(&connection.Procedure{
+		Proc:       "GetChildDetectionsForDetectionID",
+		Parameters: []interface{}{_ID},
+		Callback: func(results interface{}, dberr error) {
+			err = dberr
+
+			if err == nil {
+
+				err = conn.getRows(results,
+					func(rows *sql.Rows) (err error) {
+						if err = rows.Err(); err == nil {
+
+							var myID string
+							var myOrganizationID string
+							var mySourceID string
+							var myDeviceID string
+							var myVulnerabilityID string
+							var myIgnoreID *string
+							var myAlertDate time.Time
+							var myLastFound *time.Time
+							var myLastUpdated *time.Time
+							var myProof string
+							var myPort int
+							var myProtocol string
+							var myActiveKernel *int
+							var myDetectionStatusID int
+							var myTimesSeen int
+							var myUpdated time.Time
+							var myParentDetectionID *string
+
+							if err = rows.Scan(
+
+								&myID,
+								&myOrganizationID,
+								&mySourceID,
+								&myDeviceID,
+								&myVulnerabilityID,
+								&myIgnoreID,
+								&myAlertDate,
+								&myLastFound,
+								&myLastUpdated,
+								&myProof,
+								&myPort,
+								&myProtocol,
+								&myActiveKernel,
+								&myDetectionStatusID,
+								&myTimesSeen,
+								&myUpdated,
+								&myParentDetectionID,
+							); err == nil {
+
+								newDetectionInfo := &dal.DetectionInfo{
+									IDvar:                myID,
+									OrganizationIDvar:    myOrganizationID,
+									SourceIDvar:          mySourceID,
+									DeviceIDvar:          myDeviceID,
+									VulnerabilityIDvar:   myVulnerabilityID,
+									IgnoreIDvar:          myIgnoreID,
+									AlertDatevar:         myAlertDate,
+									LastFoundvar:         myLastFound,
+									LastUpdatedvar:       myLastUpdated,
+									Proofvar:             myProof,
+									Portvar:              myPort,
+									Protocolvar:          myProtocol,
+									ActiveKernelvar:      myActiveKernel,
+									DetectionStatusIDvar: myDetectionStatusID,
+									TimesSeenvar:         myTimesSeen,
+									Updatedvar:           myUpdated,
+									ParentDetectionIDvar: myParentDetectionID,
+								}
+
+								retDetectionInfo = append(retDetectionInfo, newDetectionInfo)
+							}
+						}
+
+						return err
+					})
+			}
+		},
+	})
+
+	return retDetectionInfo, err
+}
+
 // GetDetectionInfo executes the stored procedure GetDetectionInfo against the database and returns the read results
 func (conn *dbconn) GetDetectionInfo(_DeviceID string, _VulnerabilityID string, _Port int, _Protocol string) (domain.DetectionInfo, error) {
 	var err error
@@ -2318,6 +2410,7 @@ func (conn *dbconn) GetDetectionInfo(_DeviceID string, _VulnerabilityID string, 
 							var myDetectionStatusID int
 							var myTimesSeen int
 							var myUpdated time.Time
+							var myParentDetectionID *string
 
 							if err = rows.Scan(
 
@@ -2337,6 +2430,7 @@ func (conn *dbconn) GetDetectionInfo(_DeviceID string, _VulnerabilityID string, 
 								&myDetectionStatusID,
 								&myTimesSeen,
 								&myUpdated,
+								&myParentDetectionID,
 							); err == nil {
 
 								newDetectionInfo := &dal.DetectionInfo{
@@ -2356,6 +2450,7 @@ func (conn *dbconn) GetDetectionInfo(_DeviceID string, _VulnerabilityID string, 
 									DetectionStatusIDvar: myDetectionStatusID,
 									TimesSeenvar:         myTimesSeen,
 									Updatedvar:           myUpdated,
+									ParentDetectionIDvar: myParentDetectionID,
 								}
 
 								retDetectionInfo = newDetectionInfo
@@ -2404,6 +2499,7 @@ func (conn *dbconn) GetDetectionInfoAfter(_After time.Time, _OrgID string) ([]do
 							var myDetectionStatusID int
 							var myTimesSeen int
 							var myUpdated time.Time
+							var myParentDetectionID *string
 
 							if err = rows.Scan(
 
@@ -2423,6 +2519,7 @@ func (conn *dbconn) GetDetectionInfoAfter(_After time.Time, _OrgID string) ([]do
 								&myDetectionStatusID,
 								&myTimesSeen,
 								&myUpdated,
+								&myParentDetectionID,
 							); err == nil {
 
 								newDetectionInfo := &dal.DetectionInfo{
@@ -2442,6 +2539,7 @@ func (conn *dbconn) GetDetectionInfoAfter(_After time.Time, _OrgID string) ([]do
 									DetectionStatusIDvar: myDetectionStatusID,
 									TimesSeenvar:         myTimesSeen,
 									Updatedvar:           myUpdated,
+									ParentDetectionIDvar: myParentDetectionID,
 								}
 
 								retDetectionInfo = append(retDetectionInfo, newDetectionInfo)
@@ -2490,6 +2588,7 @@ func (conn *dbconn) GetDetectionInfoByID(_ID string, _OrgID string) (domain.Dete
 							var myDetectionStatusID int
 							var myTimesSeen int
 							var myUpdated time.Time
+							var myParentDetectionID *string
 
 							if err = rows.Scan(
 
@@ -2509,6 +2608,7 @@ func (conn *dbconn) GetDetectionInfoByID(_ID string, _OrgID string) (domain.Dete
 								&myDetectionStatusID,
 								&myTimesSeen,
 								&myUpdated,
+								&myParentDetectionID,
 							); err == nil {
 
 								newDetectionInfo := &dal.DetectionInfo{
@@ -2528,6 +2628,7 @@ func (conn *dbconn) GetDetectionInfoByID(_ID string, _OrgID string) (domain.Dete
 									DetectionStatusIDvar: myDetectionStatusID,
 									TimesSeenvar:         myTimesSeen,
 									Updatedvar:           myUpdated,
+									ParentDetectionIDvar: myParentDetectionID,
 								}
 
 								retDetectionInfo = newDetectionInfo
@@ -2662,6 +2763,7 @@ func (conn *dbconn) GetDetectionInfoBySourceVulnID(_SourceDeviceID string, _Sour
 							var myDetectionStatusID int
 							var myTimesSeen int
 							var myUpdated time.Time
+							var myParentDetectionID *string
 
 							if err = rows.Scan(
 
@@ -2681,6 +2783,7 @@ func (conn *dbconn) GetDetectionInfoBySourceVulnID(_SourceDeviceID string, _Sour
 								&myDetectionStatusID,
 								&myTimesSeen,
 								&myUpdated,
+								&myParentDetectionID,
 							); err == nil {
 
 								newDetectionInfo := &dal.DetectionInfo{
@@ -2700,6 +2803,7 @@ func (conn *dbconn) GetDetectionInfoBySourceVulnID(_SourceDeviceID string, _Sour
 									DetectionStatusIDvar: myDetectionStatusID,
 									TimesSeenvar:         myTimesSeen,
 									Updatedvar:           myUpdated,
+									ParentDetectionIDvar: myParentDetectionID,
 								}
 
 								retDetectionInfo = newDetectionInfo
@@ -2748,6 +2852,7 @@ func (conn *dbconn) GetDetectionInfoForDeviceID(inDeviceID string, _OrgID string
 							var myDetectionStatusID int
 							var myTimesSeen int
 							var myUpdated time.Time
+							var myParentDetectionID *string
 
 							if err = rows.Scan(
 
@@ -2767,6 +2872,7 @@ func (conn *dbconn) GetDetectionInfoForDeviceID(inDeviceID string, _OrgID string
 								&myDetectionStatusID,
 								&myTimesSeen,
 								&myUpdated,
+								&myParentDetectionID,
 							); err == nil {
 
 								newDetectionInfo := &dal.DetectionInfo{
@@ -2786,6 +2892,7 @@ func (conn *dbconn) GetDetectionInfoForDeviceID(inDeviceID string, _OrgID string
 									DetectionStatusIDvar: myDetectionStatusID,
 									TimesSeenvar:         myTimesSeen,
 									Updatedvar:           myUpdated,
+									ParentDetectionIDvar: myParentDetectionID,
 								}
 
 								retDetectionInfo = append(retDetectionInfo, newDetectionInfo)
@@ -2834,6 +2941,7 @@ func (conn *dbconn) GetDetectionInfoForGroupAfter(_LastUpdatedAfter time.Time, _
 							var myDetectionStatusID int
 							var myTimesSeen int
 							var myUpdated time.Time
+							var myParentDetectionID *string
 
 							if err = rows.Scan(
 
@@ -2853,6 +2961,7 @@ func (conn *dbconn) GetDetectionInfoForGroupAfter(_LastUpdatedAfter time.Time, _
 								&myDetectionStatusID,
 								&myTimesSeen,
 								&myUpdated,
+								&myParentDetectionID,
 							); err == nil {
 
 								newDetectionInfo := &dal.DetectionInfo{
@@ -2872,6 +2981,7 @@ func (conn *dbconn) GetDetectionInfoForGroupAfter(_LastUpdatedAfter time.Time, _
 									DetectionStatusIDvar: myDetectionStatusID,
 									TimesSeenvar:         myTimesSeen,
 									Updatedvar:           myUpdated,
+									ParentDetectionIDvar: myParentDetectionID,
 								}
 
 								retDetectionInfo = append(retDetectionInfo, newDetectionInfo)
@@ -3061,6 +3171,7 @@ func (conn *dbconn) GetDetectionsInfoForDevice(_DeviceID string) ([]domain.Detec
 							var myDetectionStatusID int
 							var myTimesSeen int
 							var myUpdated time.Time
+							var myParentDetectionID *string
 
 							if err = rows.Scan(
 
@@ -3080,6 +3191,7 @@ func (conn *dbconn) GetDetectionsInfoForDevice(_DeviceID string) ([]domain.Detec
 								&myDetectionStatusID,
 								&myTimesSeen,
 								&myUpdated,
+								&myParentDetectionID,
 							); err == nil {
 
 								newDetectionInfo := &dal.DetectionInfo{
@@ -3099,6 +3211,7 @@ func (conn *dbconn) GetDetectionsInfoForDevice(_DeviceID string) ([]domain.Detec
 									DetectionStatusIDvar: myDetectionStatusID,
 									TimesSeenvar:         myTimesSeen,
 									Updatedvar:           myUpdated,
+									ParentDetectionIDvar: myParentDetectionID,
 								}
 
 								retDetectionInfo = append(retDetectionInfo, newDetectionInfo)

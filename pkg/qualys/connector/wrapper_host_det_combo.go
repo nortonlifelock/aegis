@@ -109,6 +109,16 @@ func (combo *hostDetectionCombo) Device() (domain.Device, error) {
 	return combo.host, nil
 }
 
+func (combo *hostDetectionCombo) ChildDetections() []domain.Detection {
+	return nil
+}
+
+// This returns the DB ID of the parent detection
+// The scanner does not need to know this ID
+func (combo *hostDetectionCombo) ParentDetectionID() string {
+	return ""
+}
+
 func (combo *hostDetectionCombo) Vulnerability() (domain.Vulnerability, error) {
 	combo.detection.lazyLoadVulnerabilityInfoForDetection()
 	return combo.detection.vulnerabilityInfo, nil
