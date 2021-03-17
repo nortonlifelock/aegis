@@ -393,7 +393,7 @@ func findingDetectionCreation(lstream log.Logger, db domain.DatabaseConnection, 
 							portInt, _ = strconv.Atoi(port)
 						}
 
-						if detectionInfo, err := db.GetDetectionInfo(finding.DeviceID(), finding.VulnerabilityID(), portInt, protocol); err == nil {
+						if detectionInfo, err := db.GetDetectionInfo(finding.DeviceID(), vulnInfo.ID(), portInt, protocol); err == nil {
 							var ignoreID string
 							ignore, err := db.HasIgnore(sourceID, finding.VulnerabilityID(), finding.DeviceID(), orgID, sord(finding.ServicePorts()), time.Now())
 							if err != nil {
