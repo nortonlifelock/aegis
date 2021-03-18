@@ -134,6 +134,12 @@ func (f *webAppFindingWrapper) Port() int {
 }
 
 func (f *webAppFindingWrapper) Protocol() string {
+	var webPath string
+	if len(f.f.Param) > 0 && len(f.f.ResultList.List.Result.AccessPath.List.URL) > 0 {
+		webPath = f.f.ResultList.List.Result.AccessPath.List.URL[0]
+		key := fmt.Sprintf("%s;%s", f.f.Param, webPath)
+		return key
+	}
 	return ""
 }
 
