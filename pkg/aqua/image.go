@@ -39,7 +39,7 @@ func (cli *APIClient) GetImagesForRepository(ctx context.Context, registry, repo
 		}
 
 		var request *http.Request
-		if request, err = http.NewRequest(http.MethodGet, fmt.Sprintf("%s/%s&page=%d&pagesize=50", cli.baseURL, endpoint, page), nil); err == nil {
+		if request, err = http.NewRequest(http.MethodGet, fmt.Sprintf("%s%s&page=%d&pagesize=50", cli.baseURL, endpoint, page), nil); err == nil {
 			var body []byte
 			if body, err = cli.executeRequest(request); err == nil {
 				imagePage := &ImagePage{}
@@ -72,7 +72,7 @@ func (cli *APIClient) StartImageScan(registryName string, imageName string) (err
 	endpoint = strings.Replace(endpoint, "$IMAGENAME", imageName, 1)
 
 	var request *http.Request
-	if request, err = http.NewRequest(http.MethodPost, fmt.Sprintf("%s/%s", cli.baseURL, endpoint), nil); err == nil {
+	if request, err = http.NewRequest(http.MethodPost, fmt.Sprintf("%s%s", cli.baseURL, endpoint), nil); err == nil {
 		var body []byte
 		if body, err = cli.executeRequest(request); err == nil {
 			fmt.Println(string(body))
@@ -118,7 +118,7 @@ func (cli *APIClient) StartFullImageRescan(registryName, imageName string) (err 
 		bodyReader := bytes.NewReader(body)
 
 		var request *http.Request
-		if request, err = http.NewRequest(http.MethodPost, fmt.Sprintf("%s/%s", cli.baseURL, endpoint), bodyReader); err == nil {
+		if request, err = http.NewRequest(http.MethodPost, fmt.Sprintf("%s%s", cli.baseURL, endpoint), bodyReader); err == nil {
 			if body, err = cli.executeRequest(request); err == nil {
 
 			} else {
@@ -141,7 +141,7 @@ func (cli *APIClient) StartFullImageRescan(registryName, imageName string) (err 
 //	fmt.Println(endpoint)
 //
 //	var request *http.Request
-//	if request, err = http.NewRequest(http.MethodGet, fmt.Sprintf("%s/%s", cli.baseURL, endpoint), nil); err == nil {
+//	if request, err = http.NewRequest(http.MethodGet, fmt.Sprintf("%s%s", cli.baseURL, endpoint), nil); err == nil {
 //		var body []byte
 //		if body, err = cli.executeRequest(request); err == nil {
 //			fmt.Println(string(body))
