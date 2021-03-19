@@ -387,8 +387,26 @@ func (job *ScanCloseJob) mapDetectionsAndDeadHosts(detections <-chan domain.Dete
 							} else {
 								job.lstream.Send(log.Errorf(err, "empty device ID found for detection"))
 							}
+
+							for _, childDetection := range detection.ChildDetections() {
+								if childDevice, err := childDetection.Device(); err == nil {
+									if len(sord(childDevice.SourceID())) > 0 {
+										lock.Lock()
+										if deviceIDToVulnIDToDetection[sord(childDevice.SourceID())] == nil {
+											deviceIDToVulnIDToDetection[sord(childDevice.SourceID())] = make(map[string]domain.Detection)
+										}
+
+										deviceIDToVulnIDToDetection[sord(childDevice.SourceID())][combineVulnerabilityIDAndServicePortDetection(childDetection)] = childDetection
+										lock.Unlock()
+									} else {
+										job.lstream.Send(log.Errorf(err, "empty device ID found for detection"))
+									}
+								} else {
+									job.lstream.Send(log.Errorf(err, "error while loading device for detection with vulnerability %v", detection.VulnerabilityID()))
+								}
+							}
 						} else {
-							job.lstream.Send(log.Errorf(err, "error while loading detection %v", detection.VulnerabilityID()))
+							job.lstream.Send(log.Errorf(err, "error while loading device for detection with vulnerability %v", detection.VulnerabilityID()))
 						}
 					}(detection)
 				} else {
