@@ -208,8 +208,18 @@ func (session *QsSession) createScanForWebApplication(ctx context.Context, detec
 		if !seen[findingUID] {
 			seen[findingUID] = true
 
-			_, err := session.apiSession.CreateRetestForWebAppVulnerabilityFinding(findingUID)
+			start := time.Now()
+
+			count, err := session.apiSession.CreateRetestForWebAppVulnerabilityFinding(findingUID)
 			if err == nil {
+				if count == "0" {
+					// if count == "0", that means there was a retest already running for this detection
+					// that means that the LastUpdated will reflect the retest that was already running
+					// to prevent the suspicion of a scan-error, we set the time of the scan back 30 minutes so
+					// we don't think that our detection was last found before the scan was kicked off
+					start = start.Add(time.Minute * -30)
+				}
+
 				scan := &scan{
 					Name:       fmt.Sprintf("was_aegis_retest_%s_%s", findingUID, time.Now().Format(time.RFC3339)),
 					ScanID:     fmt.Sprintf("%s%s_%s", webPrefix, findingUID, time.Now().Format(time.RFC3339)),
@@ -218,7 +228,7 @@ func (session *QsSession) createScanForWebApplication(ctx context.Context, detec
 					AssetGroupID: detection.GroupID(),
 					EngineIDs:    []string{},
 
-					Created: time.Now(),
+					Created: start,
 					matches: []domain.Match{detection},
 				}
 
