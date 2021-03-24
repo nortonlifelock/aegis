@@ -215,9 +215,9 @@ func (session *QsSession) createScanForWebApplication(ctx context.Context, detec
 				if count == "0" {
 					// if count == "0", that means there was a retest already running for this detection
 					// that means that the LastUpdated will reflect the retest that was already running
-					// to prevent the suspicion of a scan-error, we set the time of the scan back 30 minutes so
+					// to prevent the suspicion of a scan-error, we zero out the time so
 					// we don't think that our detection was last found before the scan was kicked off
-					start = start.Add(time.Minute * -30)
+					start = time.Time{}
 				}
 
 				scan := &scan{
