@@ -148,8 +148,12 @@ func (f *webAppFindingWrapper) LastFound() *time.Time {
 }
 
 func (f *webAppFindingWrapper) LastUpdated() *time.Time {
-	timeVal, _ := time.Parse(webAppFindingTimeFormat, f.f.LastTestedDate)
-	return &timeVal
+	//timeVal, _ := time.Parse(webAppFindingTimeFormat, f.f.LastTestedDate)
+	//return &timeVal
+
+	// LastTestedDate will be unreliable in the case of a retest already running when we kickoff a retest
+	// Returning nil because this occurs so commonly, and causes us to improperly suspect scan-errors
+	return nil
 }
 
 func (f *webAppFindingWrapper) ChildDetections() []domain.Detection {

@@ -586,7 +586,7 @@ func createOrUpdateDetection(db domain.DatabaseConnection, lstream log.Logger, d
 						lstream.Send(log.Errorf(err, "Error while updating detection for device/vuln [%v|%v]", assetID, vulnInfo.ID()))
 					}
 				} else {
-					lstream.Send(log.Debugf("Skipping detection update for device/vuln [%v|%v] [%v after %v]", assetID, vulnInfo.ID(), detectionInDB.Updated(), *detectionFromScanner.LastUpdated()))
+					lstream.Send(log.Debugf("Skipping detection update for device/vuln [%v|%v] [%v after %v]", assetID, vulnInfo.ID(), detectionInDB.Updated(), tord1970(detectionFromScanner.LastUpdated())))
 				}
 			}
 		} else {
