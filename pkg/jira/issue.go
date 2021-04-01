@@ -150,6 +150,18 @@ func (ji *Issue) HostName() (param *string) {
 	return ji.getStringPointer(backendHostname)
 }
 
+func (ji *Issue) LinkedIssue() (param string) {
+	if ji.Issue != nil && ji.Issue.Fields != nil && ji.Issue.Fields.IssueLinks != nil {
+		if len(ji.Issue.Fields.IssueLinks) > 0 {
+			if ji.Issue.Fields.IssueLinks[0].OutwardIssue != nil {
+				param = ji.Issue.Fields.IssueLinks[0].OutwardIssue.Key
+			}
+		}
+	}
+
+	return param
+}
+
 // ResolutionDate gets the ResolutionDate parameter from the Ticket struct
 func (ji *Issue) ResolutionDate() (param *time.Time) {
 	param = new(time.Time)

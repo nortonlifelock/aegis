@@ -96,6 +96,8 @@ func (session *Session) GetWebAppScanStatus(scanID string) (status string, err e
 func (session *Session) GetVulnerabilitiesForSite(siteID string) (findings []*WebAppFinding, err error) {
 	var hasMoreRecords = true
 	var lastID = "0"
+
+	// findings holds the parent and children findings together
 	findings = make([]*WebAppFinding, 0)
 
 	for hasMoreRecords {
@@ -326,6 +328,7 @@ type WebAppFinding struct {
 			} `xml:"Result"`
 		} `xml:"list"`
 	} `xml:"resultList"`
+	Param             string `xml:"param"`
 	Severity          string `xml:"severity"`
 	URL               string `xml:"url"`
 	StatusVal         string `xml:"status"`

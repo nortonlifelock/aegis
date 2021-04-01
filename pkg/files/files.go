@@ -155,6 +155,6 @@ func GetStringFromFile(path string) (contents string, err error) {
 
 // WriteFile writes the contents of the contents parameter to the file located at the end of the path
 func WriteFile(path string, contents string) (err error) {
-	err = ioutil.WriteFile(path, []byte(contents), 0644)
+	err = ioutil.WriteFile(path, []byte(contents), 0664)
 	return err
 }

@@ -1,0 +1,1 @@
+INSERT INTO Source(SourceTypeID, Source) SELECT ID, 'CloudView' from SourceType where Type = 'CISBench';

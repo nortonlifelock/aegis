@@ -24,6 +24,41 @@ import (
 // Unassigned holds the string value of the assignee of a ticket that has yet to be assigned
 const Unassigned = "Unassigned"
 
+func (connector *ConnectorJira) LinkIssues(ticketTitle, linkedTicketTitle string) (err error) {
+	body := &IssueLinkRequest{Update: &UpdateIssueLinks{Issuelinks: []Issuelinks{
+		{
+			Add: Add{
+				Type{
+					Name:    "Related",
+					//Inward:  "",
+					//Outward: "",
+				},
+				OutwardIssue{Key: linkedTicketTitle},
+			},
+		},
+	}}}
+
+	var req *http.Request
+	if req, err = connector.client.NewRequest(http.MethodPut, jcreateissue +ticketTitle, body); err == nil { // TODO rename const
+		var wg = sync.WaitGroup{}
+		wg.Add(1)
+
+		var response *http.Response
+		if response, err = connector.funnelClient.Do(req); err == nil {
+			if response != nil {
+				defer response.Body.Close()
+
+				//var body []byte
+				//if body, err = ioutil.ReadAll(response.Body); err == nil {
+				//	fmt.Println(string(body))
+				//}
+			}
+		}
+	}
+
+	return err
+}
+
 // GetTicket returns a domain object containing information of the JIRA ticket relating to the SourceKey
 func (connector *ConnectorJira) GetTicket(sourceKey string) (ticket domain.Ticket, err error) {
 	if len(sourceKey) > 0 {
@@ -578,7 +613,7 @@ const assigneeNotFound = -1
 const assigneeInField = 0
 const assigneeInTransition = 1
 
-func (connector *ConnectorJira) findAssigneeLocationAndSeeIfResDateIsRequired(ticketID string, payload TransitionPayload) (assigneeLocation int, resolutionDateRequired bool, err error) {
+func (connector *ConnectorJira) findAssigneeLocationAndSeeIfResDateIsRequired(ticketID string, payload TransitionPayload) (assigneeLocation int, resolutionDateRequired bool, exceptionExpirationRequired bool, err error) {
 	assigneeLocation = assigneeNotFound
 
 	var req *http.Request
@@ -609,6 +644,9 @@ func (connector *ConnectorJira) findAssigneeLocationAndSeeIfResDateIsRequired(ti
 								resolutionDateRequired = len(obj.Transitions[index].Fields[resolutionDate].Name) > 0
 								// On some transitions required is returned false here, when it is actually required for a transition
 								// maybe if the field is present in this map at all, it's required?
+
+								var exceptionExpirationDate = connector.GetFieldMap(backendExceptionExpiration).getCreateID()
+								exceptionExpirationRequired = len(obj.Transitions[index].Fields[exceptionExpirationDate].Name) > 0
 								break
 							}
 						}
@@ -621,7 +659,7 @@ func (connector *ConnectorJira) findAssigneeLocationAndSeeIfResDateIsRequired(ti
 		err = fmt.Errorf("error while querying JIRA - %s", err.Error())
 	}
 
-	return assigneeLocation, resolutionDateRequired, err
+	return assigneeLocation, resolutionDateRequired, exceptionExpirationRequired, err
 }
 
 // Transition changes the status of the ticket in JIRA (corresponding to the ticket parameter) to the parameter status
@@ -740,35 +778,12 @@ func (connector *ConnectorJira) GetTicketsByClosedStatus(orgCode string, methodO
 	return connector.getTicketsByClosedStatus(orgCode, methodOfDiscovery, startDate)
 }
 
-// GetCERFExpirationUpdates returns a map relating CERF tickets to their expiration date. It only grabs tickets that expire after the startDate parameter
-func (connector *ConnectorJira) GetCERFExpirationUpdates(startDate time.Time) (cerfs map[string]time.Time, err error) {
-	cerfs = make(map[string]time.Time)
-
-	var issues <-chan domain.Ticket
-	if issues, err = connector.getCERFExpirationUpdates(startDate); err == nil {
-
-		for {
-
-			if issue, ok := <-issues; ok {
-				if len(issue.Title()) > 0 {
-					cerfs[issue.Title()] = issue.ExceptionExpiration()
-				}
-			} else {
-				break
-			}
-		}
-
-	}
-
-	return cerfs, err
-}
-
 // GetTicketsForRescan returns tickets for the rescan job. The type of rescan job is defined in Algorithm, and controls the tickets that are returned
-func (connector *ConnectorJira) GetTicketsForRescan(cerfs []domain.CERF, MethodOfDiscovery string, OrgCode string, Algorithm string) (tickets <-chan domain.Ticket, err error) {
+func (connector *ConnectorJira) GetTicketsForRescan(cerfs []domain.CERF, MethodOfDiscovery string, OrgCode string, Algorithm string) (tickets <-chan domain.Ticket, errChan <-chan error) {
 	var groupID = "" // empty group ID, as we do not discriminate the tickets we look for based on group ID
 
-	tickets, err = connector.getTicketsForRescan(cerfs, groupID, MethodOfDiscovery, OrgCode, Algorithm)
-	return tickets, err
+	tickets, errChan = connector.getTicketsForRescan(cerfs, groupID, MethodOfDiscovery, OrgCode, Algorithm)
+	return tickets, errChan
 }
 
 // GetTicketsByDeviceIDVulnID returns tickets with the device and vulnerability id provided in the parameters
@@ -778,9 +793,9 @@ func (connector *ConnectorJira) GetTicketsByDeviceIDVulnID(methodOfDiscovery str
 }
 
 // GetOpenTicketsByGroupID returns tickets with an open status for an organization/method of discovery within a specified group
-// For CIS tickets the entity ID is stored in the deviceID field, the ruleHash is stored in the vulnerabilityID field
+// For CIS tickets the entity ID is stored in the deviceID field, the ruleID is stored in the vulnerabilityID field
 // and the cloudAccountID is stored in the group ID
-func (connector *ConnectorJira) GetOpenTicketsByGroupID(methodOfDiscovery string, orgCode string, groupID string) (tickets <-chan domain.Ticket, err error) {
+func (connector *ConnectorJira) GetOpenTicketsByGroupID(methodOfDiscovery string, orgCode string, groupID string) (tickets <-chan domain.Ticket, errChan <-chan error) {
 	statuses := make(map[string]bool)
 	statuses[connector.GetStatusMap(domain.StatusOpen)] = true
 	statuses[connector.GetStatusMap(domain.StatusReopened)] = true
@@ -790,10 +805,10 @@ func (connector *ConnectorJira) GetOpenTicketsByGroupID(methodOfDiscovery string
 	statuses[connector.GetStatusMap(domain.StatusResolvedException)] = true
 	statuses[connector.GetStatusMap(domain.StatusResolvedFalsePositive)] = true
 	statuses[connector.GetStatusMap(domain.StatusScanError)] = true
-	statuses[connector.GetStatusMap(domain.StatusClosedException)] = true
+	statuses[connector.GetStatusMap(domain.StatusApprovedException)] = true
 
-	tickets, err = connector.getOpenTicketsByGroupID(statuses, methodOfDiscovery, orgCode, groupID)
-	return tickets, err
+	tickets, errChan = connector.getOpenTicketsByGroupID(statuses, methodOfDiscovery, orgCode, groupID)
+	return tickets, errChan
 }
 
 // GetStatusMap returns the mapped status to the status provided in the parameter. This is required as a JIRA project will have their own custom statuses
@@ -801,9 +816,47 @@ func (connector *ConnectorJira) GetOpenTicketsByGroupID(methodOfDiscovery string
 func (connector *ConnectorJira) GetStatusMap(in string) string {
 	var retVal = connector.statusMap[strings.ToLower(in)]
 	if len(retVal) == 0 {
-		message := fmt.Sprintf("[NO MAPPING FOUND FOR %s IN JIRA PAYLOAD]", in)
-		connector.lstream.Send(log.Error("JIRA payload missing key elements", errors.New(message)))
-		retVal = message
+		switch in {
+		case strings.ToLower("assignee"):
+			retVal = in // default JIRA field does not require mapping
+		case strings.ToLower("category"):
+			retVal = in // default JIRA field does not require mapping
+		case strings.ToLower("comment"):
+			retVal = in // default JIRA field does not require mapping
+		case strings.ToLower("created"):
+			retVal = in // default JIRA field does not require mapping
+		case strings.ToLower("creator"):
+			retVal = in // default JIRA field does not require mapping
+		case strings.ToLower("description"):
+			retVal = in // default JIRA field does not require mapping
+		case strings.ToLower("due"):
+			retVal = in // default JIRA field does not require mapping
+		case strings.ToLower("labels"):
+			retVal = in // default JIRA field does not require mapping
+		case strings.ToLower("last viewed"):
+			retVal = in // default JIRA field does not require mapping
+		case strings.ToLower("priority"):
+			retVal = in // default JIRA field does not require mapping
+		case strings.ToLower("project"):
+			retVal = in // default JIRA field does not require mapping
+		case strings.ToLower("reporter"):
+			retVal = in // default JIRA field does not require mapping
+		case strings.ToLower("resolution"):
+			retVal = in // default JIRA field does not require mapping
+		case strings.ToLower("resolved"):
+			retVal = in // default JIRA field does not require mapping
+		case strings.ToLower("status"):
+			retVal = in // default JIRA field does not require mapping
+		case strings.ToLower("summary"):
+			retVal = in // default JIRA field does not require mapping
+		case strings.ToLower("updated"):
+			retVal = in // default JIRA field does not require mapping
+		default:
+			message := fmt.Sprintf("[NO MAPPING FOUND FOR %s IN JIRA PAYLOAD]", in)
+			connector.lstream.Send(log.Warning("JIRA payload missing key elements", errors.New(message)))
+			retVal = message
+		}
+
 	}
 
 	return retVal

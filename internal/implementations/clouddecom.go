@@ -30,7 +30,8 @@ type CloudDecommissionJob struct {
 
 type CloudDecommissionPayload struct {
 	// OnlyCheckIPs is an optional field. If it is not empty, a decommission check will only be done against these specific IPs as opposed to the entire cloud inventory
-	OnlyCheckIPs []string `json:"only_check_ips"`
+	OnlyCheckIPs      []string `json:"only_check_ips"`
+	OnlyReopenTickets []string `json:"only_reopen_tickets"`
 
 	DecommOnStoppedState bool `json:"decommission_on_stopped_state"`
 }
@@ -59,7 +60,7 @@ func (job *CloudDecommissionJob) Process(ctx context.Context, id string, appconf
 
 			for _, insource := range job.insources {
 				var connection integrations.CloudServiceConnection
-				if connection, err = integrations.GetCloudServiceConnection(job.db, insource.Source(), insource, job.appconfig, job.lstream); err == nil {
+				if connection, err = integrations.GetCloudServiceConnection(job.ctx, job.db, insource.Source(), insource, job.appconfig, job.lstream); err == nil {
 					cloudConnections = append(cloudConnections, connection)
 				} else {
 					job.lstream.Send(log.Error("error while establishing connection", err))
@@ -119,7 +120,7 @@ func (job *CloudDecommissionJob) decommissionCloudAssets(cloudConnections []inte
 			}
 
 			if err == nil {
-				deviceIDToDecommissionedDevice := job.findDecommissionedDevices(historyOfDevices, allIPs)
+				deviceIDToDecommissionedDevice, deviceSourceIDToState := job.findDecommissionedDevices(historyOfDevices, allIPs)
 				job.markDevicesAsDecommissionedInDatabase(deviceIDToDecommissionedDevice)
 
 				var orgInfo domain.Organization
@@ -132,10 +133,10 @@ func (job *CloudDecommissionJob) decommissionCloudAssets(cloudConnections []inte
 						if sourceIDToSource, err = job.getSourceMap(); err == nil {
 
 							var tickets chan domain.Ticket
-							if tickets, err = job.getTicketsForDecommCheck(assetGroups, sourceIDToSource, ticketingEngine, orgInfo); err == nil {
-								job.closeTicketsForDecommissionedAssets(tickets, deviceIDToDecommissionedDevice, ticketingEngine, sourceIDToSource)
-							}
+							var errs <-chan error
 
+							tickets, errs = job.getTicketsForDecommCheck(assetGroups, sourceIDToSource, ticketingEngine, orgInfo)
+							job.closeTicketsForDecommissionedAssets(tickets, errs, deviceIDToDecommissionedDevice, deviceSourceIDToState, ticketingEngine, sourceIDToSource)
 							job.findIncorrectlyDecommissionedAssets(deviceIDToDecommissionedDevice)
 						} else {
 							job.lstream.Send(log.Errorf(err, "error while loading sources from database"))
@@ -145,6 +146,17 @@ func (job *CloudDecommissionJob) decommissionCloudAssets(cloudConnections []inte
 					}
 				} else {
 					job.lstream.Send(log.Errorf(err, "error while loading organization info for [%v]", job.config.OrganizationID()))
+				}
+
+				for _, ip := range allIPs {
+					for _, device := range historyOfDevices {
+						if device.IP() == ip.IP() {
+							_, _, err = job.db.UpdateStateOfDevice(device.ID(), ip.State(), job.config.OrganizationID())
+							if err != nil {
+								err = fmt.Errorf("error while updating state information for device [%s] - %s", device.ID(), err.Error())
+							}
+						}
+					}
 				}
 			} else {
 				job.lstream.Send(log.Errorf(err, "error while grabbing history of devices"))
@@ -157,8 +169,10 @@ func (job *CloudDecommissionJob) decommissionCloudAssets(cloudConnections []inte
 	}
 }
 
-func (job *CloudDecommissionJob) getTicketsForDecommCheck(assetGroups []domain.AssetGroup, sourceIDToSource map[string]domain.Source, ticketingEngine integrations.TicketingEngine, orgInfo domain.Organization) (tickets chan domain.Ticket, err error) {
+func (job *CloudDecommissionJob) getTicketsForDecommCheck(assetGroups []domain.AssetGroup, sourceIDToSource map[string]domain.Source, ticketingEngine integrations.TicketingEngine, orgInfo domain.Organization) (tickets chan domain.Ticket, errs <-chan error) {
 	tickets = make(chan domain.Ticket)
+	errOut := make(chan error)
+	errs = errOut
 
 	wg := &sync.WaitGroup{}
 	for _, assetGroup := range assetGroups {
@@ -166,32 +180,42 @@ func (job *CloudDecommissionJob) getTicketsForDecommCheck(assetGroups []domain.A
 		if vulnSource := sourceIDToSource[assetGroup.ScannerSourceID()]; vulnSource != nil {
 
 			var groupTickets <-chan domain.Ticket
-			if groupTickets, err = ticketingEngine.GetOpenTicketsByGroupID(vulnSource.Source(), orgInfo.Code(), assetGroup.GroupID()); err == nil {
+			var errChan <-chan error
+			groupTickets, errChan = ticketingEngine.GetOpenTicketsByGroupID(vulnSource.Source(), orgInfo.Code(), assetGroup.GroupID())
+			wg.Add(1)
+			go func(groupTickets <-chan domain.Ticket, errChan <-chan error) {
+				defer handleRoutinePanic(job.lstream)
+				defer wg.Done()
 
-				wg.Add(1)
-				go func(groupTickets <-chan domain.Ticket) {
-					defer handleRoutinePanic(job.lstream)
-					defer wg.Done()
-
-					for {
-						if ticket, ok := <-groupTickets; ok {
+				for {
+					select {
+					case <-job.ctx.Done():
+						return
+					case ticket, ok := <-groupTickets:
+						if ok {
 							select {
 							case <-job.ctx.Done():
 								return
 							case tickets <- ticket:
 							}
 						} else {
-							break
+							return
+						}
+					case err, ok := <-errChan:
+						if ok {
+							select {
+							case <-job.ctx.Done():
+								return
+							case errOut <- err:
+							}
 						}
 					}
-				}(groupTickets)
-			} else {
-				job.lstream.Send(log.Errorf(err, "error while loading tickets"))
-				break
-			}
+				}
+			}(groupTickets, errChan)
 		} else {
-			err = fmt.Errorf("could not find source with ID [%v]", assetGroup.ScannerSourceID())
+			err := fmt.Errorf("could not find source with ID [%v]", assetGroup.ScannerSourceID())
 			job.lstream.Send(log.Errorf(err, "error while gathering source"))
+			errOut <- err
 			break
 		}
 	}
@@ -199,10 +223,11 @@ func (job *CloudDecommissionJob) getTicketsForDecommCheck(assetGroups []domain.A
 	go func() {
 		defer handleRoutinePanic(job.lstream)
 		defer close(tickets)
+		defer close(errOut)
 		wg.Wait()
 	}()
 
-	return tickets, err
+	return tickets, errs
 }
 
 func (job *CloudDecommissionJob) findIncorrectlyDecommissionedAssets(deviceIDToDecommDevice map[string]domain.Device) {
@@ -247,7 +272,7 @@ func (job *CloudDecommissionJob) findIncorrectlyDecommissionedAssets(deviceIDToD
 	}
 }
 
-func (job *CloudDecommissionJob) closeTicketsForDecommissionedAssets(tickets <-chan domain.Ticket, deviceIDToDecommDevice map[string]domain.Device, ticketingEngine integrations.TicketingEngine, sourceIDToSource map[string]domain.Source) {
+func (job *CloudDecommissionJob) closeTicketsForDecommissionedAssets(tickets <-chan domain.Ticket, errs <-chan error, deviceIDToDecommDevice map[string]domain.Device, deviceSourceIDToState map[string]string, ticketingEngine integrations.TicketingEngine, sourceIDToSource map[string]domain.Source) {
 	var deviceAlreadyDecommedInDB sync.Map
 
 	wg := &sync.WaitGroup{}
@@ -289,27 +314,96 @@ func (job *CloudDecommissionJob) closeTicketsForDecommissionedAssets(tickets <-c
 						}(tic)
 					} else if sord(tic.Status()) == ticketingEngine.GetStatusMap(domain.StatusResolvedDecom) {
 						// this block hits if we have a ticket that was marked as resolved-decommissioned, but was
-						// found in the cloud asset inventory
+						// found in the cloud asset inventory. these tickets should be moved to reopened
 
 						wg.Add(1)
 						go func(tic domain.Ticket) {
 							defer handleRoutinePanic(job.lstream)
 							defer wg.Done()
 
+							var comment = "Ticket was found live in cloud asset inventory"
 							if err := ticketingEngine.Transition(
 								tic,
 								ticketingEngine.GetStatusMap(domain.StatusReopened),
-								"Ticket reopened as it was found in the cloud asset inventory",
+								comment,
 								sord(tic.AssignedTo())); err == nil {
 								job.lstream.Send(log.Infof("%v reopened as it's IP [%v] was in the AWS inventory", tic.Title(), sord(tic.IPAddress())))
 							} else {
 								job.lstream.Send(log.Errorf(err, "error while marking %v as reopened", tic.Title()))
 							}
+
 						}(tic)
+					} else if sord(tic.Status()) == ticketingEngine.GetStatusMap(domain.StatusResolvedRemediated) {
+						wg.Add(1)
+						go func(tic domain.Ticket) {
+							defer handleRoutinePanic(job.lstream)
+							defer wg.Done()
+
+							var reopen bool
+							for _, title := range job.Payload.OnlyReopenTickets {
+								if title == tic.Title() {
+									reopen = true
+								}
+							}
+
+							if reopen {
+								var comment = fmt.Sprintf("Ticket moved to %s due to the disparity between scanner and cloud asset inventory", ticketingEngine.GetStatusMap(domain.StatusScanError))
+								if len(deviceSourceIDToState[tic.DeviceID()]) > 0 {
+									comment = fmt.Sprintf("%s. Current state of asset is [%s]", comment, deviceSourceIDToState[tic.DeviceID()])
+								}
+
+								if err := ticketingEngine.Transition(
+									tic,
+									ticketingEngine.GetStatusMap(domain.StatusScanError),
+									comment,
+									sord(tic.AssignedTo())); err == nil {
+									job.lstream.Send(log.Infof("%v moved to scan error as it's IP [%v] was in the AWS inventory", tic.Title(), sord(tic.IPAddress())))
+								} else {
+									job.lstream.Send(log.Errorf(err, "error while marking %v as %s", tic.Title(), ticketingEngine.GetStatusMap(domain.StatusScanError)))
+								}
+							}
+
+						}(tic)
+					} else {
+						// these tickets shouldn't be reopened or closed, but we comment that the devices were found if they were resolved
+
+						var shouldUpdateTicket bool
+						if len(job.Payload.OnlyCheckIPs) == 0 {
+							// if we're not checking for specific IPs, comment on all the tickets
+							shouldUpdateTicket = true
+						} else {
+							// if we're only checking for specific IPs, only comment on tickets with one of those specific IPs
+							for _, checkIP := range job.Payload.OnlyCheckIPs {
+								if checkIP == sord(tic.IPAddress()) && len(checkIP) > 0 {
+									if sord(tic.Status()) == ticketingEngine.GetStatusMap(domain.StatusResolvedRemediated) ||
+										sord(tic.Status()) == ticketingEngine.GetStatusMap(domain.StatusResolvedDecom) ||
+										sord(tic.Status()) == ticketingEngine.GetStatusMap(domain.StatusApprovedException) {
+										shouldUpdateTicket = true
+									}
+								}
+							}
+						}
+
+						if shouldUpdateTicket {
+							// if we're not going to reopen the ticket, we comment on it to show that the ticket was covered in a decommission job but found alive
+							_, _, err := ticketingEngine.UpdateTicket(tic, fmt.Sprintf("IP address [%s] still found in %s asset inventory", sord(tic.IPAddress()), job.insources[0].Source()))
+							if err != nil {
+								job.lstream.Send(log.Errorf(err, "error while commenting on %s", tic.Title()))
+							}
+
+							job.lstream.Send(log.Infof("Ticket [%s] had it's ip [%s] found in the cloud inventory",
+								tic.Title(), sord(tic.IPAddress())))
+						}
 					}
 				} else {
 					return
 				}
+
+			case err, ok := <-errs:
+				if ok {
+					job.lstream.Send(log.Errorf(err, "error while loading tickets"))
+				}
+
 			}
 		}
 	}()
@@ -345,7 +439,7 @@ func (job *CloudDecommissionJob) markDevicesAsDecommissionedInDatabase(deviceIDT
 
 // TODO do we want to take MAC into consideration here?
 // maybe region could be used as a fallback if MAC isn't present
-func (job *CloudDecommissionJob) findDecommissionedDevices(historyOfDevices []domain.Device, allIPs []domain.CloudIP) map[string]domain.Device {
+func (job *CloudDecommissionJob) findDecommissionedDevices(historyOfDevices []domain.Device, allIPs []domain.CloudIP) (map[string]domain.Device, map[string]string) {
 	var dbInstanceIDToDevice = make(map[string]domain.Device)
 	var cloudInstanceIDToDevice = make(map[string]domain.CloudIP)
 
@@ -372,6 +466,7 @@ func (job *CloudDecommissionJob) findDecommissionedDevices(historyOfDevices []do
 	// find which devices we had stored in the databases that are not in the inventory of the cloud services (and are assumed to be decommissioned)
 	// as well as devices that were reported by the cloud service as decommissioned
 	var deviceIDToDecommDevice = make(map[string]domain.Device, 0)
+	var deviceSourceIDToState = make(map[string]string, 0)
 	for _, device := range historyOfDevices {
 
 		// the asset sync job (meaning a vulnerability scanner) has also found the device
@@ -381,6 +476,7 @@ func (job *CloudDecommissionJob) findDecommissionedDevices(historyOfDevices []do
 				deviceIDToDecommDevice[sord(device.SourceID())] = device
 			} else {
 				var matchedCloudDevice = cloudInstanceIDToDevice[sord(device.InstanceID())]
+				deviceSourceIDToState[sord(device.SourceID())] = matchedCloudDevice.State()
 
 				// the cloud service reported the device as decommissioned
 				if matchedCloudDevice.State() == domain.DeviceDecommed {
@@ -392,7 +488,7 @@ func (job *CloudDecommissionJob) findDecommissionedDevices(historyOfDevices []do
 		}
 	}
 
-	return deviceIDToDecommDevice
+	return deviceIDToDecommDevice, deviceSourceIDToState
 }
 
 func (job *CloudDecommissionJob) getSourceMap() (sourceIDToSource map[string]domain.Source, err error) {

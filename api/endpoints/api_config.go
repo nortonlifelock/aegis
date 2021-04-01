@@ -335,10 +335,15 @@ func getAllConfigMappings(ms domain.DatabaseConnection, orgID string) (configs [
 			for _, jobConfig := range configs {
 				if jobConfig != nil {
 
-					inID := jobConfig.DataInSourceConfigID()
-					if inID != nil {
+					inID := sord(jobConfig.DataInSourceConfigID())
+
+					// there can be multiple source configs attached to a JobConfig separated by commas
+					// if there are multiple, we display the first for the UI
+					inID = strings.Split(inID, ",")[0]
+
+					if len(inID) > 0 {
 						var sourceIn domain.SourceConfig
-						sourceIn, err = ms.GetSourceConfigByID(sord(inID))
+						sourceIn, err = ms.GetSourceConfigByID(inID)
 						if err == nil {
 							if sourceIn != nil {
 								jobConfig = &setDataInConfig{
@@ -347,17 +352,22 @@ func getAllConfigMappings(ms domain.DatabaseConnection, orgID string) (configs [
 								}
 							}
 						} else {
-							err = errors.New(fmt.Sprintf("error while call the database for DataInConfig "))
+							err = errors.New(fmt.Sprintf("error while gathering the DataIn source config for [%s]", jobConfig.ID()))
 							break
 						}
 					} else {
 						err = fmt.Errorf("data in source config id not present for [%v]", jobConfig.ID())
 					}
 
-					outID := jobConfig.DataOutSourceConfigID()
-					if outID != nil {
+					outID := sord(jobConfig.DataOutSourceConfigID())
+
+					// there can be multiple source configs attached to a JobConfig separated by commas
+					// if there are multiple, we display the first for the UI
+					outID = strings.Split(outID, ",")[0]
+
+					if len(outID) > 0 {
 						var sourceOut domain.SourceConfig
-						sourceOut, err = ms.GetSourceConfigByID(sord(outID))
+						sourceOut, err = ms.GetSourceConfigByID(outID)
 						if err == nil {
 							if sourceOut != nil {
 								jobConfig = &setDataOutConfig{
@@ -366,7 +376,7 @@ func getAllConfigMappings(ms domain.DatabaseConnection, orgID string) (configs [
 								}
 							}
 						} else {
-							err = errors.New(fmt.Sprintf("error while call the database for DataOutConfig "))
+							err = errors.New(fmt.Sprintf("error while gathering the DataOut source config for [%s]", jobConfig.ID()))
 							break
 						}
 					} else {
@@ -383,7 +393,7 @@ func getAllConfigMappings(ms domain.DatabaseConnection, orgID string) (configs [
 							}
 						}
 					} else {
-						err = errors.New(fmt.Sprintf("error while call the database for Organization "))
+						err = errors.New(fmt.Sprintf("error while gathering organization info for [%s]", orgID))
 						break
 					}
 				} else {
@@ -393,7 +403,7 @@ func getAllConfigMappings(ms domain.DatabaseConnection, orgID string) (configs [
 		}
 
 	} else {
-		err = errors.New(fmt.Sprintf(" no organization Id is provided"))
+		err = errors.New(fmt.Sprintf("empty organization ID provided"))
 	}
 
 	return configs, err

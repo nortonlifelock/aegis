@@ -20,4 +20,5 @@ type DetectionInfo interface {
 	Updated() time.Time
 	Protocol() string
 	ActiveKernel() *int
+	ParentDetectionID() *string
 }

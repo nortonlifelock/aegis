@@ -20,7 +20,7 @@ func (cli *APIClient) GetScanSummaries(ctx context.Context, registry string, ima
 		}
 
 		var request *http.Request
-		if request, err = http.NewRequest(http.MethodGet, fmt.Sprintf("%s/%s&page=%d&pagesize=50", cli.baseURL, endpoint, page), nil); err == nil {
+		if request, err = http.NewRequest(http.MethodGet, fmt.Sprintf("%s%s&page=%d&pagesize=50", cli.baseURL, endpoint, page), nil); err == nil {
 			var body []byte
 			if body, err = cli.executeRequest(request); err == nil {
 				scanPage := &ScanPage{}

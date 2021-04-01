@@ -19,6 +19,9 @@ type Detection interface {
 	LastFound() *time.Time
 	LastUpdated() *time.Time
 	//Updated() time.Time
+
+	ParentDetectionID() string
 	Device() (Device, error)
 	Vulnerability() (Vulnerability, error)
+	ChildDetections() []Detection
 }

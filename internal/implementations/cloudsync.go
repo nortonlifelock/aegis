@@ -52,7 +52,7 @@ func (job *CloudSyncJob) Process(ctx context.Context, id string, appconfig domai
 
 		for _, insource := range job.insources {
 			var connection integrations.CloudServiceConnection
-			if connection, err = integrations.GetCloudServiceConnection(job.db, insource.Source(), insource, job.appconfig, job.lstream); err == nil {
+			if connection, err = integrations.GetCloudServiceConnection(job.ctx, job.db, insource.Source(), insource, job.appconfig, job.lstream); err == nil {
 				cloudConnections = append(cloudConnections, connection)
 			} else {
 				job.lstream.Send(log.Error("error while establishing connection", err))
@@ -230,6 +230,8 @@ func (job *CloudSyncJob) createOrUpdateDevice(ip domain.CloudIP, keyToValue map[
 			case domain.DeviceRunning:
 			case domain.DeviceStopped:
 			case domain.DeviceDecommed:
+			case domain.DeviceDeallocated:
+			case domain.DeviceUnknown:
 			default:
 				job.lstream.Send(log.Errorf(nil, "unrecognized state %v", ip.State()))
 			}

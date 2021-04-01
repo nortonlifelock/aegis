@@ -13,7 +13,8 @@ import (
 
 const (
 	// Dome9 delineates that the CIS scanner connects to Dome9
-	Dome9 = "Dome9"
+	Dome9     = "Dome9"
+	CloudView = "CloudView"
 )
 
 // CISScanner finds compliance violations within a cloud service
@@ -33,7 +34,7 @@ func GetCISScanner(ctx context.Context, scannerID string, ms domain.DatabaseConn
 			case Dome9:
 				client, err = dome9.CreateClient(user, pass, sourceConfig.Address(), lstream)
 				break
-			case Qualys:
+			case Qualys, CloudView:
 				var decryptedConfig domain.SourceConfig
 				decryptedConfig, err = crypto.DecryptSourceConfig(ms, sourceConfig, appConfig)
 				if err == nil {

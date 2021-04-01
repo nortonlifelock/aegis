@@ -93,6 +93,16 @@ func (d *detection) Device() (device domain.Device, err error) {
 	return d.asset, err
 }
 
+func (d *detection) ChildDetections() []domain.Detection {
+	return nil
+}
+
+// This returns the DB ID of the parent detection
+// The scanner does not need to know this ID
+func (d *detection) ParentDetectionID() string {
+	return ""
+}
+
 func (d *detection) Vulnerability() (v domain.Vulnerability, err error) {
 
 	if validator.IsValid(d) {

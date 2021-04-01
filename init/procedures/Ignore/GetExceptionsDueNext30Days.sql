@@ -12,4 +12,4 @@ CREATE PROCEDURE `GetExceptionsDueNext30Days`()
   FROM `Ignore`
   WHERE DueDate <= DATE_ADD(NOW(), INTERVAL 30 DAY)
         AND TypeId = 0
-        AND Active = 1;
+        AND Active = 1 and Approval not like 'JobID%';

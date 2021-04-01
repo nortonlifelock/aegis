@@ -115,6 +115,27 @@ func (detection *Detection) Device() (device domain.Device, err error) {
 	return device, err
 }
 
+func (detection *Detection) ParentDetectionID() string {
+	if detection.Info.ParentDetectionID() == nil {
+		return ""
+	} else {
+		return *detection.Info.ParentDetectionID()
+	}
+}
+
+func (detection *Detection) ChildDetections() []domain.Detection {
+	childDetections := make([]domain.Detection, 0)
+	childDetInfo, _ := detection.Conn.GetChildDetectionsForDetectionID(detection.ID())
+
+	for index := range childDetInfo {
+		childDetections = append(childDetections, &Detection{
+			Conn:      detection.Conn,
+			Info:      childDetInfo[index],
+		})
+	}
+	return childDetections
+}
+
 // Vulnerability returns on object implementing a corresponding Vulnerability interface that the detection applies to
 func (detection *Detection) Vulnerability() (vulnerability domain.Vulnerability, err error) {
 	if detection.cacheVuln != nil {

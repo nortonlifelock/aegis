@@ -208,6 +208,8 @@ func (session *QsSession) createScanForWebApplication(ctx context.Context, detec
 		if !seen[findingUID] {
 			seen[findingUID] = true
 
+			start := time.Now()
+
 			_, err := session.apiSession.CreateRetestForWebAppVulnerabilityFinding(findingUID)
 			if err == nil {
 				scan := &scan{
@@ -218,7 +220,7 @@ func (session *QsSession) createScanForWebApplication(ctx context.Context, detec
 					AssetGroupID: detection.GroupID(),
 					EngineIDs:    []string{},
 
-					Created: time.Now(),
+					Created: start,
 					matches: []domain.Match{detection},
 				}
 
@@ -420,7 +422,7 @@ func (session *QsSession) prepareIPsAndAGMapping(matches []domain.Match) (groupI
 				}
 
 				if !found {
-					session.lstream.Send(log.Errorf(err, "could not find asset group with online engine for IP [%s]", ip))
+					session.lstream.Send(log.Errorf(err, "could not find asset group with online engine for IP [%s]. check that the asset group is in your Qualys SourceConfig Payload and that the asset group has an online engine", ip))
 				}
 			}
 

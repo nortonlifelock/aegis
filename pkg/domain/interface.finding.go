@@ -1,5 +1,7 @@
 package domain
 
+import "time"
+
 // Finding holds information pertaining to a CIS scanner
 type Finding interface {
 	// ID corresponds to a vulnerability ID
@@ -22,4 +24,6 @@ type Finding interface {
 	String() string
 
 	BundleID() string
+
+	LastFound() time.Time
 }

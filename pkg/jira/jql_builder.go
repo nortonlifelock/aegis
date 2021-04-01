@@ -63,6 +63,12 @@ func (q *Query) endGroup() *Query {
 	return q
 }
 
+func (q *Query) linkedTo(key string) *Query {
+	q.JQL += fmt.Sprintf("issue in linkedIssues(\"%s\")", key)
+
+	return q
+}
+
 func (q *Query) equals(in interface{}, value string) *Query {
 	q.JQL += fmt.Sprintf("\"%s\" = %s", q.getKey(in), value)
 

@@ -108,7 +108,7 @@ func (session *Session) pullRateInfoForInitialization() (rates Rates, err error)
 	// we make a request to a random authenticated endpoint to get the rate limit information in the response headers
 	req, err = http.NewRequest(http.MethodGet, fmt.Sprintf("%s?action=list", session.Config.Address()+qsAppliance), nil)
 	if err == nil {
-		err = session.makeRequest(req, func(response *http.Response) (err error) {
+		err = session.makeRequest(true, req, func(response *http.Response) (err error) {
 			defer response.Body.Close()
 
 			var status int

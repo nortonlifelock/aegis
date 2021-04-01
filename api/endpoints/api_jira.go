@@ -55,9 +55,10 @@ type statusRegistry struct {
 	resolvedDecommissioned string
 	resolvedException      string
 	closedRemediated       string
-	closedFalsePositive    string
+	approvedFalsePositive  string
 	closedDecommission     string
-	closedException        string
+	approvedException      string
+	scanError              string
 }
 
 func newStatusRegistry() statusRegistry {
@@ -70,9 +71,10 @@ func newStatusRegistry() statusRegistry {
 		"resolved-decommissioned",
 		"resolved-exception",
 		"closed-remediated",
-		"closed-false-positive",
+		"approved-false-positive",
 		"closed-decommission",
-		"closed-exception",
+		"approved-exception",
+		"scan-error",
 	}
 }
 
@@ -126,7 +128,7 @@ func attachExceptionToTicket(w http.ResponseWriter, r *http.Request) {
 					_, _, trans.err = engine.UpdateTicket(&exceptionTicket{
 						Ticket: jiraTicket,
 						cerf:   cerf,
-						status: engine.GetStatusMap(domain.StatusClosedException),
+						status: engine.GetStatusMap(domain.StatusApprovedException),
 					}, fmt.Sprintf("%s added to ticket at request of %s", cerf, sord(trans.user.Username())))
 
 					if trans.err == nil {
@@ -170,12 +172,6 @@ func getFieldMaps(w http.ResponseWriter, r *http.Request) {
 							var backendFieldsAndCustomFields backendFieldsAndCustomFields
 							backendFieldsAndCustomFields.CustomFields = customFields
 							backendFieldsAndCustomFields.BackendFields = jira.MappableFields
-
-							// TODO CERFEXPIRATION is not returned from the API because it is not a part of the Aegis project
-							// TODO we grab the expiration date from the CERF project and use it to populate the field
-							const backendCERFExpiration = "Actual Expiration Date"
-							backendFieldsAndCustomFields.CustomFields = append(backendFieldsAndCustomFields.CustomFields, backendCERFExpiration)
-
 							trans.status = http.StatusOK
 							trans.obj = backendFieldsAndCustomFields
 
@@ -340,7 +336,7 @@ func getCountOfJiraTicketsInStatus(w http.ResponseWriter, r *http.Request) {
 					needsCacheUpdate = true
 				} else if pieChartCache[trans.permission.OrgID()].Contents == nil {
 					needsCacheUpdate = true
-				} else if time.Since(pieChartCache[trans.permission.OrgID()].Updated) > time.Hour {
+				} else if time.Since(pieChartCache[trans.permission.OrgID()].Updated) > time.Minute {
 					needsCacheUpdate = true
 				}
 				pieChartLock.Unlock()
@@ -399,10 +395,12 @@ func setCountStatusLabelForStatus(connector *jira.ConnectorJira, status string, 
 	var err error
 	var queryData domain.QueryData
 	if queryData, err = Ms.GetTicketCountByStatus(status, orgID); err == nil {
-		labelLock.Lock()
-		*statusLabels = append(*statusLabels, fmt.Sprintf("%s - (%d)", status, queryData.Length()))
-		*countLabels = append(*countLabels, queryData.Length())
-		labelLock.Unlock()
+		if queryData.Length() > 0 {
+			labelLock.Lock()
+			*statusLabels = append(*statusLabels, fmt.Sprintf("%s - (%d)", status, queryData.Length()))
+			*countLabels = append(*countLabels, queryData.Length())
+			labelLock.Unlock()
+		}
 	} else {
 		fmt.Println(err.Error())
 	}

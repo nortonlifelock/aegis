@@ -23,6 +23,12 @@ type RescanQueuePayload struct {
 	// The RSQ will wait the following minutes after a ticket is updated - meaning once [time.Now >= (ticket.Updated + AgentTicketRescanDelayWaitInMinutes)] a rescan
 	// will be ticketed off for the ticket
 	AgentTicketRescanDelayWaitInMinutes *time.Duration `json:"agent_ticket_rescan_delay_wait_in_minutes"`
+
+	// ExceptionScansInclude has a list of strings holding the name of exceptions that should be included in exception rescan
+	// Please note that this field is only relevant for when Type=domain.RescanExceptions
+	// RescanQueues automatically kickoff exception rescans for exceptions that expiring in the upcoming 30 days
+	// If you want to rescan a set of exceptions that are not expiring in the upcoming 30 days, you can include them here
+	ExceptionScansInclude []string `json:"include_exceptions"`
 }
 
 // RescanQueueJob implements the Job interface required to run the job
@@ -92,18 +98,21 @@ func (job *RescanQueueJob) Process(ctx context.Context, id string, appconfig dom
 				job.lstream.Send(log.Debug("Loading tickets for Rescan"))
 				var cerfs []domain.CERF
 				if cerfs, err = job.db.GetExceptionsDueNext30Days(); err == nil {
-					if issues, err = eng.GetTicketsForRescan(cerfs, job.outsource.Source(), orgcode, job.Payload.Type); err == nil { //pulls all resolved remediated tickets from jira
-						job.lstream.Send(log.Debugf("[%v] Tickets Loaded for Rescan", len(issues)))
+					cerfs = job.addCustomExceptionsForExceptionRSQ(cerfs)
+					var errChan <-chan error
+					issues, errChan = eng.GetTicketsForRescan(cerfs, job.outsource.Source(), orgcode, job.Payload.Type)
+					job.lstream.Send(log.Debugf("[%v] Tickets Loaded for Rescan", len(issues)))
 
+					if fannedIssues, err := fanInChannel(job.ctx, issues, errChan); err == nil {
 						// exclude issues that are already being processed
 						var cleanedIssues <-chan domain.Ticket
-						if cleanedIssues, err = job.cleanTickets(issues); err == nil {
+						if cleanedIssues, err = job.cleanTickets(fanOutChannel(job.ctx, fannedIssues)); err == nil {
 							job.processCleanedIssues(cleanedIssues)
 						} else {
 							job.lstream.Send(log.Error("Error occurred while sorting tickets to re-scan", err))
 						}
 					} else {
-						job.lstream.Send(log.Error("while retrieving tickets", err))
+						job.lstream.Send(log.Errorf(err, "error while loading tickets"))
 					}
 				} else {
 					job.lstream.Send(log.Errorf(err, "error while gathering exceptions"))
@@ -120,6 +129,18 @@ func (job *RescanQueueJob) Process(ctx context.Context, id string, appconfig dom
 	}
 
 	return err
+}
+
+func (job *RescanQueueJob) addCustomExceptionsForExceptionRSQ(cerfs []domain.CERF) []domain.CERF {
+	if job.Payload.Type == domain.RescanExceptions {
+		for index := range job.Payload.ExceptionScansInclude {
+			cerfs = append(cerfs, &PayloadProvidedException{
+				job.Payload.ExceptionScansInclude[index],
+			})
+		}
+	}
+
+	return cerfs
 }
 
 func (job *RescanQueueJob) getAssetGroups() (assetGroupBelongsToThisOrgAndScanner map[string]bool, err error) {
@@ -358,7 +379,7 @@ func (job *RescanQueueJob) cleanTickets(tickets <-chan domain.Ticket) (<-chan do
 			defer handleRoutinePanic(job.lstream)
 			defer close(cleanedTickets)
 
-			var groupIDToListOfIPsForCloudDecomm = make(map[string][]string)
+			var groupIDToListOfTicketsForCloudDecomm = make(map[string][]domain.Ticket)
 
 			for {
 				if ticket, ok := <-tickets; ok {
@@ -374,11 +395,11 @@ func (job *RescanQueueJob) cleanTickets(tickets <-chan domain.Ticket) (<-chan do
 						cleanedTickets <- ticket
 					} else if job.Payload.Type == domain.RescanDecommission && assetGroupUsesCloudDecomm[ticket.GroupID()] {
 						if !ipMap[sord(ticket.IPAddress())] {
-							if groupIDToListOfIPsForCloudDecomm[ticket.GroupID()] == nil {
-								groupIDToListOfIPsForCloudDecomm[ticket.GroupID()] = make([]string, 0)
+							if groupIDToListOfTicketsForCloudDecomm[ticket.GroupID()] == nil {
+								groupIDToListOfTicketsForCloudDecomm[ticket.GroupID()] = make([]domain.Ticket, 0)
 							}
 
-							groupIDToListOfIPsForCloudDecomm[ticket.GroupID()] = append(groupIDToListOfIPsForCloudDecomm[ticket.GroupID()], sord(ticket.IPAddress()))
+							groupIDToListOfTicketsForCloudDecomm[ticket.GroupID()] = append(groupIDToListOfTicketsForCloudDecomm[ticket.GroupID()], ticket)
 						}
 					} else if skipRescanQueue {
 						job.lstream.Send(log.Debugf("skipping queuing of [%s] as group [%s] in the AssetGroup table is marked to skip the RSQ", ticket.Title(), ticket.GroupID()))
@@ -386,11 +407,13 @@ func (job *RescanQueueJob) cleanTickets(tickets <-chan domain.Ticket) (<-chan do
 				} else {
 					break
 				}
+
 			}
 
-			for groupID, listOfIpsForCloudDecomm := range groupIDToListOfIPsForCloudDecomm {
-				job.lstream.Send(log.Infof("creating cloud decommission job for group [%s] on IPs [%s]", groupID, strings.Join(listOfIpsForCloudDecomm, ",")))
-				createCloudDecommissionJob(job.id, job.db, job.lstream, job.config.OrganizationID(), groupID, listOfIpsForCloudDecomm)
+			for groupID, listOfTicketsForCloudDecomm := range groupIDToListOfTicketsForCloudDecomm {
+				ips, titles := getIPsFromTickets(listOfTicketsForCloudDecomm), getTitlesFromTickets(listOfTicketsForCloudDecomm)
+				job.lstream.Send(log.Infof("creating cloud decommission job for group [%s] on IPs [%s]", groupID, strings.Join(ips, ",")))
+				createCloudDecommissionJob(job.id, job.db, job.lstream, job.config.OrganizationID(), groupID, ips, titles)
 			}
 		}()
 
@@ -439,7 +462,9 @@ func (job *RescanQueueJob) agentTicketIsReadyForRescan(ticket domain.Ticket) (re
 			}
 		}
 	} else {
-		job.lstream.Send(log.Errorf(err, "error while loading tracking method for [%s]", ticket.Title()))
+		if err != nil {
+			job.lstream.Send(log.Errorf(err, "error while loading tracking method for [%s]", ticket.Title()))
+		}
 	}
 
 	return readyForRescan
@@ -547,4 +572,12 @@ func (l *wrapLogger) Send(log log.Log) {
 	}
 
 	l.logger.Send(log)
+}
+
+type PayloadProvidedException struct {
+	exceptionName string
+}
+
+func (e *PayloadProvidedException) CERForm() string {
+	return e.exceptionName
 }

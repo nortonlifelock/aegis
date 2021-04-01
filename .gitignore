@@ -7,6 +7,7 @@ scaffold.json
 ui/builds/dist/
 vendor/
 connected.go
+scripts.org/
 
 # GO IGNORE
 # Binaries for programs and plugins

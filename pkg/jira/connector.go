@@ -158,7 +158,7 @@ func buildConnector(ctx context.Context, payload PayloadJira, config domain.Sour
 func ensureAllStatusesExistInMap(statusMap map[string]string) (err error) {
 	var desiredStatuses = []string{
 		domain.StatusReopened, domain.StatusClosedRemediated, domain.StatusClosedFalsePositive, domain.StatusClosedDecommissioned,
-		domain.StatusOpen, domain.StatusInProgress, domain.StatusResolvedException, domain.StatusClosedException,
+		domain.StatusOpen, domain.StatusInProgress, domain.StatusResolvedException, domain.StatusApprovedException,
 		domain.StatusResolvedDecom, domain.StatusResolvedRemediated,
 	}
 

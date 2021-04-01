@@ -48,6 +48,7 @@
   Patchable           VARCHAR(30)             NULL
   OWASP               VARCHAR(300)            NULL
   ExceptionDate       DATETIME                NULL
+  LinkedIssue         VARCHAR(100)            NOT
   ApplicationName     VARCHAR(300)            NULL
   TrackingMethod      VARCHAR(100)            NULL
 */

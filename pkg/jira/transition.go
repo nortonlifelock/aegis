@@ -93,8 +93,8 @@ func executeTransition(transition workflowTransition, assignTo string, connector
 	}
 
 	var assigneeLocation int
-	var resolutionDateRequired bool
-	assigneeLocation, resolutionDateRequired, err = connector.findAssigneeLocationAndSeeIfResDateIsRequired(ticket.Title(), payload)
+	var resolutionDateRequired, exceptionExpirationRequired bool
+	assigneeLocation, resolutionDateRequired, exceptionExpirationRequired, err = connector.findAssigneeLocationAndSeeIfResDateIsRequired(ticket.Title(), payload)
 	if err == nil {
 
 		fields := handleAssigneeLocationAndResolutionDateInFields(resolutionDateRequired, ticket, &payload, connector, assigneeLocation)
@@ -126,6 +126,14 @@ func executeTransition(transition workflowTransition, assignTo string, connector
 			}
 		}
 
+		if exceptionExpirationRequired && !ticket.ExceptionExpiration().IsZero() {
+			if tpayload.fields == nil {
+				tpayload.fields = &FieldStruct{}
+			}
+
+			tpayload.fields.ExceptionExpirationDate = ticket.ExceptionExpiration().Format("2006-01-02T15:04:05.000+0000")
+		}
+
 		var oldToNewFieldName = make(map[string]string)
 		if tpayload.fields != nil {
 			if len(tpayload.fields.ReopenReason) > 0 {
@@ -134,6 +142,10 @@ func executeTransition(transition workflowTransition, assignTo string, connector
 
 			if len(tpayload.fields.ResolutionDate) > 0 {
 				oldToNewFieldName["resolution_date"] = connector.GetFieldMap(backendResolutionDate).getCreateID()
+			}
+
+			if len(tpayload.fields.ExceptionExpirationDate) > 0 {
+				oldToNewFieldName["exception_expiration_date"] = connector.GetFieldMap(backendExceptionExpiration).getCreateID()
 			}
 
 			if tpayload.fields.Assignee != nil {
@@ -178,6 +190,8 @@ func handleAssigneeLocationAndResolutionDateInFields(resolutionDateRequired bool
 	if resolutionDateRequired {
 		if !tord(Ticket.ResolutionDate()).IsZero() {
 			payload.Unknowns[connector.GetFieldMap(backendResolutionDate).getCreateID()] = tord(Ticket.ResolutionDate())
+		} else {
+			payload.Unknowns[connector.GetFieldMap(backendResolutionDate).getCreateID()] = time.Now()
 		}
 	}
 

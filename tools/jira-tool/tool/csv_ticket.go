@@ -92,7 +92,23 @@ func (t csvTicket) CERF() (param string) {
 }
 
 func (t csvTicket) ExceptionExpiration() (param time.Time) {
-	return t.Ticket.ExceptionExpiration()
+	key := "exception expiration"
+
+	if keyIsInMap(key, t.descToIndex) && len(t.updateLine[t.descToIndex[key]]) > 0 {
+		if exceptionExpiration, err := time.Parse(yyTimeLayout, t.updateLine[t.descToIndex[key]]); err == nil {
+			param = exceptionExpiration
+		} else {
+			if exceptionExpiration, err := time.Parse(yyyyTimeLayout, t.updateLine[t.descToIndex[key]]); err == nil {
+				param = exceptionExpiration
+			} else {
+				fmt.Println(fmt.Sprintf("Error while parsing alert date: %s", err.Error()))
+			}
+		}
+	} else {
+		param = t.Ticket.ExceptionExpiration()
+	}
+
+	return param
 }
 
 func (t csvTicket) CVEReferences() (param *string) {

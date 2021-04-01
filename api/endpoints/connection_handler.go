@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"sync"
+	"time"
 
 	"github.com/nortonlifelock/aegis/internal/integrations"
 	"github.com/nortonlifelock/aegis/pkg/domain"
@@ -38,7 +39,7 @@ func getTicketingConnection(source string, orgID string) (engine integrations.Ti
 				if err == nil {
 					// TODO what do we do if the connection closes? how do we check if the connection is still valid?
 					ticketingConnectionMap[source][orgID] = engine
-					gatherBurndownInfo(orgID)
+					go gatherBurndownInfo(orgID)
 				}
 			} else {
 				err = errors.Errorf("could not find a source config for the source %s and organization %s in the database", source, orgID)
@@ -74,7 +75,7 @@ func getCloudConnection(source string, orgID string) (cloudConnection integratio
 		if err == nil {
 			if sourceConfig != nil && len(sourceConfig) > 0 {
 
-				cloudConnection, err = integrations.GetCloudServiceConnection(Ms, source, sourceConfig[0], AppConfig, logger{})
+				cloudConnection, err = integrations.GetCloudServiceConnection(context.Background(), Ms, source, sourceConfig[0], AppConfig, logger{})
 				if err == nil {
 					// TODO what do we do if the connection closes? how do we check if the connection is still valid?
 					cloudConnectionMap[source][orgID] = cloudConnection
@@ -117,16 +118,20 @@ func logFunc(logType string, log string, logError error) (err error) {
 }
 
 func gatherBurndownInfo(orgID string) {
-	burnDownPackage := &BurndownPackage{}
-	burnDownPackage.MediumStats = &BurndownStats{}
-	burnDownPackage.HighStats = &BurndownStats{}
-	burnDownPackage.CritStats = &BurndownStats{}
+	for {
+		burnDownPackage := &BurndownPackage{}
+		burnDownPackage.MediumStats = &BurndownStats{}
+		burnDownPackage.HighStats = &BurndownStats{}
+		burnDownPackage.CritStats = &BurndownStats{}
 
-	burnDownLock.Lock()
-	burnDownCache[orgID] = burnDownPackage
-	burnDownLock.Unlock()
+		calculateBurndownForPriority(7, 4, 90, burnDownPackage.MediumStats, orgID)
+		calculateBurndownForPriority(9, 7, 60, burnDownPackage.HighStats, orgID)
+		calculateBurndownForPriority(10, 9, 30, burnDownPackage.CritStats, orgID)
 
-	go calculateBurndownForPriority(7, 4, 90, burnDownPackage.MediumStats, orgID)
-	go calculateBurndownForPriority(9, 7, 60, burnDownPackage.HighStats, orgID)
-	go calculateBurndownForPriority(10, 9, 30, burnDownPackage.CritStats, orgID)
+		burnDownLock.Lock()
+		burnDownCache[orgID] = burnDownPackage
+		burnDownLock.Unlock()
+
+		time.Sleep(time.Minute * 10)
+	}
 }

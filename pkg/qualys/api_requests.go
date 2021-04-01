@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"encoding/xml"
 	"fmt"
+	"github.com/nortonlifelock/aegis/pkg/funnel"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -49,7 +50,7 @@ type Rates struct {
 
 // makeRequest creates a http request to the Qualys API while also taking into account the rate limiting implementation
 // by Qualys so that the requesting methods don't crash immediately
-func (session *Session) makeRequest(request *http.Request, action func(response *http.Response) (err error)) (err error) {
+func (session *Session) makeRequest(useFunnel bool, request *http.Request, action func(response *http.Response) (err error)) (err error) {
 
 	var status int
 	var timeout int
@@ -60,16 +61,18 @@ func (session *Session) makeRequest(request *http.Request, action func(response 
 		// Ensure the timeout hasn't been met before making the request, otherwise break the loop
 		if timeout < 500 {
 
-			var authInfo domain.BasicAuth
-			if err = json.Unmarshal([]byte(session.Config.AuthInfo()), &authInfo); err == nil {
-				// Set the basic auth information and required Qualys Headers
-				request.SetBasicAuth(authInfo.Username, authInfo.Password)
-				request.Header.Add("X-Requested-With", "Aegis")
-				request.Header.Add("Content-Type", "application/xml")
-
+			if err = session.setRequestAuthInfo(request); err == nil {
 				// Execute the HTTP request against the Qualys API
+
+				var client funnel.Client
+				if useFunnel {
+					client = session.getFunnelForEndpoint(request.URL.Path)
+				} else {
+					client = &http.Client{}
+				}
+
 				var response *http.Response
-				if response, err = session.getFunnelForEndpoint(request.URL.Path).Do(request); err == nil {
+				if response, err = client.Do(request); err == nil {
 
 					// Ensure that the response from the API was not NIL
 					if response != nil {
@@ -87,16 +90,27 @@ func (session *Session) makeRequest(request *http.Request, action func(response 
 				} else {
 					err = errors.Errorf("Error when making API Request to Qualys [Endpoint: %s | Error: %s]", request.URL, err.Error())
 				}
-			} else {
-				err = fmt.Errorf("error while parsing authentication information - %s", err.Error())
 			}
-
 		} else {
 			session.lstream.Send(log.Warningf(err, "Qualys Timeout Reached for API [%s]", request.URL))
 			break
 		}
 	}
 
+	return err
+}
+
+func (session *Session) setRequestAuthInfo(request *http.Request) (err error) {
+	var authInfo domain.BasicAuth
+	if err = json.Unmarshal([]byte(session.Config.AuthInfo()), &authInfo); err == nil {
+		// Set the basic auth information and required Qualys Headers
+		request.SetBasicAuth(authInfo.Username, authInfo.Password)
+		request.Header.Add("X-Requested-With", "Aegis")
+		request.Header.Add("Content-Type", "application/xml")
+
+	} else {
+		err = fmt.Errorf("error while parsing authentication information - %s", err.Error())
+	}
 	return err
 }
 
@@ -201,7 +215,7 @@ func (session *Session) httpCall(method string, path string, fields map[string]s
 		var request *http.Request
 		if request, err = http.NewRequest(method, fmt.Sprintf("%s%s", path, qstring), reader); err == nil {
 
-			err = session.makeRequest(request, func(response *http.Response) (err error) {
+			err = session.makeRequest(true, request, func(response *http.Response) (err error) {
 				if response != nil {
 					defer response.Body.Close()
 

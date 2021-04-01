@@ -2,6 +2,7 @@ package aqua
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -21,7 +22,7 @@ func (cli *APIClient) getMostRecentImageTag(images []ImageResult) (mostRecentTag
 	return mostRecentTag
 }
 
-func (cli *APIClient) GetImagesForRepository(registry, repository string) (images []ImageResult, err error) {
+func (cli *APIClient) GetImagesForRepository(ctx context.Context, registry, repository string) (images []ImageResult, err error) {
 	images = make([]ImageResult, 0)
 	page := 1
 
@@ -31,8 +32,14 @@ func (cli *APIClient) GetImagesForRepository(registry, repository string) (image
 	endpoint = strings.Replace(endpoint, " ", "%20", -1)
 
 	for {
+		select {
+		case <-ctx.Done():
+			return
+		default:
+		}
+
 		var request *http.Request
-		if request, err = http.NewRequest(http.MethodGet, fmt.Sprintf("%s/%s&page=%d&pagesize=50", cli.baseURL, endpoint, page), nil); err == nil {
+		if request, err = http.NewRequest(http.MethodGet, fmt.Sprintf("%s%s&page=%d&pagesize=50", cli.baseURL, endpoint, page), nil); err == nil {
 			var body []byte
 			if body, err = cli.executeRequest(request); err == nil {
 				imagePage := &ImagePage{}
@@ -48,10 +55,12 @@ func (cli *APIClient) GetImagesForRepository(registry, repository string) (image
 					break
 				}
 			} else {
-				err = fmt.Errorf("error while gathering vulnerabilities - %s", err.Error())
+				err = fmt.Errorf("error while gathering images - %s", err.Error())
+				break
 			}
 		} else {
 			err = fmt.Errorf("error while making request - %s", err.Error())
+			break
 		}
 	}
 
@@ -63,7 +72,7 @@ func (cli *APIClient) StartImageScan(registryName string, imageName string) (err
 	endpoint = strings.Replace(endpoint, "$IMAGENAME", imageName, 1)
 
 	var request *http.Request
-	if request, err = http.NewRequest(http.MethodPost, fmt.Sprintf("%s/%s", cli.baseURL, endpoint), nil); err == nil {
+	if request, err = http.NewRequest(http.MethodPost, fmt.Sprintf("%s%s", cli.baseURL, endpoint), nil); err == nil {
 		var body []byte
 		if body, err = cli.executeRequest(request); err == nil {
 			fmt.Println(string(body))
@@ -109,7 +118,7 @@ func (cli *APIClient) StartFullImageRescan(registryName, imageName string) (err 
 		bodyReader := bytes.NewReader(body)
 
 		var request *http.Request
-		if request, err = http.NewRequest(http.MethodPost, fmt.Sprintf("%s/%s", cli.baseURL, endpoint), bodyReader); err == nil {
+		if request, err = http.NewRequest(http.MethodPost, fmt.Sprintf("%s%s", cli.baseURL, endpoint), bodyReader); err == nil {
 			if body, err = cli.executeRequest(request); err == nil {
 
 			} else {
@@ -132,7 +141,7 @@ func (cli *APIClient) StartFullImageRescan(registryName, imageName string) (err 
 //	fmt.Println(endpoint)
 //
 //	var request *http.Request
-//	if request, err = http.NewRequest(http.MethodGet, fmt.Sprintf("%s/%s", cli.baseURL, endpoint), nil); err == nil {
+//	if request, err = http.NewRequest(http.MethodGet, fmt.Sprintf("%s%s", cli.baseURL, endpoint), nil); err == nil {
 //		var body []byte
 //		if body, err = cli.executeRequest(request); err == nil {
 //			fmt.Println(string(body))

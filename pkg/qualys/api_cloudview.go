@@ -4,9 +4,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/nortonlifelock/aegis/pkg/domain"
+	"github.com/nortonlifelock/aegis/pkg/log"
 	"io/ioutil"
 	"net/http"
 	"strings"
+	"time"
 )
 
 type EvaluationResult struct {
@@ -106,6 +108,9 @@ func (session *Session) GetCloudAccountEvaluations(accountID string) (evaluation
 	// from looking at the API documentation, I don't see a way to find the cloud account type by using the cloud account ID alone
 	// so we just check all three and use one if it's present
 	for _, possibleCloudAccountType := range possibleAccountTypes {
+		if len(cloudAccountType) > 0 {
+			break
+		}
 		var possibleEvals []AccountEvaluationContent
 
 		if possibleEvals, err = session.GetCloudAccountEvaluationsWithCloudAccountType(accountID, possibleCloudAccountType); err == nil {
@@ -117,7 +122,7 @@ func (session *Session) GetCloudAccountEvaluations(accountID string) (evaluation
 				}
 			}
 		} else {
-			err = fmt.Errorf("error while determining cloud account type for evaluation gathering [%s|%s]", accountID, possibleCloudAccountType)
+			err = fmt.Errorf("error while determining cloud account type for evaluation gathering [%s|%s] - %s", accountID, possibleCloudAccountType, err.Error())
 			break
 		}
 	}
@@ -140,7 +145,7 @@ func (session *Session) GetCloudAccountEvaluationsWithCloudAccountType(accountID
 		var req *http.Request
 		req, err = http.NewRequest(http.MethodGet, session.Config.Address()+fmt.Sprintf("/cloudview-api/rest/v1/%s/evaluations/%s?pageNo=%d&sortOrder=asc", cloudAccountType, accountID, accPage), nil)
 		if err == nil {
-			err = session.makeRequest(req, func(resp *http.Response) (err error) {
+			err = session.makeRequest(false, req, func(resp *http.Response) (err error) {
 				var body []byte
 				body, err = ioutil.ReadAll(resp.Body)
 				if err == nil {
@@ -176,9 +181,9 @@ func (session *Session) GetCloudEvaluationFindings(accountID string, content Acc
 		evaluationResult := &EvaluationResult{}
 
 		var req *http.Request
-		req, err = http.NewRequest(http.MethodGet, session.Config.Address()+fmt.Sprintf("/cloudview-api/rest/v1/%s/evaluations/%s/resources/%s?pageNo=%d&sortOrder=asc", cloudAccountType, accountID, content.ControlID, page), nil)
+		req, err = http.NewRequest(http.MethodGet, session.Config.Address()+fmt.Sprintf("/cloudview-api/rest/v1/%s/evaluations/%s/resources/%s?pageNo=%d&pageSize=10000&sortOrder=asc", cloudAccountType, accountID, content.ControlID, page), nil) // TODO qualys sorting does not seem to be working
 		if err == nil {
-			err = session.makeRequest(req, func(resp *http.Response) (err error) {
+			err = session.makeRequest(false, req, func(resp *http.Response) (err error) {
 				var body []byte
 				body, err = ioutil.ReadAll(resp.Body)
 				if err == nil {
@@ -201,17 +206,39 @@ func (session *Session) GetCloudEvaluationFindings(accountID string, content Acc
 		)
 
 		for _, finding := range evaluationResult.Content {
-			if finding.Result != fixedFinding && !evidenceHasError(finding) && accountContentHasPolicy(policyName, content) {
+			if finding.Result != fixedFinding && !evidenceHasError(finding) && accountContentHasPolicy(policyName, content) && findingIsFresh(finding, session.lstream) {
 				findings = append(findings, &cloudViewFinding{
 					evaluationContent: finding,
 					accountContent:    content,
 					accountID:         accountID,
+					policy:            policyName,
 				})
 			}
 		}
 	}
 
 	return findings, err
+}
+
+// Sometimes the locations of the findings can be deleted (e.g. VM taken down) but the findings persist in CloudView
+// Because evaluations should occur every couple hours, we consider a finding "stale" if it hasn't been found in 24 hrs
+func findingIsFresh(finding EvaluationResultContent, lstream log.Logger) (fresh bool) {
+	fresh = true
+	const timeFormat = "2006-01-02T15:04:05-0700"
+	val, err := time.Parse(timeFormat, finding.EvaluatedOn)
+	if err == nil {
+		if !val.IsZero() {
+			if time.Since(val) > time.Hour*24 {
+				fresh = false
+			}
+		} else {
+			lstream.Send(log.Errorf(err, "empty evaluation date found for [%s|%s]", finding.ResourceID, finding.AccountID))
+		}
+	} else {
+		lstream.Send(log.Errorf(err, "error parsing evaluation date found for [%s|%s]", finding.ResourceID, finding.AccountID))
+	}
+
+	return fresh
 }
 
 func accountContentHasPolicy(policyName string, content AccountEvaluationContent) (hasPolicy bool) {
@@ -240,6 +267,7 @@ type cloudViewFinding struct {
 	evaluationContent EvaluationResultContent
 	accountContent    AccountEvaluationContent
 	accountID         string
+	policy            string
 }
 
 // ID corresponds to a vulnerability ID
@@ -267,13 +295,18 @@ func (f *cloudViewFinding) ScanID() int {
 }
 
 func (f *cloudViewFinding) Summary() string {
-	return fmt.Sprintf("Aegis (%s)", strings.Replace(f.accountContent.ControlName, "\n", "", -1))
+	return fmt.Sprintf("Aegis (%s-%s-%s)", f.accountID, f.DeviceID(), f.VulnerabilityTitle())
 }
 func (f *cloudViewFinding) VulnerabilityTitle() string {
-	return f.accountContent.ControlName
+	return strings.Replace(f.accountContent.ControlName, "\n", "", -1)
 }
 func (f *cloudViewFinding) Priority() string {
 	return strings.Title(strings.ToLower(f.accountContent.Criticality))
+}
+
+func (f *cloudViewFinding) LastFound() time.Time {
+	val, _ := time.Parse("2006-01-02T15:04:05+0000", f.evaluationContent.EvaluatedOn)
+	return val
 }
 
 // String extracts relevant information from the finding
@@ -291,5 +324,5 @@ func (f *cloudViewFinding) String() string {
 
 // not relevant to cloud view
 func (f *cloudViewFinding) BundleID() string {
-	return ""
+	return f.policy
 }

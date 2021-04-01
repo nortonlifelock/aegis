@@ -87,7 +87,7 @@ const (
 	backendResolutionDate      = "Resolution Date"
 	backendReopenReason        = "Reopen Reason"
 	backendOperatingSystem     = "Operating System"
-	backendVulnerability       = "Vulnerablility" // typo is present in JIRA and intentional
+	backendVulnerability       = "Vulnerability"
 	backendCVSS                = "cvss_score"
 	backendVulnerabilityID     = "VulnerabilityID"
 	backendOWASP               = "OWASP"
