@@ -234,3 +234,54 @@ aegis -config app.json -cpath "path to configuration file"
     4. We do mapping from cloud tags to ticket fields (if a tag mapping is specified)
     5. The ticket is assigned according to the org’s AssignmentRules table
     6. The ticket is created in JIRA and has an entry made in the Ticket table of the DB
+
+---
+# Other Processes
+
+---
+# Notes for developers
+## Creating a new job
+1. The go file for the job's code is placed in `aegis/internal/implementations/`
+2. The name of the file should reflect the name of the job
+3. The file should contain a struct for your job as well as all methods that this struct implements
+4. The job struct should implement a function with the following method signature. This method will act as the entrypoint for your job
+
+```   
+Process(ctx context.Context, id string, appconfig domain.Config, db domain.DatabaseConnection, lstream log.Logger, payload string, jobConfig domain.JobConfig, inSource []domain.SourceConfig, outSource []domain.SourceConfig) (err error)
+```
+
+5. The struct for the job needs to be registered with the job runner so the job runner knows which struct is tied with which job. This is done in `aegis/internal/implementations/registration.go`
+6. An entry for the job must be made into the database. Create a SQL migration file in `aegis/init/migrations`. Scaffolding should be ran after the file is created for the SQL to be executed against the database. Example SQL below
+```
+SELECT S.Id
+INTO @scanner_id
+FROM SourceType S
+WHERE S.Type = 'ImageScanner' LIMIT 1;
+
+SELECT S.Id
+INTO @ticket_id
+FROM SourceType S
+WHERE S.Type = 'TicketEngine' LIMIT 1;
+
+INSERT INTO Job(Struct, SourceTypeIn, SourceTypeOut, Priority, CreatedBy) VALUE ('ImageRescanJob', @scanner_Id, @ticket_id, 4, 'ryan.everhart@nortonlifelock.com');
+```
+7. By convention, the API integration where the job pulls data from is called the `insource` and the API integration that the job writes to is called the `outsource`. The type of this API integration (e.g. TicketEngine, ImageScanner) are referenced in the `SourceType` table.
+
+## How the job runner works
+1. The job runner checks the JobHistory table every 60 seconds (change with `-run_wait` flag) for entries with a StatusID 1
+2. All entries found with status 1 are loaded into memory, and have their StatusID values in the DB set to 2 (processing)
+3. The job runner looks at the JobID column for these entries. This JobID corresponds to the ID column in the Job table. The corresponding Job name is found from this table
+4. The job name is looked up in the job registry (`aegis/internal/implementations/registration.go`), and the equivalent job struct is found
+5. The job runner loads configurations from the DB for the job struct, and passes them to the Process method
+    1. The job runner takes the `ConfigID` from the `JobHistory` entry, and uses it to pull from the `JobConfig` table using the `ID` column
+    2. The job runner takes the `DataInSourceConfigID` from the `JobHistory` entry, and uses it to pull from the `SourceConfig` table using the `ID` column
+    3. The job runner takes the `DataOutSourceConfigID` from the `JobHistory` entry, and uses it to pull from the `SourceConfig` table using the `ID` column
+## How scaffolding works
+## How to make schema changes
+## Important database tables and fields
+## API funnel & concurrency settings
+
+---
+# Other
+## How duplicates are identified
+## Encrypting passwords

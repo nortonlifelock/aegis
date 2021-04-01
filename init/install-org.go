@@ -132,8 +132,7 @@ func createJobConfigs(db domain.DatabaseConnection, orgID, scannerSCID, ticketSC
 	_, _, err = db.CreateJobConfigWPayload(jobNameToJobID[ticketSyncJob], orgID, 0, false, 0, 1, false, "INSTALLER", ticketSCID, ticketSCID, "{}")
 	check(err)
 
-	// TODO set AutoStart to true once CERFs are handled in the DB (in-case they don't have a CERF project setup)
-	_, _, err = db.CreateJobConfigWPayload(jobNameToJobID[exceptionJob], orgID, 0, true, 60, 1, false, "INSTALLER", ticketSCID, scannerSCID, "{}")
+	_, _, err = db.CreateJobConfigWPayload(jobNameToJobID[exceptionJob], orgID, 0, true, 60, 1, true, "INSTALLER", ticketSCID, scannerSCID, "{}")
 	check(err)
 }
 
@@ -194,12 +193,19 @@ func createTicketSourceConfig(reader *bufio.Reader, aesClient crypto.Client, db 
 
 		fmt.Println("\nNow lets grab your JIRA status workflow! You'll need to export it a XML and give us the file path so we can parse and store it. You can delete it after")
 		fmt.Println("You can find your workflow XML in your JIRA instance by going to JIRA Administration (cog) -> Projects -> Workflows (on left) -> Select \"actions\" button next to desired workflow -> Export as XML")
-		fmt.Println("Workflow XML path: ")
-		workflowXMLPath := getInput(reader)
-		workflowXML, err := files.GetStringFromFile(workflowXMLPath)
-		check(err)
-		payload.TransitionMap, err = jira.TurnXMLWorkFlowToMap(workflowXML)
-		check(err)
+		for len(payload.TransitionMap) == 0 {
+			fmt.Println("Workflow XML path: ")
+			workflowXMLPath := getInput(reader)
+			workflowXML, err := files.GetStringFromFile(workflowXMLPath)
+			if err == nil {
+				payload.TransitionMap, err = jira.TurnXMLWorkFlowToMap(workflowXML)
+				if err != nil {
+					fmt.Println(err.Error())
+				}
+			} else {
+				fmt.Println(err.Error())
+			}
+		}
 
 		// If your ticket status do not align with the statuses that Aegis uses for tracking, you can map your status to our status in the payload of the JIRA source config in the database
 		// the Aegis recognized statuses are the keys, and your custom status is the value
