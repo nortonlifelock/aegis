@@ -181,7 +181,7 @@ func (session *Session) GetCloudEvaluationFindings(accountID string, content Acc
 		evaluationResult := &EvaluationResult{}
 
 		var req *http.Request
-		req, err = http.NewRequest(http.MethodGet, session.Config.Address()+fmt.Sprintf("/cloudview-api/rest/v1/%s/evaluations/%s/resources/%s?pageNo=%d&pageSize=10000&sortOrder=asc", cloudAccountType, accountID, content.ControlID, page), nil) // TODO qualys sorting does not seem to be working
+		req, err = http.NewRequest(http.MethodGet, session.Config.Address()+fmt.Sprintf("/cloudview-api/rest/v1/%s/evaluations/%s/resources/%s?pageNo=%d&pageSize=10000&sortOrder=asc&filter=evaluatedOn%3A%5Bnow-24h%20..%20now-1s%5D", cloudAccountType, accountID, content.ControlID, page), nil) // TODO qualys sorting does not seem to be working
 		if err == nil {
 			err = session.makeRequest(false, req, func(resp *http.Response) (err error) {
 				var body []byte

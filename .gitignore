@@ -1,6 +1,7 @@
 dev.json
 exceptions/
 *app.json
+prod.json
 *.xml
 *.csv
 scaffold.json
