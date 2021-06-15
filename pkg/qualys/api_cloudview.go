@@ -143,7 +143,7 @@ func (session *Session) GetCloudAccountEvaluationsWithCloudAccountType(accountID
 
 	for !lastAccPage {
 		var req *http.Request
-		req, err = http.NewRequest(http.MethodGet, session.Config.Address()+fmt.Sprintf("/cloudview-api/rest/v1/%s/evaluations/%s?pageNo=%d&sortOrder=asc", cloudAccountType, accountID, accPage), nil)
+		req, err = http.NewRequest(http.MethodGet, session.Config.Address()+fmt.Sprintf("/cloudview-api/rest/v1/%s/evaluations/%s?pageNo=%d&sortOrder=asc&filter=evaluatedOn%3A%5Bnow-24h%20..%20now-1s%5D%20and%20(policy.name%3ACIS%20Amazon%20Web%20Services%20Foundations%20Benchmark%20or%20policy.name%3AAegis%20AWS%20Benchmark%20or%20policy.name%3ACIS%20Microsoft%20Azure%20Foundations%20Benchmark%20or%20policy.name%3ACIS%20Google%20Cloud%20Platform%20Foundation%20Benchmark)", cloudAccountType, accountID, accPage), nil)
 		if err == nil {
 			err = session.makeRequest(false, req, func(resp *http.Response) (err error) {
 				var body []byte
