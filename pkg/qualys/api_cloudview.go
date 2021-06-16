@@ -120,7 +120,6 @@ func getAccountType(accountID string) string {
 // GetCloudAccountEvaluations was refactored with the ability to determine the account type via the getAccountType function. This removes unnecessary calls to the qualys api
 func (session *Session) GetCloudAccountEvaluations(accountID string) (evaluations []AccountEvaluationContent, cloudAccountType string, err error) {
 	accountType := getAccountType(accountID)
-
 	var evals []AccountEvaluationContent
 
 	if evals, err = session.GetCloudAccountEvaluationsWithCloudAccountType(accountID, accountType); err != nil {
@@ -144,29 +143,26 @@ func (session *Session) GetCloudAccountEvaluationsWithCloudAccountType(accountID
 			"%3A%5Bnow-24h%20..%20now-1s%5D%20and%20(policy.name%3ACIS%20Amazon%20Web%20Services%20Foundations%20Benchmark%20or%20policy.name%3AAegis%20AWS%20Benchmark%20or%20policy.name%3ACIS%20Microsoft%20Azure%20Foundations%20Benchmark%20or%20policy.name%3ACIS%20Google%20Cloud%20Platform%20Foundation%20Benchmark)",
 			nil)
 
-		if err != nil {
-			err = session.makeRequest(false, req, func(resp *http.Response) (err error) {
-				var body []byte
-				body, err = ioutil.ReadAll(resp.Body)
-				if err == nil {
-					err = json.Unmarshal(body, accountEvaluation)
-				} else {
-					err = fmt.Errorf("error while reading response body - %s", err.Error())
-				}
-
-				return err
-			})
-		} else {
-			err = fmt.Errorf("error while making request - %s", err.Error())
+		if err != nil{
+			err = fmt.Errorf("error creating url for request to Qualys - %s", err.Error())
+			return nil, err
 		}
 
-		if err == nil {
-			evaluations = append(evaluations, accountEvaluation.Content...)
-			lastAccPage = accountEvaluation.Last
-			accPage++
-		} else {
-			break
-		}
+		err = session.makeRequest(false, req, func(resp *http.Response) (err error) {
+			var body []byte
+			body, err = ioutil.ReadAll(resp.Body)
+			if err == nil {
+				err = json.Unmarshal(body, accountEvaluation)
+			} else {
+				err = fmt.Errorf("error while reading response body - %s", err.Error())
+			}
+
+			return  err
+		})
+
+		evaluations = append(evaluations, accountEvaluation.Content...)
+		lastAccPage = accountEvaluation.Last
+		accPage++
 	}
 
 	return evaluations, err
