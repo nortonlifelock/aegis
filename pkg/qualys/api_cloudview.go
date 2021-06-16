@@ -103,7 +103,7 @@ const (
 	GOOGLE_CLOUD_ACCOUNT = "gcp"
 )
 
-// getAccountType determines the account type
+// getAccountType determines the account type. AccountID are determined through regexp filters and can be added to this func
 func getAccountType(accountID string) string {
 	matched := false
 	// AWS
@@ -117,7 +117,7 @@ func getAccountType(accountID string) string {
 	//GCP
 	return GOOGLE_CLOUD_ACCOUNT
 }
-
+// GetCloudAccountEvaluations was refactored with the ability to determine the account type via the getAccountType function. This removes unnecessary calls to the qualys api
 func (session *Session) GetCloudAccountEvaluations(accountID string) (evaluations []AccountEvaluationContent, cloudAccountType string, err error) {
 	accountType := getAccountType(accountID)
 
