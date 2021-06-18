@@ -178,7 +178,7 @@ func (session *Session) GetCloudEvaluationFindings(accountID string, content Acc
 		var req *http.Request
 		// URL was split as percent signs in url affected Sprintf when running unit test
 		req, err = http.NewRequest(http.MethodGet, session.Config.Address()+fmt.Sprintf("/cloudview-api/rest/v1/%s/evaluations/%s/resources/%s?pageNo=%d", cloudAccountType, accountID, content.ControlID, page) +
-			"&pageSize=10000&sortOrder=asc&filter=evaluatedOn%3A%5Bnow-24h%20..%20now-1s%5D", nil) // TODO qualys sorting does not seem to be working
+			"&pageSize=1000&sortOrder=asc&filter=evaluatedOn%3A%5Bnow-24h%20..%20now-1s%5D", nil) // TODO qualys sorting does not seem to be working
 		if err == nil {
 			err = session.makeRequest(false, req, func(resp *http.Response) (err error) {
 				var body []byte
