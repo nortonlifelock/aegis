@@ -7,6 +7,7 @@ import (
 	"github.com/nortonlifelock/aegis/pkg/log"
 	"io/ioutil"
 	"net/http"
+	"regexp"
 	"strings"
 	"time"
 )
@@ -102,36 +103,30 @@ const (
 	GOOGLE_CLOUD_ACCOUNT = "gcp"
 )
 
+// getAccountType determines the account type. AccountID are determined through regexp filters and can be added to this func
+func getAccountType(accountID string) string {
+	matched := false
+	// AWS
+	if matched, _ = regexp.MatchString(`^\d{12}$`, accountID); matched{
+		return AWS_CLOUD_ACCOUNT
+	}
+	// Azure
+	if matched, _ = regexp.MatchString(`^[0-9A-Fa-f]{8}-([0-9A-Fa-f]{4}-){3}[0-9A-Fa-f]{12}$`, accountID); matched {
+		return AZURE_CLOUD_ACCOUNT
+	}
+	//GCP
+	return GOOGLE_CLOUD_ACCOUNT
+}
+// GetCloudAccountEvaluations was refactored with the ability to determine the account type via the getAccountType function. This removes unnecessary calls to the qualys api
 func (session *Session) GetCloudAccountEvaluations(accountID string) (evaluations []AccountEvaluationContent, cloudAccountType string, err error) {
-	var possibleAccountTypes = []string{AWS_CLOUD_ACCOUNT, AZURE_CLOUD_ACCOUNT, GOOGLE_CLOUD_ACCOUNT}
+	accountType := getAccountType(accountID)
+	var evals []AccountEvaluationContent
 
-	// from looking at the API documentation, I don't see a way to find the cloud account type by using the cloud account ID alone
-	// so we just check all three and use one if it's present
-	for _, possibleCloudAccountType := range possibleAccountTypes {
-		if len(cloudAccountType) > 0 {
-			break
-		}
-		var possibleEvals []AccountEvaluationContent
-
-		if possibleEvals, err = session.GetCloudAccountEvaluationsWithCloudAccountType(accountID, possibleCloudAccountType); err == nil {
-			for _, eval := range possibleEvals {
-				if eval.FailedResources > 0 || eval.PassedResources > 0 {
-					evaluations = possibleEvals
-					cloudAccountType = possibleCloudAccountType
-					break
-				}
-			}
-		} else {
-			err = fmt.Errorf("error while determining cloud account type for evaluation gathering [%s|%s] - %s", accountID, possibleCloudAccountType, err.Error())
-			break
-		}
+	if evals, err = session.GetCloudAccountEvaluationsWithCloudAccountType(accountID, accountType); err != nil {
+		err = fmt.Errorf("error while gathering evaluations [%s|%s] - %s", accountID, accountType, err.Error())
 	}
 
-	if err == nil && len(cloudAccountType) == 0 {
-		err = fmt.Errorf("could not determine cloud account type for accountID [%s]", accountID)
-	}
-
-	return evaluations, cloudAccountType, err
+	return evals, accountType, err
 }
 
 func (session *Session) GetCloudAccountEvaluationsWithCloudAccountType(accountID string, cloudAccountType string) (evaluations []AccountEvaluationContent, err error) {
@@ -143,30 +138,31 @@ func (session *Session) GetCloudAccountEvaluationsWithCloudAccountType(accountID
 
 	for !lastAccPage {
 		var req *http.Request
-		req, err = http.NewRequest(http.MethodGet, session.Config.Address()+fmt.Sprintf("/cloudview-api/rest/v1/%s/evaluations/%s?pageNo=%d&sortOrder=asc", cloudAccountType, accountID, accPage), nil)
-		if err == nil {
-			err = session.makeRequest(false, req, func(resp *http.Response) (err error) {
-				var body []byte
-				body, err = ioutil.ReadAll(resp.Body)
-				if err == nil {
-					err = json.Unmarshal(body, accountEvaluation)
-				} else {
-					err = fmt.Errorf("error while reading response body - %s", err.Error())
-				}
+		// URL was split as percent signs in url affected Sprintf when running unit test
+		req, err = http.NewRequest(http.MethodGet, session.Config.Address()+fmt.Sprintf("/cloudview-api/rest/v1/%s/evaluations/%s?pageNo=%d&sortOrder=asc&filter=evaluatedOn", cloudAccountType, accountID, accPage) +
+			"%3A%5Bnow-24h%20..%20now-1s%5D%20and%20(policy.name%3ACIS%20Amazon%20Web%20Services%20Foundations%20Benchmark%20or%20policy.name%3AAegis%20AWS%20Benchmark%20or%20policy.name%3ACIS%20Microsoft%20Azure%20Foundations%20Benchmark%20or%20policy.name%3ACIS%20Google%20Cloud%20Platform%20Foundation%20Benchmark)",
+			nil)
 
-				return err
-			})
-		} else {
-			err = fmt.Errorf("error while making request - %s", err.Error())
+		if err != nil{
+			err = fmt.Errorf("error creating url for request to Qualys - %s", err.Error())
+			return nil, err
 		}
 
-		if err == nil {
-			evaluations = append(evaluations, accountEvaluation.Content...)
-			lastAccPage = accountEvaluation.Last
-			accPage++
-		} else {
-			break
-		}
+		err = session.makeRequest(false, req, func(resp *http.Response) (err error) {
+			var body []byte
+			body, err = ioutil.ReadAll(resp.Body)
+			if err == nil {
+				err = json.Unmarshal(body, accountEvaluation)
+			} else {
+				err = fmt.Errorf("error while reading response body - %s", err.Error())
+			}
+
+			return  err
+		})
+
+		evaluations = append(evaluations, accountEvaluation.Content...)
+		lastAccPage = accountEvaluation.Last
+		accPage++
 	}
 
 	return evaluations, err
@@ -179,9 +175,10 @@ func (session *Session) GetCloudEvaluationFindings(accountID string, content Acc
 
 	for !last {
 		evaluationResult := &EvaluationResult{}
-
 		var req *http.Request
-		req, err = http.NewRequest(http.MethodGet, session.Config.Address()+fmt.Sprintf("/cloudview-api/rest/v1/%s/evaluations/%s/resources/%s?pageNo=%d&pageSize=10000&sortOrder=asc", cloudAccountType, accountID, content.ControlID, page), nil) // TODO qualys sorting does not seem to be working
+		// URL was split as percent signs in url affected Sprintf when running unit test
+		req, err = http.NewRequest(http.MethodGet, session.Config.Address()+fmt.Sprintf("/cloudview-api/rest/v1/%s/evaluations/%s/resources/%s?pageNo=%d", cloudAccountType, accountID, content.ControlID, page) +
+			"&pageSize=1000&sortOrder=asc&filter=evaluatedOn%3A%5Bnow-24h%20..%20now-1s%5D", nil) // TODO qualys sorting does not seem to be working
 		if err == nil {
 			err = session.makeRequest(false, req, func(resp *http.Response) (err error) {
 				var body []byte

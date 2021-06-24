@@ -522,7 +522,7 @@ func (job *ScanCloseJob) modifyJiraTicketAccordingToVulnerabilityStatus(engine i
 	} else {
 		if !statusIsAClosedStatus(engine, sord(ticket.Status())) {
 			job.lstream.Send(log.Errorf(nil, "scan [%s] did not seem to cover the device %v - scanner did not report any data for device", job.Payload.ScanID, ticket.DeviceID()))
-			err := engine.Transition(ticket, engine.GetStatusMap(domain.StatusScanError), fmt.Sprintf("scan [%s] did not cover the device %v. Please make sure this asset is still in-	scope and associated with an asset group. If this asset is out of scope, please move this ticket to NOTAVRR status or alert the vulnerability management team.", job.Payload.ScanID, ticket.DeviceID()), sord(ticket.AssignedTo()))
+			err := engine.Transition(ticket, engine.GetStatusMap(domain.StatusScanError), fmt.Sprintf("scan [%s] did not cover the device %v. Please make sure this asset is still in-scope and associated with an asset group. If this asset is out of scope, please move this ticket to Closed-NA status or alert the vulnerability management team.", job.Payload.ScanID, ticket.DeviceID()), sord(ticket.AssignedTo()))
 			if err != nil {
 				job.lstream.Send(log.Errorf(err, "error while marking ticket as ScanError [%s]", ticket.Title()))
 			}
